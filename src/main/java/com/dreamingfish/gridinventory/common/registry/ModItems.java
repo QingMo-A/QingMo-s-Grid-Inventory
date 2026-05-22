@@ -1,0 +1,15 @@
+package com.dreamingfish.gridinventory.common.registry;
+
+import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
+import net.minecraft.world.item.Item;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+public final class ModItems {
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(DFGridInventoryMod.MODID);
+    public static final DeferredItem<Item> SMALL_GRID_BAG = ITEMS.register("small_grid_bag", () -> new SmallGridBagItem(new Item.Properties().stacksTo(1)));
+
+    private ModItems() {
+    }
+}

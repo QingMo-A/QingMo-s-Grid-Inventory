@@ -1,0 +1,10 @@
+{
+  "itemGroup.df_grid_inventory": "DF Grid Inventory",
+  "item.df_grid_inventory.small_grid_bag": "Small Grid Bag",
+  "container.df_grid_inventory.small_grid_bag": "Small Grid Bag",
+  "container.df_grid_inventory.player_grid_inventory": "Inventory",
+  "key.categories.df_grid_inventory": "DF Grid Inventory",
+  "key.df_grid_inventory.pickup_item": "Pick Up Item",
+  "screen.df_grid_inventory.nearby_items": "Nearby Items",
+  "tooltip.df_grid_inventory.pickup_hint": "Press Pickup Key or Click to pick up"
+}

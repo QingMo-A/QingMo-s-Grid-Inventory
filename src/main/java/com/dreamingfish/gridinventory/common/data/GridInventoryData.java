@@ -1,0 +1,180 @@
+package com.dreamingfish.gridinventory.common.data;
+
+import com.dreamingfish.gridinventory.api.GridInsertMode;
+import com.dreamingfish.gridinventory.api.IGridInventory;
+import com.dreamingfish.gridinventory.common.inventory.GridAutoInsertHelper;
+import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
+import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
+import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public class GridInventoryData implements IGridInventory {
+    public static final StreamCodec<RegistryFriendlyByteBuf, GridInventoryData> STREAM_CODEC = StreamCodec.ofMember(GridInventoryData::encode, GridInventoryData::decode);
+
+    public static final Codec<GridInventoryData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Codec.INT.fieldOf("columns").forGetter(GridInventoryData::getColumns),
+            Codec.INT.fieldOf("rows").forGetter(GridInventoryData::getRows),
+            GridEntry.CODEC.listOf().optionalFieldOf("entries", List.of()).forGetter(GridInventoryData::getEntries)
+    ).apply(instance, GridInventoryData::new));
+
+    private final int columns;
+    private final int rows;
+    private final List<GridEntry> entries;
+    private transient Runnable changeListener = () -> {
+    };
+
+    public GridInventoryData(int columns, int rows) {
+        this(columns, rows, List.of());
+    }
+
+    public GridInventoryData(int columns, int rows, List<GridEntry> entries) {
+        this.columns = columns;
+        this.rows = rows;
+        this.entries = new ArrayList<>(entries);
+    }
+
+    public GridInventoryData copy() {
+        return new GridInventoryData(columns, rows, entries);
+    }
+
+    public void setChangeListener(Runnable changeListener) {
+        this.changeListener = changeListener == null ? () -> {
+        } : changeListener;
+    }
+
+    @Override
+    public int getColumns() {
+        return columns;
+    }
+
+    @Override
+    public int getRows() {
+        return rows;
+    }
+
+    @Override
+    public List<GridEntry> getEntries() {
+        return entries;
+    }
+
+    @Override
+    public boolean canInsert(ItemStack stack) {
+        return GridAutoInsertHelper.findFirstPlacement(this, stack).isPresent();
+    }
+
+    @Override
+    public ItemStack insert(ItemStack stack, GridInsertMode mode) {
+        ItemStack remainder = stack;
+        if (mode == GridInsertMode.EXECUTE) {
+            remainder = GridStackMerger.mergeIntoExisting(this, stack);
+            if (remainder.isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+        }
+        Optional<GridAutoInsertHelper.Placement> placement = GridAutoInsertHelper.findFirstPlacement(this, remainder);
+        if (placement.isEmpty()) {
+            return remainder;
+        }
+        if (mode == GridInsertMode.EXECUTE) {
+            GridAutoInsertHelper.Placement target = placement.get();
+            add(remainder.copy(), target.x(), target.y(), target.rotated());
+            return ItemStack.EMPTY;
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public GridEntry add(ItemStack stack, int x, int y, boolean rotated) {
+        var size = GridItemSizeManager.getSize(stack);
+        GridEntry entry = new GridEntry(UUID.randomUUID(), stack, x, y, size.placedWidth(rotated), size.placedHeight(rotated), rotated);
+        entries.add(entry);
+        setChanged();
+        return entry;
+    }
+
+    public boolean move(UUID entryId, int x, int y, boolean rotated) {
+        for (int i = 0; i < entries.size(); i++) {
+            GridEntry old = entries.get(i);
+            if (old.entryId().equals(entryId)) {
+                for (int targetIndex = 0; targetIndex < entries.size(); targetIndex++) {
+                    GridEntry target = entries.get(targetIndex);
+                    if (!target.entryId().equals(entryId)
+                            && target.contains(x, y)
+                            && ItemStack.isSameItemSameComponents(target.stack(), old.stack())
+                            && target.stack().getCount() < target.stack().getMaxStackSize()) {
+                        int moved = Math.min(old.stack().getCount(), target.stack().getMaxStackSize() - target.stack().getCount());
+                        target.stack().grow(moved);
+                        old.stack().shrink(moved);
+                        if (old.stack().isEmpty()) {
+                            entries.remove(i);
+                        }
+                        setChanged();
+                        return true;
+                    }
+                }
+                if (!GridPlacementValidator.canPlace(this, old.stack(), x, y, rotated, entryId)) {
+                    return false;
+                }
+                var size = GridItemSizeManager.getSize(old.stack());
+                entries.set(i, new GridEntry(entryId, old.stack(), x, y, size.placedWidth(rotated), size.placedHeight(rotated), rotated));
+                setChanged();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public ItemStack extract(UUID entryId, int amount) {
+        for (int i = 0; i < entries.size(); i++) {
+            GridEntry entry = entries.get(i);
+            if (entry.entryId().equals(entryId)) {
+                ItemStack extracted = entry.stack().copyWithCount(Math.min(amount, entry.stack().getCount()));
+                entry.stack().shrink(extracted.getCount());
+                if (entry.stack().isEmpty()) {
+                    entries.remove(i);
+                }
+                setChanged();
+                return extracted;
+            }
+        }
+        return ItemStack.EMPTY;
+    }
+
+    public Optional<GridEntry> getEntry(UUID entryId) {
+        return entries.stream().filter(entry -> entry.entryId().equals(entryId)).findFirst();
+    }
+
+    @Override
+    public void setChanged() {
+        changeListener.run();
+    }
+
+    public void encode(RegistryFriendlyByteBuf buf) {
+        buf.writeVarInt(columns);
+        buf.writeVarInt(rows);
+        buf.writeVarInt(entries.size());
+        for (GridEntry entry : entries) {
+            entry.encode(buf);
+        }
+    }
+
+    public static GridInventoryData decode(RegistryFriendlyByteBuf buf) {
+        int columns = buf.readVarInt();
+        int rows = buf.readVarInt();
+        int count = buf.readVarInt();
+        List<GridEntry> entries = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            entries.add(GridEntry.decode(buf));
+        }
+        return new GridInventoryData(columns, rows, entries);
+    }
+}
