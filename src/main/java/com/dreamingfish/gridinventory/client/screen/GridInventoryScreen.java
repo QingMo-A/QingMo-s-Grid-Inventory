@@ -54,10 +54,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF202020);
         GridRenderer.renderGrid(graphics, gridLeft, gridTop, menu.getGridData().getColumns(), menu.getGridData().getRows(), CELL);
         for (GridEntry entry : menu.getGridData().getEntries()) {
+            if (draggingEntry != null && draggingEntry.entryId().equals(entry.entryId())) {
+                continue;
+            }
             GridItemRenderer.renderEntry(graphics, entry, gridLeft, gridTop, CELL);
         }
+        renderDraggedOriginShadow(graphics);
         renderHover(graphics, mouseX, mouseY);
         renderPreview(graphics, mouseX, mouseY);
+        renderDraggedStackGhost(graphics, mouseX, mouseY);
     }
 
     private void renderHover(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -98,7 +103,42 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         GridItemSize size = GridItemSizeManager.getSize(stack);
         int w = size.placedWidth(rotatedPreview);
         int h = size.placedHeight(rotatedPreview);
-        graphics.fill(gridLeft + x * CELL, gridTop + y * CELL, gridLeft + (x + w) * CELL, gridTop + (y + h) * CELL, valid ? 0x6630C860 : 0x66D84040);
+        int left = gridLeft + x * CELL;
+        int top = gridTop + y * CELL;
+        int color = valid ? 0x6630C860 : 0x66D84040;
+        int outline = valid ? 0xCC7DFFA2 : 0xCCFF8888;
+        graphics.fill(left, top, left + w * CELL, top + h * CELL, color);
+        renderCellOutlines(graphics, left, top, w, h, outline);
+    }
+
+    private void renderDraggedOriginShadow(GuiGraphics graphics) {
+        if (draggingEntry == null) {
+            return;
+        }
+        GridItemRenderer.renderEntry(graphics, draggingEntry, gridLeft, gridTop, CELL, 0.35F);
+    }
+
+    private void renderDraggedStackGhost(GuiGraphics graphics, int mouseX, int mouseY) {
+        ItemStack stack = draggingEntry != null ? draggingEntry.stack() : selectedPlayerStack;
+        if (stack.isEmpty()) {
+            return;
+        }
+        GridItemSize size = GridItemSizeManager.getSize(stack);
+        int w = size.placedWidth(rotatedPreview);
+        int h = size.placedHeight(rotatedPreview);
+        int left = inGrid(mouseX, mouseY) ? gridLeft + cellX(mouseX) * CELL : mouseX - 8;
+        int top = inGrid(mouseX, mouseY) ? gridTop + cellY(mouseY) * CELL : mouseY - 8;
+        graphics.fill(left, top, left + w * CELL, top + h * CELL, 0x332C6DB8);
+        renderCellOutlines(graphics, left, top, w, h, 0x99FFFFFF);
+        GridItemRenderer.renderStack(graphics, stack, left + 4, top + 4, 0.75F);
+    }
+
+    private void renderCellOutlines(GuiGraphics graphics, int left, int top, int width, int height, int color) {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                graphics.renderOutline(left + x * CELL, top + y * CELL, CELL, CELL, color);
+            }
+        }
     }
 
     @Override
