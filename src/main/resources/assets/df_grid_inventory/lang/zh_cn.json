@@ -5,6 +5,7 @@
   "container.df_grid_inventory.player_grid_inventory": "背包",
   "key.categories.df_grid_inventory": "DF 网格背包",
   "key.df_grid_inventory.pickup_item": "拾取物品",
+  "hud.df_grid_inventory.pickup_prompt": "%s 拾取",
   "screen.df_grid_inventory.nearby_items": "附近物品",
   "tooltip.df_grid_inventory.pickup_hint": "按拾取键或点击拾取"
 }
