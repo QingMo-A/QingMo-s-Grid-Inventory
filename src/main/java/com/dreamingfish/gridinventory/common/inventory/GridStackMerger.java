@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.common.inventory;
 
+import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import net.minecraft.world.item.ItemStack;
 
@@ -10,6 +11,9 @@ public final class GridStackMerger {
     public static ItemStack mergeIntoExisting(GridInventoryData inventory, ItemStack stack) {
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
+        }
+        if (!itemsStackableInGrid()) {
+            return stack.copy();
         }
         ItemStack remainder = stack.copy();
         for (var entry : inventory.getEntries()) {
@@ -31,6 +35,9 @@ public final class GridStackMerger {
         if (stack.isEmpty()) {
             return true;
         }
+        if (!itemsStackableInGrid()) {
+            return false;
+        }
         int remaining = stack.getCount();
         for (var entry : inventory.getEntries()) {
             ItemStack existing = entry.stack();
@@ -42,5 +49,9 @@ public final class GridStackMerger {
             }
         }
         return false;
+    }
+
+    public static boolean itemsStackableInGrid() {
+        return GridInventoryConfig.GRID_ITEMS_STACKABLE.get();
     }
 }

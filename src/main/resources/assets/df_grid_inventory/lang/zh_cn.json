@@ -6,6 +6,16 @@
   "key.categories.df_grid_inventory": "DF 网格背包",
   "key.df_grid_inventory.pickup_item": "拾取物品",
   "hud.df_grid_inventory.pickup_prompt": "%s 拾取",
+  "screen.df_grid_inventory.equipment": "装备",
+  "screen.df_grid_inventory.storage": "格子",
+  "screen.df_grid_inventory.pocket": "口袋",
+  "screen.df_grid_inventory.chest_storage": "无胸甲口袋",
+  "screen.df_grid_inventory.legs_storage": "无护腿口袋",
+  "screen.df_grid_inventory.main_hand": "右手",
+  "screen.df_grid_inventory.hotbar": "快捷栏",
+  "screen.df_grid_inventory.armor_upper": "头盔 / 胸甲",
+  "screen.df_grid_inventory.armor_lower": "护腿 / 靴子",
+  "screen.df_grid_inventory.offhand": "左手",
   "screen.df_grid_inventory.nearby_items": "附近物品",
   "tooltip.df_grid_inventory.pickup_hint": "按拾取键或点击拾取"
 }

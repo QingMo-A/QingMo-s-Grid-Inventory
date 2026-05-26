@@ -40,4 +40,12 @@ public abstract class InventoryScreenMixin extends EffectRenderingInventoryScree
         }
     }
 
+    @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
+    private void df_grid_inventory$releaseNearbyItems(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (Minecraft.getInstance().player != null && !Minecraft.getInstance().player.isCreative()
+                && df_grid_inventory$nearbyItemsPanel.mouseReleased(mouseX, mouseY, button)) {
+            cir.setReturnValue(true);
+        }
+    }
+
 }

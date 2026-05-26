@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.common.registry;
 
 import com.dreamingfish.gridinventory.DFGridInventoryMod;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -13,6 +14,10 @@ public final class ModDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<GridInventoryData>> GRID_INVENTORY = DATA_COMPONENTS.register(
             "grid_inventory",
             () -> DataComponentType.<GridInventoryData>builder().persistent(GridInventoryData.CODEC).networkSynchronized(GridInventoryData.STREAM_CODEC).build()
+    );
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<EquipmentStorageData>> EQUIPMENT_STORAGE = DATA_COMPONENTS.register(
+            "equipment_storage",
+            () -> DataComponentType.<EquipmentStorageData>builder().persistent(EquipmentStorageData.CODEC).networkSynchronized(EquipmentStorageData.STREAM_CODEC).build()
     );
 
     private ModDataComponents() {

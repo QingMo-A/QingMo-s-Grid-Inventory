@@ -1,0 +1,30 @@
+{
+  "rules": [
+    {
+      "type": "item",
+      "target": "minecraft:leather_chestplate",
+      "slot": "chest",
+      "containers": [
+        {
+          "id": "front_pockets",
+          "title": "Chest Pockets",
+          "columns": 4,
+          "rows": 2
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "minecraft:leather_leggings",
+      "slot": "legs",
+      "containers": [
+        {
+          "id": "leg_pockets",
+          "title": "Leg Pockets",
+          "columns": 4,
+          "rows": 1
+        }
+      ]
+    }
+  ]
+}

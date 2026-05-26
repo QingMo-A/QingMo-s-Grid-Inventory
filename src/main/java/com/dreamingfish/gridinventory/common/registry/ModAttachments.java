@@ -13,7 +13,7 @@ public final class ModAttachments {
 
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<GridInventoryData>> PLAYER_GRID_INVENTORY = ATTACHMENT_TYPES.register(
             "player_grid_inventory",
-            () -> AttachmentType.builder(() -> new GridInventoryData(GridInventoryConfig.PLAYER_GRID_COLUMNS.get(), GridInventoryConfig.PLAYER_GRID_ROWS.get()))
+            () -> AttachmentType.builder(() -> new GridInventoryData(GridInventoryConfig.POCKET_COLUMNS.get(), GridInventoryConfig.POCKET_ROWS.get()))
                     .serialize(GridInventoryData.CODEC)
                     .copyOnDeath()
                     .build()

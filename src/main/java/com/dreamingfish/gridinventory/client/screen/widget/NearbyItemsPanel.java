@@ -1,8 +1,8 @@
 package com.dreamingfish.gridinventory.client.screen.widget;
 
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
+import com.dreamingfish.gridinventory.client.pickup.ClientPickupController;
 import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
-import com.dreamingfish.gridinventory.common.network.ManualPickupItemPacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -12,7 +12,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,14 +25,26 @@ public class NearbyItemsPanel {
     private int top;
     private int columns;
     private int visibleRows;
+    private int panelHeight;
     private int scrollRows;
     private int totalRows;
+    private NearbyGroundItemView draggedView;
+    private boolean dragging;
 
     public void setBounds(int left, int top) {
+        setBounds(left, top, GridInventoryClientConfig.NEARBY_PANEL_VISIBLE_ROWS.get() * CELL + 26);
+    }
+
+    public void setBounds(int left, int top, int availableHeight) {
+        setBounds(left, top, availableHeight, GridInventoryClientConfig.NEARBY_PANEL_COLUMNS.get());
+    }
+
+    public void setBounds(int left, int top, int availableHeight, int maxColumns) {
         this.left = left;
         this.top = top;
-        this.columns = GridInventoryClientConfig.NEARBY_PANEL_COLUMNS.get();
-        this.visibleRows = GridInventoryClientConfig.NEARBY_PANEL_VISIBLE_ROWS.get();
+        this.columns = Math.max(2, Math.min(GridInventoryClientConfig.NEARBY_PANEL_COLUMNS.get(), maxColumns));
+        this.panelHeight = Math.max(CELL + 26, availableHeight);
+        this.visibleRows = Math.max(1, (panelHeight - 26) / CELL);
     }
 
     public int width() {
@@ -41,7 +52,7 @@ public class NearbyItemsPanel {
     }
 
     public int height() {
-        return visibleRows * CELL + 26;
+        return panelHeight > 0 ? panelHeight : visibleRows * CELL + 26;
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -70,13 +81,19 @@ public class NearbyItemsPanel {
         }
         graphics.disableScissor();
 
-        hovered(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(
+        if (dragging && draggedView != null) {
+            renderDraggedView(graphics, font, mouseX, mouseY);
+        }
+
+        if (!dragging) {
+            hovered(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(
                 entry.view.stack().getHoverName(),
                 Component.literal("Count: " + entry.view.stack().getCount()).withStyle(ChatFormatting.GRAY),
                 Component.literal(String.format("Distance: %.1f", entry.view.distance())).withStyle(ChatFormatting.GRAY),
                 Component.literal("Size: " + entry.view.gridWidth() + " x " + entry.view.gridHeight()).withStyle(ChatFormatting.GRAY),
                 Component.translatable("tooltip.df_grid_inventory.pickup_hint").withStyle(ChatFormatting.YELLOW)
-        ), Optional.empty(), mouseX, mouseY));
+            ), Optional.empty(), mouseX, mouseY));
+        }
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -84,8 +101,27 @@ public class NearbyItemsPanel {
             return false;
         }
         Optional<Entry> hit = hovered((int) mouseX, (int) mouseY);
-        hit.ifPresent(entry -> PacketDistributor.sendToServer(new ManualPickupItemPacket(entry.view.entityId())));
+        hit.ifPresent(entry -> {
+            draggedView = entry.view;
+            dragging = true;
+        });
         return hit.isPresent() || isInside((int) mouseX, (int) mouseY, left, top, width(), height());
+    }
+
+    public boolean mouseDragged(double mouseX, double mouseY, int button) {
+        return button == 0 && dragging;
+    }
+
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button != 0 || !dragging) {
+            return false;
+        }
+        if (draggedView != null) {
+            ClientPickupController.requestPickup(draggedView.entityId());
+        }
+        draggedView = null;
+        dragging = false;
+        return true;
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaY) {
@@ -95,6 +131,21 @@ public class NearbyItemsPanel {
         int max = Math.max(0, totalRows - visibleRows);
         scrollRows = Math.max(0, Math.min(max, scrollRows - (int) Math.signum(deltaY)));
         return true;
+    }
+
+    private void renderDraggedView(GuiGraphics graphics, Font font, int mouseX, int mouseY) {
+        int width = draggedView.gridWidth() * CELL;
+        int height = draggedView.gridHeight() * CELL;
+        int x = mouseX - 8;
+        int y = mouseY - 8;
+        graphics.fill(x, y, x + width, y + height, 0x66305FA8);
+        for (int yy = 0; yy < draggedView.gridHeight(); yy++) {
+            for (int xx = 0; xx < draggedView.gridWidth(); xx++) {
+                graphics.renderOutline(x + xx * CELL, y + yy * CELL, CELL, CELL, 0xAAFFFFFF);
+            }
+        }
+        graphics.renderItem(draggedView.stack(), x + 2, y + 2);
+        graphics.renderItemDecorations(font, draggedView.stack(), x + 2, y + 2);
     }
 
     private Optional<Entry> hovered(int mouseX, int mouseY) {

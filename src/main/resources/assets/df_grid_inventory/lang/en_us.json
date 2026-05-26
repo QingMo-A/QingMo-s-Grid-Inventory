@@ -6,6 +6,16 @@
   "key.categories.df_grid_inventory": "DF Grid Inventory",
   "key.df_grid_inventory.pickup_item": "Pick Up Item",
   "hud.df_grid_inventory.pickup_prompt": "%s Pick Up",
+  "screen.df_grid_inventory.equipment": "Equipment",
+  "screen.df_grid_inventory.storage": "Storage",
+  "screen.df_grid_inventory.pocket": "Pockets",
+  "screen.df_grid_inventory.chest_storage": "No chest storage",
+  "screen.df_grid_inventory.legs_storage": "No leg storage",
+  "screen.df_grid_inventory.main_hand": "Main hand",
+  "screen.df_grid_inventory.hotbar": "Hotbar",
+  "screen.df_grid_inventory.armor_upper": "Helmet / Chest",
+  "screen.df_grid_inventory.armor_lower": "Legs / Boots",
+  "screen.df_grid_inventory.offhand": "Offhand",
   "screen.df_grid_inventory.nearby_items": "Nearby Items",
   "tooltip.df_grid_inventory.pickup_hint": "Press Pickup Key or Click to pick up"
 }

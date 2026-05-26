@@ -22,6 +22,9 @@ public final class ModNetworking {
         registrar.playToServer(OpenPlayerGridInventoryPacket.TYPE, OpenPlayerGridInventoryPacket.STREAM_CODEC, OpenPlayerGridInventoryPacket::handle);
         registrar.playToServer(ManualPickupItemPacket.TYPE, ManualPickupItemPacket.STREAM_CODEC, ManualPickupItemPacket::handle);
         registrar.playToServer(PickupGroundItemIntoGridPacket.TYPE, PickupGroundItemIntoGridPacket.STREAM_CODEC, PickupGroundItemIntoGridPacket::handle);
+        registrar.playToServer(InsertIntoEquipmentStoragePacket.TYPE, InsertIntoEquipmentStoragePacket.STREAM_CODEC, InsertIntoEquipmentStoragePacket::handle);
+        registrar.playToServer(MoveEquipmentStorageEntryPacket.TYPE, MoveEquipmentStorageEntryPacket.STREAM_CODEC, MoveEquipmentStorageEntryPacket::handle);
+        registrar.playToServer(ExtractEquipmentStorageEntryPacket.TYPE, ExtractEquipmentStorageEntryPacket.STREAM_CODEC, ExtractEquipmentStorageEntryPacket::handle);
     }
 
     public static void syncMenu(Player player, GridInventoryMenu menu) {

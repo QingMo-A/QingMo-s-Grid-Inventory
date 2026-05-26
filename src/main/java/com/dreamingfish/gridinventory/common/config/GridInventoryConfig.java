@@ -9,11 +9,19 @@ public final class GridInventoryConfig {
     public static final ModConfigSpec.IntValue DEFAULT_ITEM_WIDTH;
     public static final ModConfigSpec.IntValue DEFAULT_ITEM_HEIGHT;
     public static final ModConfigSpec.BooleanValue DEFAULT_ROTATABLE;
+    public static final ModConfigSpec.BooleanValue GRID_ITEMS_STACKABLE;
     public static final ModConfigSpec.IntValue SMALL_GRID_BAG_COLUMNS;
     public static final ModConfigSpec.IntValue SMALL_GRID_BAG_ROWS;
     public static final ModConfigSpec.BooleanValue REPLACE_SURVIVAL_INVENTORY;
     public static final ModConfigSpec.IntValue PLAYER_GRID_COLUMNS;
     public static final ModConfigSpec.IntValue PLAYER_GRID_ROWS;
+    public static final ModConfigSpec.BooleanValue POCKET_ENABLED;
+    public static final ModConfigSpec.IntValue POCKET_COLUMNS;
+    public static final ModConfigSpec.IntValue POCKET_ROWS;
+    public static final ModConfigSpec.BooleanValue EQUIPMENT_STORAGE_ENABLED;
+    public static final ModConfigSpec.BooleanValue PREVENT_UNEQUIP_WHEN_STORAGE_NOT_EMPTY;
+    public static final ModConfigSpec.BooleanValue ALLOW_CHEST_STORAGE;
+    public static final ModConfigSpec.BooleanValue ALLOW_LEGS_STORAGE;
     public static final ModConfigSpec.BooleanValue CUSTOM_HOTBAR_SLOTS_ENABLED;
     public static final ModConfigSpec.IntValue HOTBAR_SLOTS;
     public static final ModConfigSpec.BooleanValue DISABLE_VANILLA_AUTO_PICKUP;
@@ -32,6 +40,11 @@ public final class GridInventoryConfig {
         DEFAULT_ROTATABLE = BUILDER.define("default_rotatable", false);
         BUILDER.pop();
 
+        BUILDER.push("grid_inventory");
+        GRID_ITEMS_STACKABLE = BUILDER.comment("If false, items stored inside grid inventories are split into count-1 entries even when vanilla would allow stacking.")
+                .define("items_stackable", true);
+        BUILDER.pop();
+
         BUILDER.push("small_grid_bag");
         SMALL_GRID_BAG_COLUMNS = BUILDER.defineInRange("columns", 8, 1, 32);
         SMALL_GRID_BAG_ROWS = BUILDER.defineInRange("rows", 6, 1, 32);
@@ -41,6 +54,21 @@ public final class GridInventoryConfig {
         REPLACE_SURVIVAL_INVENTORY = BUILDER.define("replace_survival_inventory", true);
         PLAYER_GRID_COLUMNS = BUILDER.defineInRange("columns", 10, 1, 32);
         PLAYER_GRID_ROWS = BUILDER.defineInRange("rows", 6, 1, 32);
+        BUILDER.pop();
+
+        BUILDER.push("pocket");
+        POCKET_ENABLED = BUILDER.define("enabled", true);
+        POCKET_COLUMNS = BUILDER.defineInRange("columns", 4, 1, 16);
+        POCKET_ROWS = BUILDER.defineInRange("rows", 1, 1, 16);
+        BUILDER.pop();
+
+        BUILDER.push("equipment_storage");
+        EQUIPMENT_STORAGE_ENABLED = BUILDER.define("enabled", true);
+        PREVENT_UNEQUIP_WHEN_STORAGE_NOT_EMPTY = BUILDER.define("prevent_unequip_when_storage_not_empty", true);
+        ALLOW_CHEST_STORAGE = BUILDER.define("allow_chest_storage", true);
+        ALLOW_LEGS_STORAGE = BUILDER.define("allow_legs_storage", true);
+        BUILDER.define("allow_helmet_storage", false);
+        BUILDER.define("allow_boots_storage", false);
         BUILDER.pop();
 
         BUILDER.push("hotbar");
@@ -57,6 +85,10 @@ public final class GridInventoryConfig {
         BUILDER.pop();
 
         BUILDER.push("nearby_panel");
+        BUILDER.define("enabled", true);
+        BUILDER.defineInRange("columns", 6, 1, 16);
+        BUILDER.defineInRange("visible_rows", 10, 1, 32);
+        BUILDER.define("sort_mode", "distance");
         SERVER_VALIDATE_NEARBY_RANGE = BUILDER.define("server_validate_nearby_range", true);
         BUILDER.defineInRange("nearby_items_range", 6.0, 0.5, 64.0);
         BUILDER.pop();

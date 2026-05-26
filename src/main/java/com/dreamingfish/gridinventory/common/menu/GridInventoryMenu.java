@@ -2,19 +2,26 @@ package com.dreamingfish.gridinventory.common.menu;
 
 import com.dreamingfish.gridinventory.api.GridInsertMode;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
+import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
+import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
+import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
 import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
 import com.dreamingfish.gridinventory.common.registry.ModAttachments;
+import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.UUID;
+import java.util.Optional;
 
 public class GridInventoryMenu extends AbstractContainerMenu {
     private final Inventory playerInventory;
@@ -48,8 +55,13 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     private void addPlayerSlots(Inventory inventory) {
         if (playerGrid) {
+            this.addSlot(new EquipmentSlotView(inventory, 39, 12, 64, EquipmentSlot.HEAD));
+            this.addSlot(new EquipmentSlotView(inventory, 38, 12, 84, EquipmentSlot.CHEST));
+            this.addSlot(new EquipmentSlotView(inventory, 37, 12, 104, EquipmentSlot.LEGS));
+            this.addSlot(new EquipmentSlotView(inventory, 36, 12, 124, EquipmentSlot.FEET));
+            this.addSlot(new Slot(inventory, 40, 12, 150));
             for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column, 8 + column * 18, 198));
+                this.addSlot(new Slot(inventory, column, 86 + column * 18, 198));
             }
             return;
         }
@@ -67,6 +79,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return gridData;
     }
 
+    public boolean isPlayerGrid() {
+        return playerGrid;
+    }
+
     public void replaceGridData(GridInventoryData data) {
         this.gridData = data;
         this.gridData.setChangeListener(this::save);
@@ -80,8 +96,12 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (source.isEmpty()) {
             return false;
         }
+        if ((playerSlot == 38 || playerSlot == 37) && EquipmentStorageManager.preventsUnequip(source)) {
+            return false;
+        }
         var targetEntry = gridData.getEntries().stream().filter(entry -> entry.contains(targetX, targetY)).findFirst();
-        if (targetEntry.isPresent()
+        if (GridStackMerger.itemsStackableInGrid()
+                && targetEntry.isPresent()
                 && ItemStack.isSameItemSameComponents(targetEntry.get().stack(), source)
                 && targetEntry.get().stack().getCount() < targetEntry.get().stack().getMaxStackSize()) {
             int moved = Math.min(source.getCount(), targetEntry.get().stack().getMaxStackSize() - targetEntry.get().stack().getCount());
@@ -95,8 +115,9 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (!GridPlacementValidator.canPlace(gridData, source, targetX, targetY, rotated, null)) {
             return false;
         }
-        gridData.add(source.copy(), targetX, targetY, rotated);
-        source.setCount(0);
+        ItemStack inserted = source.copyWithCount(GridStackMerger.itemsStackableInGrid() ? source.getCount() : 1);
+        gridData.add(inserted, targetX, targetY, rotated);
+        source.shrink(inserted.getCount());
         playerInventory.setChanged();
         save();
         return true;
@@ -107,9 +128,13 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return false;
         }
         ItemStack source = playerInventory.getItem(playerSlot);
+        if ((playerSlot == 38 || playerSlot == 37) && EquipmentStorageManager.preventsUnequip(source)) {
+            return false;
+        }
         ItemStack remainder = gridData.insert(source.copy(), GridInsertMode.EXECUTE);
-        if (remainder.isEmpty()) {
-            source.setCount(0);
+        int inserted = source.getCount() - remainder.getCount();
+        if (inserted > 0) {
+            source.shrink(inserted);
             playerInventory.setChanged();
             save();
             return true;
@@ -123,6 +148,82 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             save();
         }
         return moved;
+    }
+
+    public boolean insertFromPlayerIntoEquipmentStorage(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {
+        if (playerSlot < 0 || playerSlot >= 36 || playerSlot >= playerInventory.getContainerSize()) {
+            return false;
+        }
+        ItemStack source = playerInventory.getItem(playerSlot);
+        Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(equipmentSlot, containerId);
+        if (source.isEmpty() || edit.isEmpty() || !GridPlacementValidator.canPlace(edit.get().inventory(), source, targetX, targetY, rotated, null)) {
+            return false;
+        }
+        ItemStack inserted = source.copyWithCount(GridStackMerger.itemsStackableInGrid() ? source.getCount() : 1);
+        edit.get().inventory().add(inserted, targetX, targetY, rotated);
+        source.shrink(inserted.getCount());
+        saveEquipmentStorage(equipmentSlot, edit.get().storage());
+        playerInventory.setChanged();
+        return true;
+    }
+
+    public boolean moveEquipmentEntry(EquipmentSlot equipmentSlot, String containerId, UUID entryId, int targetX, int targetY, boolean rotated) {
+        Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(equipmentSlot, containerId);
+        if (edit.isEmpty() || !edit.get().inventory().move(entryId, targetX, targetY, rotated)) {
+            return false;
+        }
+        saveEquipmentStorage(equipmentSlot, edit.get().storage());
+        return true;
+    }
+
+    public boolean extractEquipmentEntryToPlayerSlot(EquipmentSlot equipmentSlot, String containerId, UUID entryId, int playerSlot, int amount) {
+        if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
+            return false;
+        }
+        Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(equipmentSlot, containerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = edit.flatMap(storage -> storage.inventory().getEntry(entryId));
+        if (entry.isEmpty() || !mayInsertIntoVanillaSlot(playerSlot, entry.get().stack())) {
+            return false;
+        }
+        ItemStack destination = playerInventory.getItem(playerSlot);
+        ItemStack stack = entry.get().stack();
+        int amountToMove = Math.min(amount, stack.getCount());
+        if (destination.isEmpty()) {
+            playerInventory.setItem(playerSlot, edit.get().inventory().extract(entryId, amountToMove));
+        } else if (ItemStack.isSameItemSameComponents(destination, stack) && destination.getCount() < destination.getMaxStackSize()) {
+            int accepted = Math.min(amountToMove, destination.getMaxStackSize() - destination.getCount());
+            edit.get().inventory().extract(entryId, accepted);
+            destination.grow(accepted);
+        } else {
+            return false;
+        }
+        saveEquipmentStorage(equipmentSlot, edit.get().storage());
+        playerInventory.setChanged();
+        return true;
+    }
+
+    private Optional<EquipmentStorageEdit> editableEquipmentInventory(EquipmentSlot slot, String containerId) {
+        ItemStack equipped = playerInventory.player.getItemBySlot(slot);
+        EquipmentStorageData current = equipped.get(ModDataComponents.EQUIPMENT_STORAGE.get());
+        if (current == null) {
+            return Optional.empty();
+        }
+        EquipmentStorageData storage = new EquipmentStorageData(current.containers().stream()
+                .map(container -> new NamedGridInventoryData(container.id(), container.title(), container.inventory().copy()))
+                .toList());
+        return storage.containers().stream()
+                .filter(container -> container.id().equals(containerId))
+                .map(container -> new EquipmentStorageEdit(storage, container.inventory()))
+                .findFirst();
+    }
+
+    private void saveEquipmentStorage(EquipmentSlot slot, EquipmentStorageData storage) {
+        ItemStack equipped = playerInventory.player.getItemBySlot(slot);
+        equipped.set(ModDataComponents.EQUIPMENT_STORAGE.get(), storage);
+        playerInventory.setChanged();
+    }
+
+    private record EquipmentStorageEdit(EquipmentStorageData storage, GridInventoryData inventory) {
     }
 
     public boolean extractToPlayerInventory(UUID entryId, int amount) {
@@ -151,6 +252,9 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         }
         ItemStack target = playerInventory.getItem(playerSlot);
         ItemStack stack = entry.get().stack();
+        if (!mayInsertIntoVanillaSlot(playerSlot, stack)) {
+            return false;
+        }
         int moveCount = Math.min(amount, stack.getCount());
         if (target.isEmpty()) {
             ItemStack extracted = gridData.extract(entryId, moveCount);
@@ -171,6 +275,16 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         playerInventory.setChanged();
         save();
         return true;
+    }
+
+    private boolean mayInsertIntoVanillaSlot(int playerSlot, ItemStack stack) {
+        return switch (playerSlot) {
+            case 39 -> stack.canEquip(EquipmentSlot.HEAD, playerInventory.player);
+            case 38 -> stack.canEquip(EquipmentSlot.CHEST, playerInventory.player);
+            case 37 -> stack.canEquip(EquipmentSlot.LEGS, playerInventory.player);
+            case 36 -> stack.canEquip(EquipmentSlot.FEET, playerInventory.player);
+            default -> true;
+        };
     }
 
     public ItemStack bagStack() {
@@ -209,5 +323,31 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     public void removed(Player player) {
         super.removed(player);
         save();
+    }
+
+    private static class EquipmentSlotView extends Slot {
+        private final EquipmentSlot equipmentSlot;
+        private final Player owner;
+
+        private EquipmentSlotView(Inventory inventory, int index, int x, int y, EquipmentSlot equipmentSlot) {
+            super(inventory, index, x, y);
+            this.equipmentSlot = equipmentSlot;
+            this.owner = inventory.player;
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return stack.canEquip(equipmentSlot, owner);
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            return !EquipmentStorageManager.preventsUnequip(getItem());
+        }
+
+        @Override
+        public int getMaxStackSize() {
+            return 1;
+        }
     }
 }

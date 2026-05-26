@@ -43,7 +43,9 @@ public class GridInventoryData implements IGridInventory {
     }
 
     public GridInventoryData copy() {
-        return new GridInventoryData(columns, rows, entries);
+        return new GridInventoryData(columns, rows, entries.stream()
+                .map(entry -> new GridEntry(entry.entryId(), entry.stack().copy(), entry.x(), entry.y(), entry.width(), entry.height(), entry.rotated()))
+                .toList());
     }
 
     public void setChangeListener(Runnable changeListener) {
@@ -68,11 +70,14 @@ public class GridInventoryData implements IGridInventory {
 
     @Override
     public boolean canInsert(ItemStack stack) {
-        return GridAutoInsertHelper.findFirstPlacement(this, stack).isPresent();
+        return insert(stack, GridInsertMode.SIMULATE).isEmpty();
     }
 
     @Override
     public ItemStack insert(ItemStack stack, GridInsertMode mode) {
+        if (!GridStackMerger.itemsStackableInGrid()) {
+            return insertUnstacked(stack, mode);
+        }
         ItemStack remainder = stack;
         if (mode == GridInsertMode.EXECUTE) {
             remainder = GridStackMerger.mergeIntoExisting(this, stack);
@@ -92,6 +97,25 @@ public class GridInventoryData implements IGridInventory {
         return ItemStack.EMPTY;
     }
 
+    private ItemStack insertUnstacked(ItemStack stack, GridInsertMode mode) {
+        if (stack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        GridInventoryData targetInventory = mode == GridInsertMode.EXECUTE ? this : copy();
+        ItemStack remainder = stack.copy();
+        while (!remainder.isEmpty()) {
+            ItemStack single = remainder.copyWithCount(1);
+            Optional<GridAutoInsertHelper.Placement> placement = GridAutoInsertHelper.findFirstPlacement(targetInventory, single);
+            if (placement.isEmpty()) {
+                return remainder;
+            }
+            GridAutoInsertHelper.Placement target = placement.get();
+            targetInventory.add(single, target.x(), target.y(), target.rotated());
+            remainder.shrink(1);
+        }
+        return ItemStack.EMPTY;
+    }
+
     public GridEntry add(ItemStack stack, int x, int y, boolean rotated) {
         var size = GridItemSizeManager.getSize(stack);
         GridEntry entry = new GridEntry(UUID.randomUUID(), stack, x, y, size.placedWidth(rotated), size.placedHeight(rotated), rotated);
@@ -104,20 +128,22 @@ public class GridInventoryData implements IGridInventory {
         for (int i = 0; i < entries.size(); i++) {
             GridEntry old = entries.get(i);
             if (old.entryId().equals(entryId)) {
-                for (int targetIndex = 0; targetIndex < entries.size(); targetIndex++) {
-                    GridEntry target = entries.get(targetIndex);
-                    if (!target.entryId().equals(entryId)
-                            && target.contains(x, y)
-                            && ItemStack.isSameItemSameComponents(target.stack(), old.stack())
-                            && target.stack().getCount() < target.stack().getMaxStackSize()) {
-                        int moved = Math.min(old.stack().getCount(), target.stack().getMaxStackSize() - target.stack().getCount());
-                        target.stack().grow(moved);
-                        old.stack().shrink(moved);
-                        if (old.stack().isEmpty()) {
-                            entries.remove(i);
+                if (GridStackMerger.itemsStackableInGrid()) {
+                    for (int targetIndex = 0; targetIndex < entries.size(); targetIndex++) {
+                        GridEntry target = entries.get(targetIndex);
+                        if (!target.entryId().equals(entryId)
+                                && target.contains(x, y)
+                                && ItemStack.isSameItemSameComponents(target.stack(), old.stack())
+                                && target.stack().getCount() < target.stack().getMaxStackSize()) {
+                            int moved = Math.min(old.stack().getCount(), target.stack().getMaxStackSize() - target.stack().getCount());
+                            target.stack().grow(moved);
+                            old.stack().shrink(moved);
+                            if (old.stack().isEmpty()) {
+                                entries.remove(i);
+                            }
+                            setChanged();
+                            return true;
                         }
-                        setChanged();
-                        return true;
                     }
                 }
                 if (!GridPlacementValidator.canPlace(this, old.stack(), x, y, rotated, entryId)) {

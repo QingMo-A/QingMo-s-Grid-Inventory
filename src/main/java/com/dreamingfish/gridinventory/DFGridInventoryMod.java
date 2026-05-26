@@ -12,6 +12,7 @@ import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
+import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
 import com.mojang.logging.LogUtils;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -55,6 +56,7 @@ public class DFGridInventoryMod {
     @SubscribeEvent
     public void addReloadListener(AddReloadListenerEvent event) {
         event.addListener(new GridItemSizeLoader());
+        event.addListener(new EquipmentStorageLoader());
     }
 
     @SubscribeEvent

@@ -10,8 +10,15 @@ import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryPac
 import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotPacket;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryPacket;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryPacket;
+import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStoragePacket;
+import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryPacket;
+import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryPacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
+import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
+import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
+import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
+import com.dreamingfish.gridinventory.mixin.client.SlotAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -29,28 +36,79 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private int gridLeft;
     private int gridTop;
     private GridEntry draggingEntry;
+    private GridColumnPanel.EquipmentEntryHit draggingEquipmentEntry;
     private boolean rotatedPreview;
     private int lastPlayerSlot = -1;
     private ItemStack selectedPlayerStack = ItemStack.EMPTY;
+    private int dragAnchorCellX;
+    private int dragAnchorCellY;
+    private int dragAnchorPixelX = CELL / 2;
+    private int dragAnchorPixelY = CELL / 2;
     private final NearbyItemsPanel nearbyItemsPanel = new NearbyItemsPanel();
+    private final EquipmentColumnPanel equipmentColumnPanel = new EquipmentColumnPanel();
+    private final GridColumnPanel gridColumnPanel = new GridColumnPanel();
+    private int workspaceMargin;
+    private int columnGap;
+    private int equipmentWidth;
+    private int gridColumnWidth;
+    private int workspaceTop;
+    private int columnHeight;
 
     public GridInventoryScreen(GridInventoryMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 176;
+        this.imageWidth = menu.isPlayerGrid() ? 390 : 176;
         this.imageHeight = 222;
         this.inventoryLabelY = 126;
     }
 
     @Override
     protected void init() {
+        if (menu.isPlayerGrid()) {
+            workspaceMargin = Math.max(6, Math.min(16, Math.min(width, height) / 20));
+            columnGap = GridInventoryClientConfig.COLUMN_GAP.get();
+            imageWidth = Math.max(360, width - workspaceMargin * 2);
+            imageHeight = Math.max(222, height - workspaceMargin * 2);
+        }
         super.init();
-        gridLeft = leftPos + 16;
-        gridTop = topPos + 18;
-        nearbyItemsPanel.setBounds(leftPos + imageWidth + 8, topPos + 16);
+        if (menu.isPlayerGrid()) {
+            workspaceTop = topPos;
+            columnHeight = imageHeight - 38;
+            int nearbyColumns = Math.max(2, Math.min(
+                    GridInventoryClientConfig.NEARBY_PANEL_COLUMNS.get(),
+                    (imageWidth - 204 - 88 - columnGap * 2 - 12) / CELL
+            ));
+            int nearbyWidth = nearbyColumns * CELL + 12;
+            equipmentWidth = Math.max(204, Math.min(232, imageWidth - nearbyWidth - columnGap * 2 - 88));
+            gridColumnWidth = imageWidth - equipmentWidth - nearbyWidth - columnGap * 2;
+            int gridColumnLeft = leftPos + equipmentWidth + columnGap;
+            int nearbyLeft = gridColumnLeft + gridColumnWidth + columnGap;
+            equipmentColumnPanel.setBounds(leftPos, workspaceTop, equipmentWidth, columnHeight);
+            gridColumnPanel.setBounds(gridColumnLeft, workspaceTop, gridColumnWidth, columnHeight);
+            gridLeft = gridColumnPanel.pocketLeft();
+            gridTop = gridColumnPanel.pocketTop();
+            nearbyItemsPanel.setBounds(nearbyLeft, workspaceTop, columnHeight, nearbyColumns);
+            repositionVanillaSlots();
+        } else {
+            gridLeft = leftPos + 16;
+            gridTop = topPos + 18;
+            nearbyItemsPanel.setBounds(leftPos + imageWidth + 8, topPos + 16);
+        }
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        if (menu.isPlayerGrid()) {
+            graphics.fill(leftPos - 4, topPos - 4, leftPos + imageWidth + 4, topPos + imageHeight + 4, 0xE0101010);
+            equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarLeft(), hotbarTop());
+            gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId());
+            gridLeft = gridColumnPanel.pocketLeft();
+            gridTop = gridColumnPanel.pocketTop();
+            renderHover(graphics, mouseX, mouseY);
+            renderPreview(graphics, mouseX, mouseY);
+            renderEquipmentPreview(graphics, mouseX, mouseY);
+            renderDraggedStackGhost(graphics, mouseX, mouseY);
+            return;
+        }
         graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF202020);
         GridRenderer.renderGrid(graphics, gridLeft, gridTop, menu.getGridData().getColumns(), menu.getGridData().getRows(), CELL);
         for (GridEntry entry : menu.getGridData().getEntries()) {
@@ -63,6 +121,43 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         renderHover(graphics, mouseX, mouseY);
         renderPreview(graphics, mouseX, mouseY);
         renderDraggedStackGhost(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (!menu.isPlayerGrid()) {
+            super.renderLabels(graphics, mouseX, mouseY);
+        }
+    }
+
+    private void repositionVanillaSlots() {
+        int armorFrame = 30;
+        int frameInset = (armorFrame - CELL) / 2;
+        int pairLeft = leftPos + (equipmentWidth - armorFrame * 2 - 30) / 2;
+        int upperY = workspaceTop + 27;
+        int lowerY = hotbarTop() - armorFrame - 16;
+        setSlotPosition(0, pairLeft + frameInset, upperY + frameInset);
+        setSlotPosition(1, pairLeft + armorFrame + 30 + frameInset, upperY + frameInset);
+        setSlotPosition(2, pairLeft + frameInset, lowerY + frameInset);
+        setSlotPosition(3, pairLeft + armorFrame + 30 + frameInset, lowerY + frameInset);
+        setSlotPosition(4, leftPos + 9, hotbarTop());
+        for (int i = 0; i < 9; i++) {
+            setSlotPosition(5 + i, hotbarLeft() + i * CELL, hotbarTop());
+        }
+    }
+
+    private int hotbarLeft() {
+        return leftPos + 38;
+    }
+
+    private int hotbarTop() {
+        return topPos + columnHeight - 24;
+    }
+
+    private void setSlotPosition(int menuIndex, int absoluteX, int absoluteY) {
+        SlotAccessor accessor = (SlotAccessor) (Object) menu.slots.get(menuIndex);
+        accessor.df_grid_inventory$setX(absoluteX - leftPos);
+        accessor.df_grid_inventory$setY(absoluteY - topPos);
     }
 
     private void renderHover(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -97,8 +192,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (stack.isEmpty() || !inGrid(mouseX, mouseY)) {
             return;
         }
-        int x = cellX(mouseX);
-        int y = cellY(mouseY);
+        int x = targetGridX(stack, mouseX);
+        int y = targetGridY(stack, mouseY);
         boolean valid = GridPlacementValidator.canPlace(menu.getGridData(), stack, x, y, rotatedPreview, draggingEntry == null ? null : draggingEntry.entryId());
         GridItemSize size = GridItemSizeManager.getSize(stack);
         int w = size.placedWidth(rotatedPreview);
@@ -119,18 +214,39 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void renderDraggedStackGhost(GuiGraphics graphics, int mouseX, int mouseY) {
-        ItemStack stack = draggingEntry != null ? draggingEntry.stack() : selectedPlayerStack;
+        ItemStack stack = draggingEntry != null ? draggingEntry.stack()
+                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
         if (stack.isEmpty()) {
             return;
         }
         GridItemSize size = GridItemSizeManager.getSize(stack);
         int w = size.placedWidth(rotatedPreview);
         int h = size.placedHeight(rotatedPreview);
-        int left = inGrid(mouseX, mouseY) ? gridLeft + cellX(mouseX) * CELL : mouseX - 8;
-        int top = inGrid(mouseX, mouseY) ? gridTop + cellY(mouseY) * CELL : mouseY - 8;
+        int left = mouseX - anchorCellX(stack) * CELL - dragAnchorPixelX;
+        int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
         graphics.fill(left, top, left + w * CELL, top + h * CELL, 0x332C6DB8);
         renderCellOutlines(graphics, left, top, w, h, 0x99FFFFFF);
-        GridItemRenderer.renderStack(graphics, stack, left + 4, top + 4, 0.75F);
+        GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F);
+    }
+
+    private void renderEquipmentPreview(GuiGraphics graphics, int mouseX, int mouseY) {
+        ItemStack stack = draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
+        if (stack.isEmpty()) {
+            return;
+        }
+        gridColumnPanel.equipmentRegionAt(mouseX, mouseY).ifPresent(region -> {
+            int x = targetRegionX(region, stack, mouseX);
+            int y = targetRegionY(region, stack, mouseY);
+            boolean valid = GridPlacementValidator.canPlace(region.inventory(), stack, x, y, rotatedPreview,
+                    draggingEquipmentEntry == null ? null : draggingEquipmentEntry.entry().entryId());
+            GridItemSize size = GridItemSizeManager.getSize(stack);
+            int w = size.placedWidth(rotatedPreview);
+            int h = size.placedHeight(rotatedPreview);
+            int drawX = region.left() + x * CELL;
+            int drawY = region.top() + y * CELL;
+            graphics.fill(drawX, drawY, drawX + w * CELL, drawY + h * CELL, valid ? 0x6630C860 : 0x66D84040);
+            renderCellOutlines(graphics, drawX, drawY, w, h, valid ? 0xCC7DFFA2 : 0xCCFF8888);
+        });
     }
 
     private void renderCellOutlines(GuiGraphics graphics, int left, int top, int width, int height, int color) {
@@ -146,9 +262,21 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nearbyItemsPanel.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
-        if (button == 1 && (draggingEntry != null || !selectedPlayerStack.isEmpty())) {
+        if (button == 1 && (draggingEntry != null || draggingEquipmentEntry != null || !selectedPlayerStack.isEmpty())) {
             rotatedPreview = !rotatedPreview;
             return true;
+        }
+        if (menu.isPlayerGrid()) {
+            Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt((int) mouseX, (int) mouseY);
+            if (equipmentHit.isPresent() && button == 0) {
+                draggingEquipmentEntry = equipmentHit.get();
+                rotatedPreview = equipmentHit.get().entry().rotated();
+                setGridDragAnchor((int) mouseX, (int) mouseY,
+                        draggingEquipmentEntry.region().left() + draggingEquipmentEntry.entry().x() * CELL,
+                        draggingEquipmentEntry.region().top() + draggingEquipmentEntry.entry().y() * CELL,
+                        draggingEquipmentEntry.entry().width(), draggingEquipmentEntry.entry().height());
+                return true;
+            }
         }
         if (inGrid((int) mouseX, (int) mouseY)) {
             int x = cellX((int) mouseX);
@@ -164,6 +292,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 } else {
                     draggingEntry = hit.get();
                     rotatedPreview = hit.get().rotated();
+                    setGridDragAnchor((int) mouseX, (int) mouseY,
+                            gridLeft + draggingEntry.x() * CELL, gridTop + draggingEntry.y() * CELL,
+                            draggingEntry.width(), draggingEntry.height());
                 }
                 return true;
             }
@@ -179,6 +310,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (button == 0 && hovered.hasItem()) {
                 selectedPlayerStack = hovered.getItem().copy();
                 rotatedPreview = false;
+                setSlotDragAnchor((int) mouseX, (int) mouseY, hovered);
                 return true;
             }
         }
@@ -187,9 +319,33 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (nearbyItemsPanel.mouseReleased(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (button == 0 && draggingEquipmentEntry != null) {
+            Optional<GridColumnPanel.Region> region = gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY);
+            if (region.isPresent()
+                    && region.get().slot() == draggingEquipmentEntry.slot()
+                    && region.get().containerId().equals(draggingEquipmentEntry.containerId())) {
+                PacketDistributor.sendToServer(new MoveEquipmentStorageEntryPacket(
+                        draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
+                        targetRegionX(region.get(), draggingEquipmentEntry.entry().stack(), (int) mouseX),
+                        targetRegionY(region.get(), draggingEquipmentEntry.entry().stack(), (int) mouseY), rotatedPreview));
+            } else {
+                Slot hovered = findHoveredSlot(mouseX, mouseY);
+                if (hovered != null) {
+                    PacketDistributor.sendToServer(new ExtractEquipmentStorageEntryPacket(
+                            draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
+                            hovered.getSlotIndex(), draggingEquipmentEntry.entry().stack().getCount()));
+                }
+            }
+            clearDragState();
+            return true;
+        }
         if (button == 0 && draggingEntry != null) {
             if (inGrid((int) mouseX, (int) mouseY)) {
-                PacketDistributor.sendToServer(new MoveGridEntryPacket(draggingEntry.entryId(), cellX((int) mouseX), cellY((int) mouseY), rotatedPreview));
+                PacketDistributor.sendToServer(new MoveGridEntryPacket(draggingEntry.entryId(),
+                        targetGridX(draggingEntry.stack(), (int) mouseX), targetGridY(draggingEntry.stack(), (int) mouseY), rotatedPreview));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
@@ -200,8 +356,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (button == 0 && !selectedPlayerStack.isEmpty() && lastPlayerSlot >= 0) {
-            if (inGrid((int) mouseX, (int) mouseY)) {
-                PacketDistributor.sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot, cellX((int) mouseX), cellY((int) mouseY), rotatedPreview, false));
+            Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
+            if (equipmentRegion.isPresent()) {
+                GridColumnPanel.Region region = equipmentRegion.get();
+                PacketDistributor.sendToServer(new InsertIntoEquipmentStoragePacket(lastPlayerSlot, region.slot(), region.containerId(),
+                        targetRegionX(region, selectedPlayerStack, (int) mouseX),
+                        targetRegionY(region, selectedPlayerStack, (int) mouseY), rotatedPreview));
+            } else if (inGrid((int) mouseX, (int) mouseY)) {
+                PacketDistributor.sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot,
+                        targetGridX(selectedPlayerStack, (int) mouseX), targetGridY(selectedPlayerStack, (int) mouseY), rotatedPreview, false));
             }
             clearDragState();
             return true;
@@ -210,7 +373,20 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (nearbyItemsPanel.mouseDragged(mouseX, mouseY, button)) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (menu.isPlayerGrid() && gridColumnPanel.mouseScrolled(mouseX, mouseY, scrollY)) {
+            gridLeft = gridColumnPanel.pocketLeft();
+            gridTop = gridColumnPanel.pocketTop();
+            return true;
+        }
         if (nearbyItemsPanel.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
@@ -238,6 +414,48 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return (mouseY - gridTop) / CELL;
     }
 
+    private int anchorCellX(ItemStack stack) {
+        int width = GridItemSizeManager.getSize(stack).placedWidth(rotatedPreview);
+        return Math.max(0, Math.min(dragAnchorCellX, width - 1));
+    }
+
+    private int anchorCellY(ItemStack stack) {
+        int height = GridItemSizeManager.getSize(stack).placedHeight(rotatedPreview);
+        return Math.max(0, Math.min(dragAnchorCellY, height - 1));
+    }
+
+    private int targetGridX(ItemStack stack, int mouseX) {
+        return cellX(mouseX) - anchorCellX(stack);
+    }
+
+    private int targetGridY(ItemStack stack, int mouseY) {
+        return cellY(mouseY) - anchorCellY(stack);
+    }
+
+    private int targetRegionX(GridColumnPanel.Region region, ItemStack stack, int mouseX) {
+        return region.cellX(mouseX) - anchorCellX(stack);
+    }
+
+    private int targetRegionY(GridColumnPanel.Region region, ItemStack stack, int mouseY) {
+        return region.cellY(mouseY) - anchorCellY(stack);
+    }
+
+    private void setGridDragAnchor(int mouseX, int mouseY, int itemLeft, int itemTop, int width, int height) {
+        int relativeX = Math.max(0, Math.min(width * CELL - 1, mouseX - itemLeft));
+        int relativeY = Math.max(0, Math.min(height * CELL - 1, mouseY - itemTop));
+        dragAnchorCellX = relativeX / CELL;
+        dragAnchorCellY = relativeY / CELL;
+        dragAnchorPixelX = relativeX % CELL;
+        dragAnchorPixelY = relativeY % CELL;
+    }
+
+    private void setSlotDragAnchor(int mouseX, int mouseY, Slot slot) {
+        dragAnchorCellX = 0;
+        dragAnchorCellY = 0;
+        dragAnchorPixelX = Math.max(0, Math.min(CELL - 1, mouseX - leftPos - slot.x));
+        dragAnchorPixelY = Math.max(0, Math.min(CELL - 1, mouseY - topPos - slot.y));
+    }
+
     private Slot findHoveredSlot(double mouseX, double mouseY) {
         for (Slot slot : menu.slots) {
             if (isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY)) {
@@ -249,8 +467,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private void clearDragState() {
         draggingEntry = null;
+        draggingEquipmentEntry = null;
         selectedPlayerStack = ItemStack.EMPTY;
         lastPlayerSlot = -1;
         rotatedPreview = false;
+        dragAnchorCellX = 0;
+        dragAnchorCellY = 0;
+        dragAnchorPixelX = CELL / 2;
+        dragAnchorPixelY = CELL / 2;
     }
 }
