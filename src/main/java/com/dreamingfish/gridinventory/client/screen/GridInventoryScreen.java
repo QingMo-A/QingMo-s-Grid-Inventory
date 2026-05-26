@@ -17,6 +17,7 @@ import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
+import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
 import com.dreamingfish.gridinventory.mixin.client.SlotAccessor;
 import net.minecraft.ChatFormatting;
@@ -87,7 +88,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
             nearbyItemsPanel.setBounds(nearbyLeft, workspaceTop, columnHeight, nearbyColumns);
-            repositionVanillaSlots();
+            equipmentColumnPanel.layoutSlots(hotbarTop());
+            hideVanillaSlots();
         } else {
             gridLeft = leftPos + 16;
             gridTop = topPos + 18;
@@ -99,7 +101,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (menu.isPlayerGrid()) {
             graphics.fill(leftPos - 4, topPos - 4, leftPos + imageWidth + 4, topPos + imageHeight + 4, 0xE0101010);
-            equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarLeft(), hotbarTop());
+            equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot);
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId());
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
@@ -130,24 +132,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
     }
 
-    private void repositionVanillaSlots() {
-        int armorFrame = 30;
-        int frameInset = (armorFrame - CELL) / 2;
-        int pairLeft = leftPos + (equipmentWidth - armorFrame * 2 - 30) / 2;
-        int upperY = workspaceTop + 27;
-        int lowerY = hotbarTop() - armorFrame - 16;
-        setSlotPosition(0, pairLeft + frameInset, upperY + frameInset);
-        setSlotPosition(1, pairLeft + armorFrame + 30 + frameInset, upperY + frameInset);
-        setSlotPosition(2, pairLeft + frameInset, lowerY + frameInset);
-        setSlotPosition(3, pairLeft + armorFrame + 30 + frameInset, lowerY + frameInset);
-        setSlotPosition(4, leftPos + 9, hotbarTop());
-        for (int i = 0; i < 9; i++) {
-            setSlotPosition(5 + i, hotbarLeft() + i * CELL, hotbarTop());
+    @Override
+    protected void renderSlot(GuiGraphics graphics, Slot slot) {
+        if (!menu.isPlayerGrid()) {
+            super.renderSlot(graphics, slot);
         }
     }
 
-    private int hotbarLeft() {
-        return leftPos + 38;
+    private void hideVanillaSlots() {
+        for (int menuIndex = 0; menuIndex < menu.slots.size(); menuIndex++) {
+            setSlotPosition(menuIndex, leftPos - 1000 - menuIndex * CELL, topPos - 1000);
+        }
     }
 
     private int hotbarTop() {
@@ -185,6 +180,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 Component.literal("Size: " + entry.width() + " x " + entry.height()).withStyle(ChatFormatting.GRAY),
                 Component.literal("Rotatable: " + (GridItemSizeManager.getSize(entry.stack()).rotatable() ? "Yes" : "No")).withStyle(ChatFormatting.GRAY)
         ), Optional.empty(), mouseX, mouseY));
+        if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null && selectedPlayerStack.isEmpty()) {
+            equipmentColumnPanel.slotAt(mouseX, mouseY)
+                    .map(slot -> menu.slots.get(slot.menuIndex()))
+                    .filter(Slot::hasItem)
+                    .ifPresent(slot -> graphics.renderTooltip(font, slot.getItem(), mouseX, mouseY));
+        }
     }
 
     private void renderPreview(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -452,11 +453,25 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private void setSlotDragAnchor(int mouseX, int mouseY, Slot slot) {
         dragAnchorCellX = 0;
         dragAnchorCellY = 0;
+        if (menu.isPlayerGrid()) {
+            Optional<FreeSlotWidget> customSlot = equipmentColumnPanel.slotAt(mouseX, mouseY);
+            if (customSlot.isPresent()) {
+                FreeSlotWidget widget = customSlot.get();
+                dragAnchorPixelX = Math.max(0, Math.min(CELL - 1, (mouseX - widget.x()) * CELL / widget.size()));
+                dragAnchorPixelY = Math.max(0, Math.min(CELL - 1, (mouseY - widget.y()) * CELL / widget.size()));
+                return;
+            }
+        }
         dragAnchorPixelX = Math.max(0, Math.min(CELL - 1, mouseX - leftPos - slot.x));
         dragAnchorPixelY = Math.max(0, Math.min(CELL - 1, mouseY - topPos - slot.y));
     }
 
     private Slot findHoveredSlot(double mouseX, double mouseY) {
+        if (menu.isPlayerGrid()) {
+            return equipmentColumnPanel.slotAt(mouseX, mouseY)
+                    .map(slot -> menu.slots.get(slot.menuIndex()))
+                    .orElse(null);
+        }
         for (Slot slot : menu.slots) {
             if (isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY)) {
                 return slot;
