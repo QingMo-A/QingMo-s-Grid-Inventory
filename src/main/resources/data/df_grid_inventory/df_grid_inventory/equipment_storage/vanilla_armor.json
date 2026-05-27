@@ -9,10 +9,10 @@
           "id": "front_pockets",
           "title": "Chest Pockets",
           "layout": [
-            "ABBB.",
-            "ABBB.",
-            ".....",
-            "C.DD."
+            "AABCD",
+            "AABCD",
+            "E.FFF",
+            "E.FFF"
           ]
         }
       ]
