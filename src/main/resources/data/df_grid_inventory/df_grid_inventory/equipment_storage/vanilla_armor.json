@@ -8,8 +8,12 @@
         {
           "id": "front_pockets",
           "title": "Chest Pockets",
-          "columns": 4,
-          "rows": 2
+          "layout": [
+            "ABBB.",
+            "ABBB.",
+            ".....",
+            "C.DD."
+          ]
         }
       ]
     },
@@ -21,8 +25,9 @@
         {
           "id": "leg_pockets",
           "title": "Leg Pockets",
-          "columns": 4,
-          "rows": 1
+          "layout": [
+            "ABCD"
+          ]
         }
       ]
     },
@@ -34,8 +39,12 @@
         {
           "id": "chest_storage",
           "title": "Chest Storage",
-          "columns": 4,
-          "rows": 2
+          "layout": [
+            "ABBB.",
+            "ABBB.",
+            ".....",
+            "C.DD."
+          ]
         }
       ]
     },
@@ -47,8 +56,9 @@
         {
           "id": "leg_storage",
           "title": "Leg Storage",
-          "columns": 4,
-          "rows": 1
+          "layout": [
+            "ABCD"
+          ]
         }
       ]
     }

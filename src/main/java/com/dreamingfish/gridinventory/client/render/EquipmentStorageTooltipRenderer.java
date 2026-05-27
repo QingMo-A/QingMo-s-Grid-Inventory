@@ -51,7 +51,7 @@ public final class EquipmentStorageTooltipRenderer {
         for (NamedGridInventoryData container : storage.containers()) {
             graphics.drawString(font, container.title(), panelX + PADDING, y, 0xC8C8C8, false);
             y += CONTAINER_LABEL_HEIGHT;
-            GridRenderer.renderGrid(graphics, panelX + PADDING, y, container.inventory().getColumns(), container.inventory().getRows(), CELL);
+            GridRenderer.renderGrid(graphics, panelX + PADDING, y, container.inventory(), CELL);
             for (var entry : container.inventory().getEntries()) {
                 GridItemRenderer.renderEntry(graphics, entry, panelX + PADDING, y, CELL);
             }

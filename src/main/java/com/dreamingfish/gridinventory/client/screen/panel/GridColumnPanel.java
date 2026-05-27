@@ -105,7 +105,7 @@ public final class GridColumnPanel {
     private int renderGrid(GuiGraphics graphics, Component title, GridInventoryData inventory, int y, @Nullable UUID draggedEntryId) {
         graphics.drawString(Minecraft.getInstance().font, title, left + 8, y, 0xBFBFBF, false);
         int gridTop = y + 13;
-        GridRenderer.renderGrid(graphics, left + 8, gridTop, inventory.getColumns(), inventory.getRows(), CELL);
+        GridRenderer.renderGrid(graphics, left + 8, gridTop, inventory, CELL);
         inventory.getEntries().forEach(entry -> GridItemRenderer.renderEntry(
                 graphics, entry, left + 8, gridTop, CELL,
                 draggedEntryId != null && draggedEntryId.equals(entry.entryId()) ? 0.35F : 1.0F

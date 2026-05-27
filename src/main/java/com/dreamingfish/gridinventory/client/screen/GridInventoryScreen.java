@@ -121,7 +121,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return;
         }
         graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xFF202020);
-        GridRenderer.renderGrid(graphics, gridLeft, gridTop, menu.getGridData().getColumns(), menu.getGridData().getRows(), CELL);
+        GridRenderer.renderGrid(graphics, gridLeft, gridTop, menu.getGridData(), CELL);
         for (GridEntry entry : menu.getGridData().getEntries()) {
             if (draggingEntry != null && draggingEntry.entryId().equals(entry.entryId())) {
                 continue;

@@ -23,29 +23,40 @@ public class GridInventoryData implements IGridInventory {
     public static final Codec<GridInventoryData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.fieldOf("columns").forGetter(GridInventoryData::getColumns),
             Codec.INT.fieldOf("rows").forGetter(GridInventoryData::getRows),
-            GridEntry.CODEC.listOf().optionalFieldOf("entries", List.of()).forGetter(GridInventoryData::getEntries)
+            GridEntry.CODEC.listOf().optionalFieldOf("entries", List.of()).forGetter(GridInventoryData::getEntries),
+            GridSection.CODEC.listOf().optionalFieldOf("sections", List.of()).forGetter(GridInventoryData::getSections)
     ).apply(instance, GridInventoryData::new));
 
     private final int columns;
     private final int rows;
     private final List<GridEntry> entries;
+    private final List<GridSection> sections;
     private transient Runnable changeListener = () -> {
     };
 
     public GridInventoryData(int columns, int rows) {
-        this(columns, rows, List.of());
+        this(columns, rows, List.of(), List.of());
     }
 
     public GridInventoryData(int columns, int rows, List<GridEntry> entries) {
+        this(columns, rows, entries, List.of());
+    }
+
+    public GridInventoryData(int columns, int rows, List<GridEntry> entries, List<GridSection> sections) {
         this.columns = columns;
         this.rows = rows;
         this.entries = new ArrayList<>(entries);
+        this.sections = List.copyOf(sections);
+    }
+
+    public static GridInventoryData withSections(int columns, int rows, List<GridSection> sections) {
+        return new GridInventoryData(columns, rows, List.of(), sections);
     }
 
     public GridInventoryData copy() {
         return new GridInventoryData(columns, rows, entries.stream()
                 .map(entry -> new GridEntry(entry.entryId(), entry.stack().copy(), entry.x(), entry.y(), entry.width(), entry.height(), entry.rotated()))
-                .toList());
+                .toList(), sections);
     }
 
     public void setChangeListener(Runnable changeListener) {
@@ -66,6 +77,46 @@ public class GridInventoryData implements IGridInventory {
     @Override
     public List<GridEntry> getEntries() {
         return entries;
+    }
+
+    public List<GridSection> getSections() {
+        return sections;
+    }
+
+    public boolean hasCustomSections() {
+        return !sections.isEmpty();
+    }
+
+    public boolean isEnabledCell(int x, int y) {
+        if (x < 0 || y < 0 || x >= columns || y >= rows) {
+            return false;
+        }
+        return sections.isEmpty() || sections.stream().anyMatch(section -> section.contains(x, y));
+    }
+
+    public String sectionAt(int x, int y) {
+        if (!isEnabledCell(x, y)) {
+            return null;
+        }
+        if (sections.isEmpty()) {
+            return "__rectangle__";
+        }
+        return sections.stream().filter(section -> section.contains(x, y)).map(GridSection::id).findFirst().orElse(null);
+    }
+
+    public boolean canOccupySingleSection(int x, int y, int width, int height) {
+        String sectionId = sectionAt(x, y);
+        if (sectionId == null) {
+            return false;
+        }
+        for (int cellY = y; cellY < y + height; cellY++) {
+            for (int cellX = x; cellX < x + width; cellX++) {
+                if (!sectionId.equals(sectionAt(cellX, cellY))) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     @Override
@@ -191,6 +242,10 @@ public class GridInventoryData implements IGridInventory {
         for (GridEntry entry : entries) {
             entry.encode(buf);
         }
+        buf.writeVarInt(sections.size());
+        for (GridSection section : sections) {
+            section.encode(buf);
+        }
     }
 
     public static GridInventoryData decode(RegistryFriendlyByteBuf buf) {
@@ -201,6 +256,11 @@ public class GridInventoryData implements IGridInventory {
         for (int i = 0; i < count; i++) {
             entries.add(GridEntry.decode(buf));
         }
-        return new GridInventoryData(columns, rows, entries);
+        int sectionCount = buf.readVarInt();
+        List<GridSection> sections = new ArrayList<>();
+        for (int i = 0; i < sectionCount; i++) {
+            sections.add(GridSection.decode(buf));
+        }
+        return new GridInventoryData(columns, rows, entries, sections);
     }
 }

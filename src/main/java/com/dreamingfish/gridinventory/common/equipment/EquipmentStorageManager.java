@@ -42,18 +42,21 @@ public final class EquipmentStorageManager {
 
     public static EquipmentStorageData initializeStorage(ItemStack stack, EquipmentSlot slot) {
         EquipmentStorageData current = stack.get(ModDataComponents.EQUIPMENT_STORAGE.get());
-        if (current != null) {
+        if (current != null && !current.isEmpty()) {
             return current;
         }
-        EquipmentStorageData initialized = getDefinition(stack, slot)
-                .map(definition -> new EquipmentStorageData(definition.containers().stream()
-                        .map(container -> new NamedGridInventoryData(container.id(), container.title(), new GridInventoryData(container.columns(), container.rows())))
-                        .toList()))
-                .orElse(EquipmentStorageData.EMPTY);
+        EquipmentStorageData initialized = getDefinition(stack, slot).map(EquipmentStorageManager::createStorage).orElse(EquipmentStorageData.EMPTY);
         if (!initialized.containers().isEmpty()) {
             stack.set(ModDataComponents.EQUIPMENT_STORAGE.get(), initialized);
         }
         return initialized;
+    }
+
+    private static EquipmentStorageData createStorage(EquipmentStorageDefinition definition) {
+        return new EquipmentStorageData(definition.containers().stream()
+                .map(container -> new NamedGridInventoryData(container.id(), container.title(),
+                        GridInventoryData.withSections(container.resolvedColumns(), container.resolvedRows(), container.resolvedSections())))
+                .toList());
     }
 
     private static boolean allowedSlot(EquipmentSlot slot) {

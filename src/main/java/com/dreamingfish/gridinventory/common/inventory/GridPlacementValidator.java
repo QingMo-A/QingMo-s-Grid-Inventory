@@ -1,6 +1,7 @@
 package com.dreamingfish.gridinventory.common.inventory;
 
 import com.dreamingfish.gridinventory.api.IGridInventory;
+import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +27,9 @@ public final class GridPlacementValidator {
         int width = size.placedWidth(rotated);
         int height = size.placedHeight(rotated);
         if (targetX + width > inventory.getColumns() || targetY + height > inventory.getRows()) {
+            return false;
+        }
+        if (inventory instanceof GridInventoryData data && !data.canOccupySingleSection(targetX, targetY, width, height)) {
             return false;
         }
         for (var entry : inventory.getEntries()) {
