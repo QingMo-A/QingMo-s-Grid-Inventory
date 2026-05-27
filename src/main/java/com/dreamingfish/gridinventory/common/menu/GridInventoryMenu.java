@@ -348,6 +348,60 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    public boolean movePlayerFreeSlot(int sourcePlayerSlot, int targetPlayerSlot) {
+        if (!playerGrid || sourcePlayerSlot == targetPlayerSlot
+                || !isFreePlayerSlot(sourcePlayerSlot) || !isFreePlayerSlot(targetPlayerSlot)) {
+            return false;
+        }
+        Optional<Slot> sourceView = findPlayerSlotView(sourcePlayerSlot);
+        Optional<Slot> targetView = findPlayerSlotView(targetPlayerSlot);
+        if (sourceView.isEmpty() || targetView.isEmpty() || !sourceView.get().mayPickup(playerInventory.player)) {
+            return false;
+        }
+        ItemStack source = playerInventory.getItem(sourcePlayerSlot);
+        ItemStack target = playerInventory.getItem(targetPlayerSlot);
+        if (source.isEmpty() || !targetView.get().mayPlace(source)) {
+            return false;
+        }
+        int targetLimit = Math.min(targetView.get().getMaxStackSize(), source.getMaxStackSize());
+        if (target.isEmpty()) {
+            int moved = Math.min(source.getCount(), targetLimit);
+            playerInventory.setItem(targetPlayerSlot, source.copyWithCount(moved));
+            source.shrink(moved);
+            playerInventory.setChanged();
+            return true;
+        }
+        if (ItemStack.isSameItemSameComponents(source, target)) {
+            int moved = Math.min(source.getCount(), Math.max(0, targetLimit - target.getCount()));
+            if (moved <= 0) {
+                return false;
+            }
+            target.grow(moved);
+            source.shrink(moved);
+            playerInventory.setChanged();
+            return true;
+        }
+        if (!targetView.get().mayPickup(playerInventory.player) || !sourceView.get().mayPlace(target)) {
+            return false;
+        }
+        int sourceLimit = Math.min(sourceView.get().getMaxStackSize(), target.getMaxStackSize());
+        if (source.getCount() > targetLimit || target.getCount() > sourceLimit) {
+            return false;
+        }
+        playerInventory.setItem(sourcePlayerSlot, target);
+        playerInventory.setItem(targetPlayerSlot, source);
+        playerInventory.setChanged();
+        return true;
+    }
+
+    private boolean isFreePlayerSlot(int playerSlot) {
+        return playerSlot >= 0 && playerSlot <= 8 || playerSlot >= 36 && playerSlot <= 40;
+    }
+
+    private Optional<Slot> findPlayerSlotView(int playerSlot) {
+        return slots.stream().filter(slot -> slot.getSlotIndex() == playerSlot).findFirst();
+    }
+
     private boolean mayInsertIntoVanillaSlot(int playerSlot, ItemStack stack) {
         return switch (playerSlot) {
             case 39 -> stack.canEquip(EquipmentSlot.HEAD, playerInventory.player);

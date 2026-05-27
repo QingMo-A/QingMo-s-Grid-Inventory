@@ -84,20 +84,39 @@ public final class EquipmentColumnPanel {
             Slot slot = slots.get(freeSlot.menuIndex());
             boolean hovered = freeSlot.contains(mouseX, mouseY);
             Boolean dropAllowed = hovered && !draggedStack.isEmpty()
-                    ? supportsDropToFreeSlot && canReceive(slot, draggedStack) : null;
+                    ? supportsDropToFreeSlot && canReceive(slot, draggedStack, slots, draggedPlayerSlot, minecraft.player) : null;
             freeSlot.render(graphics, slot, hovered,
                     draggedPlayerSlot >= 0 && slot.getSlotIndex() == draggedPlayerSlot, dropAllowed);
         }
     }
 
-    private boolean canReceive(Slot slot, ItemStack draggedStack) {
+    private boolean canReceive(Slot slot, ItemStack draggedStack, List<Slot> slots, int draggedPlayerSlot, net.minecraft.world.entity.player.Player player) {
         if (!slot.mayPlace(draggedStack)) {
             return false;
         }
         ItemStack existing = slot.getItem();
-        return existing.isEmpty()
-                || ItemStack.isSameItemSameComponents(existing, draggedStack)
-                && existing.getCount() < Math.min(existing.getMaxStackSize(), slot.getMaxStackSize());
+        if (draggedPlayerSlot < 0) {
+            return existing.isEmpty()
+                    || ItemStack.isSameItemSameComponents(existing, draggedStack)
+                    && existing.getCount() < Math.min(existing.getMaxStackSize(), slot.getMaxStackSize());
+        }
+        if (slot.getSlotIndex() == draggedPlayerSlot) {
+            return false;
+        }
+        Optional<Slot> source = slots.stream().filter(candidate -> candidate.getSlotIndex() == draggedPlayerSlot).findFirst();
+        if (source.isEmpty() || !source.get().mayPickup(player)) {
+            return false;
+        }
+        int targetLimit = Math.min(draggedStack.getMaxStackSize(), slot.getMaxStackSize());
+        if (existing.isEmpty()) {
+            return targetLimit > 0;
+        }
+        if (ItemStack.isSameItemSameComponents(existing, draggedStack)) {
+            return existing.getCount() < targetLimit;
+        }
+        int sourceLimit = Math.min(existing.getMaxStackSize(), source.get().getMaxStackSize());
+        return slot.mayPickup(player) && source.get().mayPlace(existing)
+                && draggedStack.getCount() <= targetLimit && existing.getCount() <= sourceLimit;
     }
 
     public Optional<FreeSlotWidget> slotAt(double mouseX, double mouseY) {

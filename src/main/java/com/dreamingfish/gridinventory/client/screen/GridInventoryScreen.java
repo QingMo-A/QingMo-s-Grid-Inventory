@@ -16,6 +16,7 @@ import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntr
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStoragePacket;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridPacket;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryPacket;
+import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotPacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
@@ -105,7 +106,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (menu.isPlayerGrid()) {
             graphics.fill(leftPos - 4, topPos - 4, leftPos + imageWidth + 4, topPos + imageHeight + 4, 0xE0101010);
             equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot,
-                    draggedStack(), draggingEntry != null || draggingEquipmentEntry != null);
+                    draggedStack(), !draggedStack().isEmpty());
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(), draggingEquipmentEntry);
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
@@ -398,6 +399,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 PacketDistributor.sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot,
                         targetGridX(selectedPlayerStack, (int) mouseX), targetGridY(selectedPlayerStack, (int) mouseY), rotatedPreview, false));
+            } else {
+                Slot hovered = findHoveredSlot(mouseX, mouseY);
+                if (hovered != null && hovered.getSlotIndex() != lastPlayerSlot) {
+                    PacketDistributor.sendToServer(new MovePlayerFreeSlotPacket(lastPlayerSlot, hovered.getSlotIndex()));
+                }
             }
             clearDragState();
             return true;
