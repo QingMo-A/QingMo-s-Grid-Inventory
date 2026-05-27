@@ -144,6 +144,25 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return moved;
     }
 
+    public boolean quickEquipGridEntry(UUID entryId) {
+        if (!playerGrid) {
+            return false;
+        }
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = gridData.getEntry(entryId);
+        if (entry.isEmpty()) {
+            return false;
+        }
+        Optional<EquipmentSlot> targetSlot = findEmptyArmorSlot(entry.get().stack());
+        if (targetSlot.isEmpty()) {
+            return false;
+        }
+        ItemStack equipped = gridData.extract(entryId, 1);
+        playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
     public boolean insertFromPlayerIntoEquipmentStorage(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {
         if (playerSlot < 0 || playerSlot >= 36 || playerSlot >= playerInventory.getContainerSize()) {
             return false;
@@ -167,6 +186,26 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return false;
         }
         saveEquipmentStorage(equipmentSlot, edit.get().storage());
+        return true;
+    }
+
+    public boolean quickEquipEquipmentStorageEntry(EquipmentSlot sourceSlot, String containerId, UUID entryId) {
+        if (!playerGrid) {
+            return false;
+        }
+        Optional<EquipmentStorageEdit> source = editableEquipmentInventory(sourceSlot, containerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = source.flatMap(edit -> edit.inventory().getEntry(entryId));
+        if (source.isEmpty() || entry.isEmpty()) {
+            return false;
+        }
+        Optional<EquipmentSlot> targetSlot = findEmptyArmorSlot(entry.get().stack());
+        if (targetSlot.isEmpty()) {
+            return false;
+        }
+        ItemStack equipped = source.get().inventory().extract(entryId, 1);
+        saveEquipmentStorage(sourceSlot, source.get().storage());
+        playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
+        playerInventory.setChanged();
         return true;
     }
 
@@ -394,6 +433,25 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     private Optional<Slot> findPlayerSlotView(int playerSlot) {
         return slots.stream().filter(slot -> slot.getSlotIndex() == playerSlot).findFirst();
+    }
+
+    private Optional<EquipmentSlot> findEmptyArmorSlot(ItemStack stack) {
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            if (playerInventory.player.getItemBySlot(slot).isEmpty() && stack.canEquip(slot, playerInventory.player)) {
+                return Optional.of(slot);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private int equipmentPlayerSlot(EquipmentSlot slot) {
+        return switch (slot) {
+            case HEAD -> 39;
+            case CHEST -> 38;
+            case LEGS -> 37;
+            case FEET -> 36;
+            default -> throw new IllegalArgumentException("Unsupported quick equip slot: " + slot);
+        };
     }
 
     private boolean mayInsertIntoVanillaSlot(int playerSlot, ItemStack stack) {

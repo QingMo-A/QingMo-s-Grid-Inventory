@@ -18,6 +18,8 @@ import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipm
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridPacket;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryPacket;
 import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotPacket;
+import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryPacket;
+import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryPacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
@@ -299,33 +301,40 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
         if (menu.isPlayerGrid()) {
             Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt((int) mouseX, (int) mouseY);
-            if (equipmentHit.isPresent() && button == 0) {
-                draggingEquipmentEntry = equipmentHit.get();
-                rotatedPreview = equipmentHit.get().entry().rotated();
-                setGridDragAnchor((int) mouseX, (int) mouseY,
-                        draggingEquipmentEntry.region().left() + draggingEquipmentEntry.entry().x() * CELL,
-                        draggingEquipmentEntry.region().top() + draggingEquipmentEntry.entry().y() * CELL,
-                        draggingEquipmentEntry.entry().width(), draggingEquipmentEntry.entry().height());
-                return true;
+            if (equipmentHit.isPresent()) {
+                if (button == 1) {
+                    PacketDistributor.sendToServer(new QuickEquipEquipmentStorageEntryPacket(
+                            equipmentHit.get().slot(), equipmentHit.get().containerId(), equipmentHit.get().entry().entryId()));
+                    return true;
+                }
+                if (button == 0) {
+                    draggingEquipmentEntry = equipmentHit.get();
+                    rotatedPreview = equipmentHit.get().entry().rotated();
+                    setGridDragAnchor((int) mouseX, (int) mouseY,
+                            draggingEquipmentEntry.region().left() + draggingEquipmentEntry.entry().x() * CELL,
+                            draggingEquipmentEntry.region().top() + draggingEquipmentEntry.entry().y() * CELL,
+                            draggingEquipmentEntry.entry().width(), draggingEquipmentEntry.entry().height());
+                    return true;
+                }
             }
         }
         if (inGrid((int) mouseX, (int) mouseY)) {
             int x = cellX((int) mouseX);
             int y = cellY((int) mouseY);
-            if (button == 1) {
-                rotateDraggedPreview();
-                return true;
-            }
             Optional<GridEntry> hit = menu.getGridData().getEntries().stream().filter(entry -> entry.contains(x, y)).findFirst();
             if (hit.isPresent()) {
-                if (hasShiftDown()) {
+                if (button == 1 && menu.isPlayerGrid()) {
+                    PacketDistributor.sendToServer(new QuickEquipGridEntryPacket(hit.get().entryId()));
+                } else if (hasShiftDown() && button == 0) {
                     PacketDistributor.sendToServer(new ExtractToPlayerInventoryPacket(hit.get().entryId(), hit.get().stack().getCount()));
-                } else {
+                } else if (button == 0) {
                     draggingEntry = hit.get();
                     rotatedPreview = hit.get().rotated();
                     setGridDragAnchor((int) mouseX, (int) mouseY,
                             gridLeft + draggingEntry.x() * CELL, gridTop + draggingEntry.y() * CELL,
                             draggingEntry.width(), draggingEntry.height());
+                } else {
+                    return false;
                 }
                 return true;
             }
