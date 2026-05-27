@@ -18,5 +18,6 @@
   "screen.df_grid_inventory.armor_lower": "护腿 / 靴子",
   "screen.df_grid_inventory.offhand": "左手",
   "screen.df_grid_inventory.nearby_items": "附近物品",
-  "tooltip.df_grid_inventory.pickup_hint": "按拾取键或点击拾取"
+  "tooltip.df_grid_inventory.pickup_hint": "按拾取键或点击拾取",
+  "tooltip.df_grid_inventory.equipment_storage": "随身口袋"
 }

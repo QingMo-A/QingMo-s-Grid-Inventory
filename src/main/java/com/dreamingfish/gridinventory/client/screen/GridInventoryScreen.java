@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.client.screen;
 import com.dreamingfish.gridinventory.api.GridItemSize;
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridRenderer;
+import com.dreamingfish.gridinventory.client.render.EquipmentStorageTooltipRenderer;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
@@ -181,7 +182,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
         nearbyItemsPanel.render(graphics, mouseX, mouseY);
-        entryAt(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(
+        hoveredGridEntry(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(
                 entry.stack().getHoverName(),
                 Component.literal("Size: " + entry.width() + " x " + entry.height()).withStyle(ChatFormatting.GRAY),
                 Component.literal("Rotatable: " + (GridItemSizeManager.getSize(entry.stack()).rotatable() ? "Yes" : "No")).withStyle(ChatFormatting.GRAY)
@@ -191,6 +192,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     .map(slot -> menu.slots.get(slot.menuIndex()))
                     .filter(Slot::hasItem)
                     .ifPresent(slot -> graphics.renderTooltip(font, slot.getItem(), mouseX, mouseY));
+        }
+        if (draggingEntry == null && draggingEquipmentEntry == null && selectedPlayerStack.isEmpty()) {
+            hoveredStack(mouseX, mouseY).ifPresent(stack ->
+                    EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
         }
     }
 
@@ -460,6 +465,27 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int x = cellX(mouseX);
         int y = cellY(mouseY);
         return menu.getGridData().getEntries().stream().filter(entry -> entry.contains(x, y)).findFirst();
+    }
+
+    private Optional<GridEntry> hoveredGridEntry(int mouseX, int mouseY) {
+        Optional<GridEntry> pocketEntry = entryAt(mouseX, mouseY);
+        if (pocketEntry.isPresent() || !menu.isPlayerGrid()) {
+            return pocketEntry;
+        }
+        return gridColumnPanel.equipmentEntryAt(mouseX, mouseY).map(GridColumnPanel.EquipmentEntryHit::entry);
+    }
+
+    private Optional<ItemStack> hoveredStack(int mouseX, int mouseY) {
+        if (menu.isPlayerGrid()) {
+            Optional<ItemStack> slotStack = equipmentColumnPanel.slotAt(mouseX, mouseY)
+                    .map(slot -> menu.slots.get(slot.menuIndex()))
+                    .filter(Slot::hasItem)
+                    .map(Slot::getItem);
+            if (slotStack.isPresent()) {
+                return slotStack;
+            }
+        }
+        return hoveredGridEntry(mouseX, mouseY).map(GridEntry::stack);
     }
 
     private boolean inGrid(int mouseX, int mouseY) {

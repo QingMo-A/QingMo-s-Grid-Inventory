@@ -18,5 +18,6 @@
   "screen.df_grid_inventory.armor_lower": "Legs / Boots",
   "screen.df_grid_inventory.offhand": "Offhand",
   "screen.df_grid_inventory.nearby_items": "Nearby Items",
-  "tooltip.df_grid_inventory.pickup_hint": "Press Pickup Key or Click to pick up"
+  "tooltip.df_grid_inventory.pickup_hint": "Press Pickup Key or Click to pick up",
+  "tooltip.df_grid_inventory.equipment_storage": "Stored Pockets"
 }

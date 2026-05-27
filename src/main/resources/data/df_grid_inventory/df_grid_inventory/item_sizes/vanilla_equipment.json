@@ -3,22 +3,22 @@
     {
       "type": "tag",
       "target": "minecraft:head_armor",
-      "width": 2,
-      "height": 2,
+      "width": 4,
+      "height": 4,
       "rotatable": false
     },
     {
       "type": "tag",
       "target": "minecraft:chest_armor",
-      "width": 2,
-      "height": 3,
+      "width": 5,
+      "height": 4,
       "rotatable": true
     },
     {
       "type": "tag",
       "target": "minecraft:leg_armor",
-      "width": 2,
-      "height": 3,
+      "width": 3,
+      "height": 4,
       "rotatable": true
     },
     {
