@@ -176,6 +176,77 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    public boolean transferGridEntryIntoEquipmentStorage(UUID entryId, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = gridData.getEntry(entryId);
+        Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
+        if (!playerGrid || source.isEmpty() || target.isEmpty()
+                || !GridPlacementValidator.canPlace(target.get().inventory(), source.get().stack(), targetX, targetY, rotated, null)) {
+            return false;
+        }
+        ItemStack moved = source.get().stack().copy();
+        target.get().inventory().add(moved, targetX, targetY, rotated);
+        gridData.extract(entryId, moved.getCount());
+        save();
+        saveEquipmentStorage(equipmentSlot, target.get().storage());
+        return true;
+    }
+
+    public boolean transferEquipmentEntryIntoGrid(EquipmentSlot equipmentSlot, String containerId, UUID entryId, int targetX, int targetY, boolean rotated) {
+        Optional<EquipmentStorageEdit> source = editableEquipmentInventory(equipmentSlot, containerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = source.flatMap(edit -> edit.inventory().getEntry(entryId));
+        if (!playerGrid || source.isEmpty() || entry.isEmpty()
+                || !GridPlacementValidator.canPlace(gridData, entry.get().stack(), targetX, targetY, rotated, null)) {
+            return false;
+        }
+        ItemStack moved = entry.get().stack().copy();
+        gridData.add(moved, targetX, targetY, rotated);
+        source.get().inventory().extract(entryId, moved.getCount());
+        saveEquipmentStorage(equipmentSlot, source.get().storage());
+        save();
+        return true;
+    }
+
+    public boolean transferEquipmentEntryBetweenStorages(EquipmentSlot sourceSlot, String sourceContainerId, UUID entryId,
+                                                           EquipmentSlot targetSlot, String targetContainerId,
+                                                           int targetX, int targetY, boolean rotated) {
+        if (!playerGrid) {
+            return false;
+        }
+        if (sourceSlot == targetSlot && sourceContainerId.equals(targetContainerId)) {
+            return moveEquipmentEntry(sourceSlot, sourceContainerId, entryId, targetX, targetY, rotated);
+        }
+        Optional<EquipmentStorageEdit> source = editableEquipmentInventory(sourceSlot, sourceContainerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = source.flatMap(edit -> edit.inventory().getEntry(entryId));
+        if (source.isEmpty() || entry.isEmpty()) {
+            return false;
+        }
+        if (sourceSlot == targetSlot) {
+            Optional<NamedGridInventoryData> targetContainer = source.get().storage().containers().stream()
+                    .filter(container -> container.id().equals(targetContainerId))
+                    .findFirst();
+            if (targetContainer.isEmpty()
+                    || !GridPlacementValidator.canPlace(targetContainer.get().inventory(), entry.get().stack(), targetX, targetY, rotated, null)) {
+                return false;
+            }
+            ItemStack moved = entry.get().stack().copy();
+            targetContainer.get().inventory().add(moved, targetX, targetY, rotated);
+            source.get().inventory().extract(entryId, moved.getCount());
+            saveEquipmentStorage(sourceSlot, source.get().storage());
+            return true;
+        }
+        Optional<EquipmentStorageEdit> target = editableEquipmentInventory(targetSlot, targetContainerId);
+        if (target.isEmpty()
+                || !GridPlacementValidator.canPlace(target.get().inventory(), entry.get().stack(), targetX, targetY, rotated, null)) {
+            return false;
+        }
+        ItemStack moved = entry.get().stack().copy();
+        target.get().inventory().add(moved, targetX, targetY, rotated);
+        source.get().inventory().extract(entryId, moved.getCount());
+        saveEquipmentStorage(sourceSlot, source.get().storage());
+        saveEquipmentStorage(targetSlot, target.get().storage());
+        return true;
+    }
+
     public boolean extractEquipmentEntryToPlayerSlot(EquipmentSlot equipmentSlot, String containerId, UUID entryId, int playerSlot, int amount) {
         if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
             return false;

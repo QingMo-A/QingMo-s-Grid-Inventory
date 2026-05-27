@@ -12,6 +12,7 @@ import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
+import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageEvents;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
 import com.mojang.logging.LogUtils;
 import net.neoforged.api.distmarker.Dist;
@@ -47,6 +48,7 @@ public class DFGridInventoryMod {
 
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(ManualPickupEvents.class);
+        NeoForge.EVENT_BUS.register(EquipmentStorageEvents.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

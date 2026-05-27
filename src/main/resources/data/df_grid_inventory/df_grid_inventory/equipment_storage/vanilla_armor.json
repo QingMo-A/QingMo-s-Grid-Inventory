@@ -25,6 +25,32 @@
           "rows": 1
         }
       ]
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:chest_armor",
+      "slot": "chest",
+      "containers": [
+        {
+          "id": "chest_storage",
+          "title": "Chest Storage",
+          "columns": 4,
+          "rows": 2
+        }
+      ]
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:leg_armor",
+      "slot": "legs",
+      "containers": [
+        {
+          "id": "leg_storage",
+          "title": "Leg Storage",
+          "columns": 4,
+          "rows": 1
+        }
+      ]
     }
   ]
 }
