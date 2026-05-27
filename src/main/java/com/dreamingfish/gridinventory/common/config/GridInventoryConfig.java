@@ -19,7 +19,6 @@ public final class GridInventoryConfig {
     public static final ModConfigSpec.IntValue POCKET_COLUMNS;
     public static final ModConfigSpec.IntValue POCKET_ROWS;
     public static final ModConfigSpec.BooleanValue EQUIPMENT_STORAGE_ENABLED;
-    public static final ModConfigSpec.BooleanValue PREVENT_UNEQUIP_WHEN_STORAGE_NOT_EMPTY;
     public static final ModConfigSpec.BooleanValue ALLOW_CHEST_STORAGE;
     public static final ModConfigSpec.BooleanValue ALLOW_LEGS_STORAGE;
     public static final ModConfigSpec.BooleanValue CUSTOM_HOTBAR_SLOTS_ENABLED;
@@ -64,7 +63,6 @@ public final class GridInventoryConfig {
 
         BUILDER.push("equipment_storage");
         EQUIPMENT_STORAGE_ENABLED = BUILDER.define("enabled", true);
-        PREVENT_UNEQUIP_WHEN_STORAGE_NOT_EMPTY = BUILDER.define("prevent_unequip_when_storage_not_empty", true);
         ALLOW_CHEST_STORAGE = BUILDER.define("allow_chest_storage", true);
         ALLOW_LEGS_STORAGE = BUILDER.define("allow_legs_storage", true);
         BUILDER.define("allow_helmet_storage", false);

@@ -56,11 +56,6 @@ public final class EquipmentStorageManager {
         return initialized;
     }
 
-    public static boolean preventsUnequip(ItemStack stack) {
-        EquipmentStorageData storage = stack.get(ModDataComponents.EQUIPMENT_STORAGE.get());
-        return GridInventoryConfig.PREVENT_UNEQUIP_WHEN_STORAGE_NOT_EMPTY.get() && storage != null && !storage.isEmpty();
-    }
-
     private static boolean allowedSlot(EquipmentSlot slot) {
         return (slot == EquipmentSlot.CHEST && GridInventoryConfig.ALLOW_CHEST_STORAGE.get())
                 || (slot == EquipmentSlot.LEGS && GridInventoryConfig.ALLOW_LEGS_STORAGE.get());

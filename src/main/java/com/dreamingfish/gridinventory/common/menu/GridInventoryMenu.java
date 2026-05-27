@@ -96,9 +96,6 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (source.isEmpty()) {
             return false;
         }
-        if ((playerSlot == 38 || playerSlot == 37) && EquipmentStorageManager.preventsUnequip(source)) {
-            return false;
-        }
         var targetEntry = gridData.getEntries().stream().filter(entry -> entry.contains(targetX, targetY)).findFirst();
         if (GridStackMerger.itemsStackableInGrid()
                 && targetEntry.isPresent()
@@ -128,9 +125,6 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return false;
         }
         ItemStack source = playerInventory.getItem(playerSlot);
-        if ((playerSlot == 38 || playerSlot == 37) && EquipmentStorageManager.preventsUnequip(source)) {
-            return false;
-        }
         ItemStack remainder = gridData.insert(source.copy(), GridInsertMode.EXECUTE);
         int inserted = source.getCount() - remainder.getCount();
         if (inserted > 0) {
@@ -467,7 +461,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPickup(Player player) {
-            return !EquipmentStorageManager.preventsUnequip(getItem());
+            return true;
         }
 
         @Override
