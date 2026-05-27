@@ -28,6 +28,7 @@ public final class ClientEvents {
 
     public static void registerKeys(RegisterKeyMappingsEvent event) {
         event.register(ModKeyMappings.PICKUP_ITEM);
+        event.register(ModKeyMappings.ROTATE_GRID_ITEM);
     }
 
     @SubscribeEvent

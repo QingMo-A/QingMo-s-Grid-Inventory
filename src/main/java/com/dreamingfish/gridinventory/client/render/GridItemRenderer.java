@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.client.render;
 
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
@@ -21,7 +22,7 @@ public final class GridItemRenderer {
         int accentAlpha = Math.round(0xFF * alpha);
         graphics.fill(x + 1, y + 1, x + entry.width() * cell, y + entry.height() * cell, (bodyAlpha << 24) | 0x2D2D2D);
         graphics.fill(x + 1, y + 1, x + entry.width() * cell, y + 2, (accentAlpha << 24) | 0xB8A15B);
-        renderStackInArea(graphics, entry.stack(), x, y, entry.width() * cell, entry.height() * cell, alpha);
+        renderStackInArea(graphics, entry.stack(), x, y, entry.width() * cell, entry.height() * cell, alpha, entry.rotated());
     }
 
     public static void renderStack(GuiGraphics graphics, ItemStack stack, int x, int y, float alpha) {
@@ -32,17 +33,24 @@ public final class GridItemRenderer {
     }
 
     public static void renderStackInArea(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height, float alpha) {
+        renderStackInArea(graphics, stack, x, y, width, height, alpha, false);
+    }
+
+    public static void renderStackInArea(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height, float alpha, boolean rotated) {
         int padding = GridInventoryClientConfig.GRID_ITEM_INNER_PADDING.get();
         int iconSize = Math.max(8, Math.min(width, height) - padding * 2);
         float scale = iconSize / 16.0F;
-        float iconX = x + (width - iconSize) / 2.0F;
-        float iconY = y + (height - iconSize) / 2.0F;
+        float iconCenterX = x + width / 2.0F;
+        float iconCenterY = y + height / 2.0F;
 
         graphics.pose().pushPose();
-        graphics.pose().translate(iconX, iconY, 0.0F);
+        graphics.pose().translate(iconCenterX, iconCenterY, 0.0F);
+        if (rotated) {
+            graphics.pose().mulPose(Axis.ZP.rotationDegrees(-90.0F));
+        }
         graphics.pose().scale(scale, scale, 1.0F);
         graphics.setColor(1.0F, 1.0F, 1.0F, alpha);
-        graphics.renderItem(stack, 0, 0);
+        graphics.renderItem(stack, -8, -8);
         graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         graphics.pose().popPose();
 

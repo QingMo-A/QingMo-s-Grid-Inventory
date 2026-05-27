@@ -12,6 +12,12 @@ public final class ModKeyMappings {
             GLFW.GLFW_KEY_R,
             CATEGORY
     );
+    public static final KeyMapping ROTATE_GRID_ITEM = new KeyMapping(
+            "key.df_grid_inventory.rotate_grid_item",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_V,
+            CATEGORY
+    );
 
     private ModKeyMappings() {
     }

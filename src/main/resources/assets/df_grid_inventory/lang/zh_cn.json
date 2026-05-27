@@ -5,6 +5,7 @@
   "container.df_grid_inventory.player_grid_inventory": "背包",
   "key.categories.df_grid_inventory": "DF 网格背包",
   "key.df_grid_inventory.pickup_item": "拾取物品",
+  "key.df_grid_inventory.rotate_grid_item": "旋转拖拽中的网格物品",
   "hud.df_grid_inventory.pickup_prompt": "%s 拾取",
   "screen.df_grid_inventory.equipment": "装备",
   "screen.df_grid_inventory.storage": "格子",

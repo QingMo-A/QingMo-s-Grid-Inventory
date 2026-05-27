@@ -23,6 +23,7 @@ import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
+import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
 import com.dreamingfish.gridinventory.mixin.client.SlotAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -231,7 +232,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int h = size.placedHeight(rotatedPreview);
         int left = mouseX - anchorCellX(stack) * CELL - dragAnchorPixelX;
         int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
-        GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F);
+        GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F, rotatedPreview);
     }
 
     private void renderEquipmentPreview(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -263,6 +264,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
     }
 
+    private void rotateDraggedPreview() {
+        ItemStack stack = draggedStack();
+        if (stack.isEmpty()) {
+            return;
+        }
+        GridItemSize size = GridItemSizeManager.getSize(stack);
+        if (size.rotatable() && size.width() != size.height()) {
+            rotatedPreview = !rotatedPreview;
+        }
+    }
+
     private void renderCellOutlines(GuiGraphics graphics, int left, int top, int width, int height, int color) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
@@ -277,7 +289,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (button == 1 && (draggingEntry != null || draggingEquipmentEntry != null || !selectedPlayerStack.isEmpty())) {
-            rotatedPreview = !rotatedPreview;
+            rotateDraggedPreview();
             return true;
         }
         if (menu.isPlayerGrid()) {
@@ -296,7 +308,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             int x = cellX((int) mouseX);
             int y = cellY((int) mouseY);
             if (button == 1) {
-                rotatedPreview = !rotatedPreview;
+                rotateDraggedPreview();
                 return true;
             }
             Optional<GridEntry> hit = menu.getGridData().getEntries().stream().filter(entry -> entry.contains(x, y)).findFirst();
@@ -329,6 +341,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (ModKeyMappings.ROTATE_GRID_ITEM.matches(keyCode, scanCode) && !draggedStack().isEmpty()) {
+            rotateDraggedPreview();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

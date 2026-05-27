@@ -12,14 +12,14 @@
       "target": "minecraft:chest_armor",
       "width": 2,
       "height": 3,
-      "rotatable": false
+      "rotatable": true
     },
     {
       "type": "tag",
       "target": "minecraft:leg_armor",
       "width": 2,
       "height": 3,
-      "rotatable": false
+      "rotatable": true
     },
     {
       "type": "tag",
@@ -33,7 +33,7 @@
       "target": "minecraft:elytra",
       "width": 2,
       "height": 3,
-      "rotatable": false
+      "rotatable": true
     },
     {
       "type": "item",
