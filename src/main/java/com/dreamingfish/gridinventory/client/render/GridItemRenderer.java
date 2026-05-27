@@ -40,8 +40,9 @@ public final class GridItemRenderer {
         int padding = GridInventoryClientConfig.GRID_ITEM_INNER_PADDING.get();
         int iconSize = Math.max(8, Math.min(width, height) - padding * 2);
         float scale = iconSize / 16.0F;
-        float iconCenterX = x + width / 2.0F;
-        float iconCenterY = y + height / 2.0F;
+        // Grid lines consume the top and left pixels, so center icons in the visible inner area.
+        float iconCenterX = x + width / 2.0F + 0.5F;
+        float iconCenterY = y + height / 2.0F + 0.5F;
 
         graphics.pose().pushPose();
         graphics.pose().translate(iconCenterX, iconCenterY, 0.0F);
