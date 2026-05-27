@@ -30,8 +30,8 @@ public final class EquipmentStorageTooltipRenderer {
         int contentWidth = font.width(title);
         int contentHeight = TITLE_HEIGHT;
         for (NamedGridInventoryData container : storage.containers()) {
-            contentWidth = Math.max(contentWidth, Math.max(font.width(container.title()), container.inventory().getColumns() * CELL));
-            contentHeight += CONTAINER_LABEL_HEIGHT + container.inventory().getRows() * CELL + CONTAINER_GAP;
+            contentWidth = Math.max(contentWidth, Math.max(font.width(container.title()), GridLayoutMetrics.width(container.inventory(), CELL)));
+            contentHeight += CONTAINER_LABEL_HEIGHT + GridLayoutMetrics.height(container.inventory(), CELL) + CONTAINER_GAP;
         }
         int panelWidth = contentWidth + PADDING * 2;
         int panelHeight = contentHeight + PADDING * 2 - CONTAINER_GAP;
@@ -53,9 +53,9 @@ public final class EquipmentStorageTooltipRenderer {
             y += CONTAINER_LABEL_HEIGHT;
             GridRenderer.renderGrid(graphics, panelX + PADDING, y, container.inventory(), CELL);
             for (var entry : container.inventory().getEntries()) {
-                GridItemRenderer.renderEntry(graphics, entry, panelX + PADDING, y, CELL);
+                GridItemRenderer.renderEntry(graphics, entry, container.inventory(), panelX + PADDING, y, CELL, 1.0F);
             }
-            y += container.inventory().getRows() * CELL + CONTAINER_GAP;
+            y += GridLayoutMetrics.height(container.inventory(), CELL) + CONTAINER_GAP;
         }
         graphics.pose().popPose();
     }

@@ -30,23 +30,10 @@ public final class GridRenderer {
                 if (!inventory.isEnabledCell(x, y)) {
                     continue;
                 }
-                int cellLeft = left + x * cell;
-                int cellTop = top + y * cell;
+                int cellLeft = left + GridLayoutMetrics.cellLeft(inventory, x, cell);
+                int cellTop = top + GridLayoutMetrics.cellTop(inventory, y, cell);
                 graphics.fill(cellLeft, cellTop, cellLeft + cell, cellTop + cell, 0xFF111111);
                 graphics.renderOutline(cellLeft, cellTop, cell, cell, 0xFF555555);
-                String section = inventory.sectionAt(x, y);
-                if (!section.equals(inventory.sectionAt(x - 1, y))) {
-                    graphics.fill(cellLeft, cellTop, cellLeft + 2, cellTop + cell, 0xFF8A8A8A);
-                }
-                if (!section.equals(inventory.sectionAt(x + 1, y))) {
-                    graphics.fill(cellLeft + cell - 2, cellTop, cellLeft + cell, cellTop + cell, 0xFF8A8A8A);
-                }
-                if (!section.equals(inventory.sectionAt(x, y - 1))) {
-                    graphics.fill(cellLeft, cellTop, cellLeft + cell, cellTop + 2, 0xFF8A8A8A);
-                }
-                if (!section.equals(inventory.sectionAt(x, y + 1))) {
-                    graphics.fill(cellLeft, cellTop + cell - 2, cellLeft + cell, cellTop + cell, 0xFF8A8A8A);
-                }
             }
         }
     }

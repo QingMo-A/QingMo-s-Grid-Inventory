@@ -259,10 +259,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             GridItemSize size = GridItemSizeManager.getSize(stack);
             int w = size.placedWidth(rotatedPreview);
             int h = size.placedHeight(rotatedPreview);
-            int drawX = region.left() + x * CELL;
-            int drawY = region.top() + y * CELL;
-            graphics.fill(drawX, drawY, drawX + w * CELL, drawY + h * CELL, valid ? 0x6630C860 : 0x66D84040);
-            renderCellOutlines(graphics, drawX, drawY, w, h, valid ? 0xCC7DFFA2 : 0xCCFF8888);
+            int drawX = region.drawX(x);
+            int drawY = region.drawY(y);
+            int drawWidth = region.areaWidth(x, w);
+            int drawHeight = region.areaHeight(y, h);
+            graphics.fill(drawX, drawY, drawX + drawWidth, drawY + drawHeight, valid ? 0x6630C860 : 0x66D84040);
+            renderRegionCellOutlines(graphics, region, x, y, w, h, valid ? 0xCC7DFFA2 : 0xCCFF8888);
         });
     }
 
@@ -290,6 +292,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
     }
 
+    private void renderRegionCellOutlines(GuiGraphics graphics, GridColumnPanel.Region region, int targetX, int targetY,
+                                          int width, int height, int color) {
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                graphics.renderOutline(region.drawX(targetX + x), region.drawY(targetY + y), CELL, CELL, color);
+            }
+        }
+    }
+
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (nearbyItemsPanel.mouseClicked(mouseX, mouseY, button)) {
@@ -311,8 +322,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     draggingEquipmentEntry = equipmentHit.get();
                     rotatedPreview = equipmentHit.get().entry().rotated();
                     setGridDragAnchor((int) mouseX, (int) mouseY,
-                            draggingEquipmentEntry.region().left() + draggingEquipmentEntry.entry().x() * CELL,
-                            draggingEquipmentEntry.region().top() + draggingEquipmentEntry.entry().y() * CELL,
+                            draggingEquipmentEntry.region().drawX(draggingEquipmentEntry.entry().x()),
+                            draggingEquipmentEntry.region().drawY(draggingEquipmentEntry.entry().y()),
                             draggingEquipmentEntry.entry().width(), draggingEquipmentEntry.entry().height());
                     return true;
                 }

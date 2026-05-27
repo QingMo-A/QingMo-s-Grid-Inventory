@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.client.screen.panel;
 
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridRenderer;
+import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
@@ -75,7 +76,7 @@ public final class GridColumnPanel {
         return equipmentRegions.stream()
                 .filter(region -> region.contains(mouseX, mouseY))
                 .flatMap(region -> region.inventory().getEntries().stream()
-                        .filter(entry -> entry.contains((mouseX - region.left()) / CELL, (mouseY - region.top()) / CELL))
+                        .filter(entry -> entry.contains(region.cellX(mouseX), region.cellY(mouseY)))
                         .map(entry -> new EquipmentEntryHit(region.slot(), region.containerId(), region.inventory(), entry, region)))
                 .findFirst();
     }
@@ -107,10 +108,10 @@ public final class GridColumnPanel {
         int gridTop = y + 13;
         GridRenderer.renderGrid(graphics, left + 8, gridTop, inventory, CELL);
         inventory.getEntries().forEach(entry -> GridItemRenderer.renderEntry(
-                graphics, entry, left + 8, gridTop, CELL,
+                graphics, entry, inventory, left + 8, gridTop, CELL,
                 draggedEntryId != null && draggedEntryId.equals(entry.entryId()) ? 0.35F : 1.0F
         ));
-        return gridTop + inventory.getRows() * CELL + 10;
+        return gridTop + GridLayoutMetrics.height(inventory, CELL) + 10;
     }
 
     private void renderScrollbar(GuiGraphics graphics) {
@@ -132,16 +133,34 @@ public final class GridColumnPanel {
     public record Region(EquipmentSlot slot, String containerId, GridInventoryData inventory, int left, int top) {
         private boolean contains(int mouseX, int mouseY) {
             return mouseX >= left && mouseY >= top
-                    && mouseX < left + inventory.getColumns() * CELL
-                    && mouseY < top + inventory.getRows() * CELL;
+                    && mouseX < left + GridLayoutMetrics.width(inventory, CELL)
+                    && mouseY < top + GridLayoutMetrics.height(inventory, CELL)
+                    && cellX(mouseX) >= 0 && cellY(mouseY) >= 0
+                    && inventory.isEnabledCell(cellX(mouseX), cellY(mouseY));
         }
 
         public int cellX(int mouseX) {
-            return (mouseX - left) / CELL;
+            return GridLayoutMetrics.cellXAt(inventory, mouseX - left, CELL);
         }
 
         public int cellY(int mouseY) {
-            return (mouseY - top) / CELL;
+            return GridLayoutMetrics.cellYAt(inventory, mouseY - top, CELL);
+        }
+
+        public int drawX(int cellX) {
+            return left + GridLayoutMetrics.cellLeft(inventory, cellX, CELL);
+        }
+
+        public int drawY(int cellY) {
+            return top + GridLayoutMetrics.cellTop(inventory, cellY, CELL);
+        }
+
+        public int areaWidth(int cellX, int width) {
+            return GridLayoutMetrics.areaWidth(inventory, cellX, width, CELL);
+        }
+
+        public int areaHeight(int cellY, int height) {
+            return GridLayoutMetrics.areaHeight(inventory, cellY, height, CELL);
         }
     }
 }

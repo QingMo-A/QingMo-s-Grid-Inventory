@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.client.render;
 
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
+import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -23,6 +24,18 @@ public final class GridItemRenderer {
         graphics.fill(x + 1, y + 1, x + entry.width() * cell, y + entry.height() * cell, (bodyAlpha << 24) | 0x2D2D2D);
         graphics.fill(x + 1, y + 1, x + entry.width() * cell, y + 2, (accentAlpha << 24) | 0xB8A15B);
         renderStackInArea(graphics, entry.stack(), x, y, entry.width() * cell, entry.height() * cell, alpha, entry.rotated());
+    }
+
+    public static void renderEntry(GuiGraphics graphics, GridEntry entry, GridInventoryData inventory, int gridLeft, int gridTop, int cell, float alpha) {
+        int x = gridLeft + GridLayoutMetrics.cellLeft(inventory, entry.x(), cell);
+        int y = gridTop + GridLayoutMetrics.cellTop(inventory, entry.y(), cell);
+        int width = GridLayoutMetrics.areaWidth(inventory, entry.x(), entry.width(), cell);
+        int height = GridLayoutMetrics.areaHeight(inventory, entry.y(), entry.height(), cell);
+        int bodyAlpha = Math.round(0xAA * alpha);
+        int accentAlpha = Math.round(0xFF * alpha);
+        graphics.fill(x + 1, y + 1, x + width, y + height, (bodyAlpha << 24) | 0x2D2D2D);
+        graphics.fill(x + 1, y + 1, x + width, y + 2, (accentAlpha << 24) | 0xB8A15B);
+        renderStackInArea(graphics, entry.stack(), x, y, width, height, alpha, entry.rotated());
     }
 
     public static void renderStack(GuiGraphics graphics, ItemStack stack, int x, int y, float alpha) {
