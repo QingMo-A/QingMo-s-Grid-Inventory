@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +48,8 @@ public final class EquipmentColumnPanel {
         }
     }
 
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, int hotbarTop, List<Slot> slots, int draggedPlayerSlot) {
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, int hotbarTop, List<Slot> slots,
+                       int draggedPlayerSlot, ItemStack draggedStack, boolean supportsDropToFreeSlot) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null) {
             return;
@@ -80,9 +82,22 @@ public final class EquipmentColumnPanel {
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.hotbar"), firstHotbar.x(), hotbarTop - 14, 0xBFBFBF, false);
         for (FreeSlotWidget freeSlot : freeSlots) {
             Slot slot = slots.get(freeSlot.menuIndex());
-            freeSlot.render(graphics, slot, freeSlot.contains(mouseX, mouseY),
-                    draggedPlayerSlot >= 0 && slot.getSlotIndex() == draggedPlayerSlot);
+            boolean hovered = freeSlot.contains(mouseX, mouseY);
+            Boolean dropAllowed = hovered && !draggedStack.isEmpty()
+                    ? supportsDropToFreeSlot && canReceive(slot, draggedStack) : null;
+            freeSlot.render(graphics, slot, hovered,
+                    draggedPlayerSlot >= 0 && slot.getSlotIndex() == draggedPlayerSlot, dropAllowed);
         }
+    }
+
+    private boolean canReceive(Slot slot, ItemStack draggedStack) {
+        if (!slot.mayPlace(draggedStack)) {
+            return false;
+        }
+        ItemStack existing = slot.getItem();
+        return existing.isEmpty()
+                || ItemStack.isSameItemSameComponents(existing, draggedStack)
+                && existing.getCount() < Math.min(existing.getMaxStackSize(), slot.getMaxStackSize());
     }
 
     public Optional<FreeSlotWidget> slotAt(double mouseX, double mouseY) {

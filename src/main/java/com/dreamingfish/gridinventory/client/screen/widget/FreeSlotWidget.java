@@ -5,15 +5,20 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 public record FreeSlotWidget(int menuIndex, int x, int y, int size) {
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= x && mouseY >= y && mouseX < x + size && mouseY < y + size;
     }
 
-    public void render(GuiGraphics graphics, Slot slot, boolean hovered, boolean dragged) {
+    public void render(GuiGraphics graphics, Slot slot, boolean hovered, boolean dragged, @Nullable Boolean dropAllowed) {
         graphics.fill(x, y, x + size, y + size, hovered ? 0xFF30343A : 0xFF202020);
-        graphics.renderOutline(x, y, size, size, hovered ? 0xFFE3E8EE : 0xFF4C4C4C);
+        int outline = 0xFF4C4C4C;
+        if (hovered) {
+            outline = dropAllowed == null ? 0xFFE3E8EE : dropAllowed ? 0xFF58DE86 : 0xFFF06161;
+        }
+        graphics.renderOutline(x, y, size, size, outline);
         if (slot.hasItem()) {
             renderItem(graphics, slot.getItem(), dragged ? 0.36F : 1.0F);
         }

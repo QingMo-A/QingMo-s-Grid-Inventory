@@ -101,7 +101,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (menu.isPlayerGrid()) {
             graphics.fill(leftPos - 4, topPos - 4, leftPos + imageWidth + 4, topPos + imageHeight + 4, 0xE0101010);
-            equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot);
+            equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot,
+                    draggedStack(), draggingEntry != null || draggingEquipmentEntry != null);
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId());
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
@@ -215,8 +216,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void renderDraggedStackGhost(GuiGraphics graphics, int mouseX, int mouseY) {
-        ItemStack stack = draggingEntry != null ? draggingEntry.stack()
-                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
+        ItemStack stack = draggedStack();
         if (stack.isEmpty()) {
             return;
         }
@@ -225,8 +225,6 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int h = size.placedHeight(rotatedPreview);
         int left = mouseX - anchorCellX(stack) * CELL - dragAnchorPixelX;
         int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
-        graphics.fill(left, top, left + w * CELL, top + h * CELL, 0x332C6DB8);
-        renderCellOutlines(graphics, left, top, w, h, 0x99FFFFFF);
         GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F);
     }
 
@@ -248,6 +246,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             graphics.fill(drawX, drawY, drawX + w * CELL, drawY + h * CELL, valid ? 0x6630C860 : 0x66D84040);
             renderCellOutlines(graphics, drawX, drawY, w, h, valid ? 0xCC7DFFA2 : 0xCCFF8888);
         });
+    }
+
+    private ItemStack draggedStack() {
+        return draggingEntry != null ? draggingEntry.stack()
+                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
     }
 
     private void renderCellOutlines(GuiGraphics graphics, int left, int top, int width, int height, int color) {
