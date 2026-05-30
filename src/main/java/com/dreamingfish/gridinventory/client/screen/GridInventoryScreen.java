@@ -113,7 +113,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (menu.isPlayerGrid()) {
-            graphics.fill(leftPos - 4, topPos - 4, leftPos + imageWidth + 4, topPos + imageHeight + 4, 0xA8101010);
+            graphics.fill(leftPos - 4, topPos - 4, leftPos + imageWidth + 4, topPos + imageHeight + 4, 0x2E101010);
             equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot,
                     draggedStack(), !draggedStack().isEmpty());
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(), draggingEquipmentEntry);
@@ -125,7 +125,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             renderDraggedStackGhost(graphics, mouseX, mouseY);
             return;
         }
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0xB0202020);
+        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0x00202020);
         GridRenderer.renderGrid(graphics, gridLeft, gridTop, menu.getGridData(), CELL);
         for (GridEntry entry : menu.getGridData().getEntries()) {
             if (draggingEntry != null && draggingEntry.entryId().equals(entry.entryId())) {
@@ -199,7 +199,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.fill(0, 0, width, height, 0x1A000000);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
         nearbyItemsPanel.render(graphics, mouseX, mouseY);

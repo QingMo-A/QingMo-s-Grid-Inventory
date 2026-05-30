@@ -62,8 +62,8 @@ public class NearbyItemsPanel {
         }
         refresh();
         Font font = Minecraft.getInstance().font;
-        graphics.fill(left, top, left + width(), top + height(), 0xA8171717);
-        graphics.fill(left, top, left + width(), top + 14, 0xB82D2D2D);
+        graphics.fill(left, top, left + width(), top + height(), 0x2E171717);
+        graphics.fill(left, top, left + width(), top + 14, 0x002D2D2D);
         graphics.drawString(font, Component.translatable("screen.df_grid_inventory.nearby_items"), left + 5, top + 4, 0xFFFFFF, false);
 
         int gridLeft = left + 6;

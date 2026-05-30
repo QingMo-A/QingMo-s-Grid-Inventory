@@ -48,7 +48,7 @@ public final class GridColumnPanel {
     public void render(GuiGraphics graphics, GridInventoryData pocket, @Nullable UUID draggedPocketEntryId,
                        @Nullable EquipmentEntryHit draggedEquipmentEntry) {
         Minecraft minecraft = Minecraft.getInstance();
-        graphics.fill(left, top, left + width, top + height, 0xA81A1A1A);
+        graphics.fill(left, top, left + width, top + height, 0x2E1A1A1A);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.storage"), left + 8, top + 6, 0xFFFFFF, false);
         graphics.enableScissor(left, top + 18, left + width - 6, top + height - 4);
         equipmentRegions.clear();

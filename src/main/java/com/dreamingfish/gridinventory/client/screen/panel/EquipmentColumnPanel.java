@@ -55,7 +55,7 @@ public final class EquipmentColumnPanel {
             return;
         }
         layoutSlots(hotbarTop);
-        graphics.fill(left, top, left + width, top + height, 0xA81A1A1A);
+        graphics.fill(left, top, left + width, top + height, 0x2E1A1A1A);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.equipment"), left + 8, top + 7, 0xFFFFFF, false);
 
         FreeSlotWidget helmet = freeSlots.get(0);
