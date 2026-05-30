@@ -168,6 +168,20 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (draggingEntry != null || draggingEquipmentEntry != null || !selectedPlayerStack.isEmpty()) {
             return;
         }
+        if (menu.isPlayerGrid()) {
+            Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt(mouseX, mouseY);
+            if (equipmentHit.isPresent()) {
+                GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
+                GridEntry entry = hit.entry();
+                int x1 = hit.region().drawX(entry.x());
+                int y1 = hit.region().drawY(entry.y());
+                int width = hit.region().areaWidth(entry.x(), entry.width());
+                int height = hit.region().areaHeight(entry.y(), entry.height());
+                graphics.fill(x1, y1, x1 + width, y1 + height, 0x22FFFFFF);
+                renderRegionCellOutlines(graphics, hit.region(), entry.x(), entry.y(), entry.width(), entry.height(), 0xFFFFFFFF);
+                return;
+            }
+        }
         entryAt(mouseX, mouseY).ifPresent(entry -> {
             int x1 = gridLeft + entry.x() * CELL;
             int y1 = gridTop + entry.y() * CELL;
