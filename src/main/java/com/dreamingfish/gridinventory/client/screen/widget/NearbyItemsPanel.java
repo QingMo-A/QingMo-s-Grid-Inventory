@@ -78,8 +78,9 @@ public class NearbyItemsPanel {
             int color = isInside(mouseX, mouseY, drawX, drawY, entry.view.gridWidth() * CELL, entry.view.gridHeight() * CELL) ? 0x994D6EA8 : 0x77333333;
             int areaWidth = entry.view.gridWidth() * CELL;
             int areaHeight = entry.view.gridHeight() * CELL;
-            graphics.fill(drawX, drawY, drawX + areaWidth, drawY + areaHeight, color);
-            GridItemRenderer.renderStackInArea(graphics, entry.view.stack(), drawX, drawY, areaWidth, areaHeight, 1.0F);
+            boolean draggedOrigin = dragging && draggedView != null && draggedView.entityId() == entry.view.entityId();
+            graphics.fill(drawX, drawY, drawX + areaWidth, drawY + areaHeight, draggedOrigin ? 0x44333333 : color);
+            GridItemRenderer.renderStackInArea(graphics, entry.view.stack(), drawX, drawY, areaWidth, areaHeight, draggedOrigin ? 0.35F : 1.0F);
         }
         graphics.disableScissor();
 
@@ -154,12 +155,6 @@ public class NearbyItemsPanel {
         int height = draggedView.gridHeight() * CELL;
         int x = mouseX - 8;
         int y = mouseY - 8;
-        graphics.fill(x, y, x + width, y + height, 0x66305FA8);
-        for (int yy = 0; yy < draggedView.gridHeight(); yy++) {
-            for (int xx = 0; xx < draggedView.gridWidth(); xx++) {
-                graphics.renderOutline(x + xx * CELL, y + yy * CELL, CELL, CELL, 0xAAFFFFFF);
-            }
-        }
         GridItemRenderer.renderStackInArea(graphics, draggedView.stack(), x, y, width, height, 0.85F);
     }
 
