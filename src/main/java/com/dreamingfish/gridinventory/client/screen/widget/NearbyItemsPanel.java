@@ -177,7 +177,7 @@ public class NearbyItemsPanel {
         if (minecraft.player == null || minecraft.level == null) {
             return;
         }
-        double range = GridInventoryConfig.NEARBY_ITEMS_RANGE.get();
+        double range = effectiveNearbyRange();
         AABB area = minecraft.player.getBoundingBox().inflate(range);
         List<NearbyGroundItemView> views = minecraft.level.getEntitiesOfClass(ItemEntity.class, area, item -> !item.isRemoved() && item.isAlive() && !item.getItem().isEmpty())
                 .stream()
@@ -189,6 +189,14 @@ public class NearbyItemsPanel {
                 .sorted(Comparator.comparingDouble(NearbyGroundItemView::distance))
                 .toList();
         pack(views);
+    }
+
+    private static double effectiveNearbyRange() {
+        double range = GridInventoryConfig.NEARBY_ITEMS_RANGE.get();
+        if (GridInventoryConfig.SERVER_VALIDATE_NEARBY_RANGE.get()) {
+            range = Math.min(range, GridInventoryConfig.PICKUP_RANGE.get());
+        }
+        return range;
     }
 
     private void pack(List<NearbyGroundItemView> views) {

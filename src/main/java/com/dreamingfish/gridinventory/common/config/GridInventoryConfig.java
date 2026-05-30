@@ -77,8 +77,8 @@ public final class GridInventoryConfig {
         BUILDER.push("pickup");
         DISABLE_VANILLA_AUTO_PICKUP = BUILDER.define("disable_vanilla_auto_pickup", true);
         MANUAL_PICKUP_ENABLED = BUILDER.define("manual_pickup_enabled", true);
-        PICKUP_RANGE = BUILDER.defineInRange("pickup_range", 4.0, 0.5, 32.0);
-        NEARBY_ITEMS_RANGE = BUILDER.defineInRange("nearby_items_range", 6.0, 0.5, 64.0);
+        PICKUP_RANGE = BUILDER.defineInRange("pickup_range", 2.0, 0.5, 32.0);
+        NEARBY_ITEMS_RANGE = BUILDER.defineInRange("nearby_items_range", 1.0, 0.5, 64.0);
         ALLOW_PICKUP_THROUGH_WALLS = BUILDER.define("allow_pickup_through_walls", false);
         BUILDER.pop();
 
@@ -88,7 +88,7 @@ public final class GridInventoryConfig {
         BUILDER.defineInRange("visible_rows", 10, 1, 32);
         BUILDER.define("sort_mode", "distance");
         SERVER_VALIDATE_NEARBY_RANGE = BUILDER.define("server_validate_nearby_range", true);
-        BUILDER.defineInRange("nearby_items_range", 6.0, 0.5, 64.0);
+        BUILDER.defineInRange("nearby_items_range", 1.0, 0.5, 64.0);
         BUILDER.pop();
 
         SPEC = BUILDER.build();
