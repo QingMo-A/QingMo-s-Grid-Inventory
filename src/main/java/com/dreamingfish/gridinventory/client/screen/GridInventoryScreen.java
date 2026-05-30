@@ -22,7 +22,10 @@ import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryPacket;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryPacket;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryPacket;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryPacket;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridPacket;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStoragePacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
+import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
@@ -219,7 +222,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private void renderPreview(GuiGraphics graphics, int mouseX, int mouseY) {
         ItemStack stack = draggingEntry != null ? draggingEntry.stack()
-                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
+                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack()
+                : nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack).orElse(selectedPlayerStack);
         if (stack.isEmpty() || !inGrid(mouseX, mouseY)) {
             return;
         }
@@ -260,7 +264,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private void renderEquipmentPreview(GuiGraphics graphics, int mouseX, int mouseY) {
         ItemStack stack = draggingEntry != null ? draggingEntry.stack()
-                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
+                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack()
+                : nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack).orElse(selectedPlayerStack);
         if (stack.isEmpty()) {
             return;
         }
@@ -286,7 +291,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private ItemStack draggedStack() {
         return draggingEntry != null ? draggingEntry.stack()
-                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack() : selectedPlayerStack;
+                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack()
+                : nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack).orElse(selectedPlayerStack);
     }
 
     private void rotateDraggedPreview() {
@@ -390,6 +396,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             rotateDraggedPreview();
             return true;
         }
+        if (ModKeyMappings.PICKUP_ITEM.matches(keyCode, scanCode)
+                && draggingEntry == null && draggingEquipmentEntry == null && selectedPlayerStack.isEmpty()
+                && nearbyItemsPanel.pickupHovered(currentMouseX(), currentMouseY())) {
+            return true;
+        }
         if (ModKeyMappings.DROP_HOVERED_GRID_ITEM.matches(keyCode, scanCode) && draggedStack().isEmpty()) {
             return dropHoveredGridItem();
         }
@@ -397,8 +408,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private boolean dropHoveredGridItem() {
-        int mouseX = (int) (minecraft.mouseHandler.xpos() * width / minecraft.getWindow().getScreenWidth());
-        int mouseY = (int) (minecraft.mouseHandler.ypos() * height / minecraft.getWindow().getScreenHeight());
+        int mouseX = currentMouseX();
+        int mouseY = currentMouseY();
         if (menu.isPlayerGrid()) {
             Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt(mouseX, mouseY);
             if (equipmentHit.isPresent()) {
@@ -415,8 +426,21 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return false;
     }
 
+    private int currentMouseX() {
+        return (int) (minecraft.mouseHandler.xpos() * width / minecraft.getWindow().getScreenWidth());
+    }
+
+    private int currentMouseY() {
+        return (int) (minecraft.mouseHandler.ypos() * height / minecraft.getWindow().getScreenHeight());
+    }
+
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && nearbyItemsPanel.isDraggingGroundItem()) {
+            handleGroundItemRelease((int) mouseX, (int) mouseY);
+            nearbyItemsPanel.clearDrag();
+            return true;
+        }
         if (nearbyItemsPanel.mouseReleased(mouseX, mouseY, button)) {
             return true;
         }
@@ -493,6 +517,26 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    private void handleGroundItemRelease(int mouseX, int mouseY) {
+        Optional<NearbyGroundItemView> dragged = nearbyItemsPanel.draggedView();
+        if (dragged.isEmpty()) {
+            return;
+        }
+        NearbyGroundItemView view = dragged.get();
+        Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
+                ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
+        if (equipmentRegion.isPresent()) {
+            GridColumnPanel.Region region = equipmentRegion.get();
+            PacketDistributor.sendToServer(new PickupGroundItemIntoEquipmentStoragePacket(
+                    view.entityId(), region.slot(), region.containerId(),
+                    targetRegionX(region, view.stack(), mouseX), targetRegionY(region, view.stack(), mouseY), rotatedPreview));
+        } else if (inGrid(mouseX, mouseY)) {
+            PacketDistributor.sendToServer(new PickupGroundItemIntoGridPacket(
+                    view.entityId(), targetGridX(view.stack(), mouseX), targetGridY(view.stack(), mouseY), rotatedPreview));
+        }
+        rotatedPreview = false;
     }
 
     @Override

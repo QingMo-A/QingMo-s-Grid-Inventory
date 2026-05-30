@@ -93,7 +93,7 @@ public class NearbyItemsPanel {
                 Component.literal("Count: " + entry.view.stack().getCount()).withStyle(ChatFormatting.GRAY),
                 Component.literal(String.format("Distance: %.1f", entry.view.distance())).withStyle(ChatFormatting.GRAY),
                 Component.literal("Size: " + entry.view.gridWidth() + " x " + entry.view.gridHeight()).withStyle(ChatFormatting.GRAY),
-                Component.translatable("tooltip.df_grid_inventory.pickup_hint").withStyle(ChatFormatting.YELLOW)
+                Component.translatable("tooltip.df_grid_inventory.nearby_drag_hint").withStyle(ChatFormatting.YELLOW)
             ), Optional.empty(), mouseX, mouseY));
         }
     }
@@ -118,12 +118,26 @@ public class NearbyItemsPanel {
         if (button != 0 || !dragging) {
             return false;
         }
-        if (draggedView != null) {
-            ClientPickupController.requestPickup(draggedView.entityId());
-        }
+        return true;
+    }
+
+    public boolean pickupHovered(int mouseX, int mouseY) {
+        Optional<Entry> hit = hovered(mouseX, mouseY);
+        hit.ifPresent(entry -> ClientPickupController.requestPickup(entry.view.entityId()));
+        return hit.isPresent();
+    }
+
+    public boolean isDraggingGroundItem() {
+        return dragging && draggedView != null;
+    }
+
+    public Optional<NearbyGroundItemView> draggedView() {
+        return Optional.ofNullable(draggedView);
+    }
+
+    public void clearDrag() {
         draggedView = null;
         dragging = false;
-        return true;
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaY) {

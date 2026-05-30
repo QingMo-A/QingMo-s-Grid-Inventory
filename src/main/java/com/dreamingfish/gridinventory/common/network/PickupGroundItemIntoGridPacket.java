@@ -1,6 +1,7 @@
 package com.dreamingfish.gridinventory.common.network;
 
 import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -23,7 +24,10 @@ public record PickupGroundItemIntoGridPacket(int entityId, int targetX, int targ
     }
 
     public static void handle(PickupGroundItemIntoGridPacket packet, IPayloadContext context) {
-        // Reserved for drag-from-ground-into-grid placement. Server validation will live here.
+        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
+            menu.pickupGroundItemIntoGrid(packet.entityId(), packet.targetX(), packet.targetY(), packet.rotated());
+            menu.broadcastChanges();
+        }
     }
 
     @Override

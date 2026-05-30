@@ -8,11 +8,17 @@ import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
 import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
+import com.dreamingfish.gridinventory.common.network.ModNetworking;
+import com.dreamingfish.gridinventory.common.pickup.ManualPickupHandler;
 import com.dreamingfish.gridinventory.common.registry.ModAttachments;
 import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -237,6 +243,51 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         playerInventory.player.drop(dropped, false);
         saveEquipmentStorage(equipmentSlot, edit.get().storage());
         playerInventory.setChanged();
+        return true;
+    }
+
+    public boolean pickupGroundItemIntoGrid(int entityId, int targetX, int targetY, boolean rotated) {
+        if (!(playerInventory.player instanceof ServerPlayer player)) {
+            return false;
+        }
+        Optional<ItemEntity> itemEntity = ManualPickupHandler.findReachableItem(player, entityId);
+        if (itemEntity.isEmpty() || !insertGroundStackIntoGrid(itemEntity.get(), gridData, targetX, targetY, rotated)) {
+            return false;
+        }
+        save();
+        ModNetworking.syncMenu(player, this);
+        return true;
+    }
+
+    public boolean pickupGroundItemIntoEquipmentStorage(int entityId, EquipmentSlot equipmentSlot, String containerId,
+                                                       int targetX, int targetY, boolean rotated) {
+        if (!(playerInventory.player instanceof ServerPlayer player)) {
+            return false;
+        }
+        Optional<ItemEntity> itemEntity = ManualPickupHandler.findReachableItem(player, entityId);
+        Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(equipmentSlot, containerId);
+        if (itemEntity.isEmpty() || edit.isEmpty()
+                || !insertGroundStackIntoGrid(itemEntity.get(), edit.get().inventory(), targetX, targetY, rotated)) {
+            return false;
+        }
+        saveEquipmentStorage(equipmentSlot, edit.get().storage());
+        return true;
+    }
+
+    private boolean insertGroundStackIntoGrid(ItemEntity itemEntity, GridInventoryData inventory, int targetX, int targetY, boolean rotated) {
+        ItemStack groundStack = itemEntity.getItem();
+        if (groundStack.isEmpty() || !GridPlacementValidator.canPlace(inventory, groundStack, targetX, targetY, rotated, null)) {
+            return false;
+        }
+        ItemStack inserted = groundStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? groundStack.getCount() : 1);
+        inventory.add(inserted, targetX, targetY, rotated);
+        groundStack.shrink(inserted.getCount());
+        if (groundStack.isEmpty()) {
+            itemEntity.discard();
+        }
+        playerInventory.player.level().playSound(null, playerInventory.player.getX(), playerInventory.player.getY(), playerInventory.player.getZ(),
+                SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F,
+                ((playerInventory.player.getRandom().nextFloat() - playerInventory.player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
         return true;
     }
 

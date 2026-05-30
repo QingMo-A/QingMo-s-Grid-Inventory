@@ -20,5 +20,6 @@
   "screen.df_grid_inventory.offhand": "左手",
   "screen.df_grid_inventory.nearby_items": "附近物品",
   "tooltip.df_grid_inventory.pickup_hint": "按拾取键或点击拾取",
+  "tooltip.df_grid_inventory.nearby_drag_hint": "按拾取键拾取，或拖入网格",
   "tooltip.df_grid_inventory.equipment_storage": "随身口袋"
 }
