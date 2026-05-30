@@ -20,6 +20,8 @@ import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEnt
 import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotPacket;
 import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryPacket;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryPacket;
+import com.dreamingfish.gridinventory.common.network.DropGridEntryPacket;
+import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryPacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
@@ -388,7 +390,29 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             rotateDraggedPreview();
             return true;
         }
+        if (ModKeyMappings.DROP_HOVERED_GRID_ITEM.matches(keyCode, scanCode) && draggedStack().isEmpty()) {
+            return dropHoveredGridItem();
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean dropHoveredGridItem() {
+        int mouseX = (int) (minecraft.mouseHandler.xpos() * width / minecraft.getWindow().getScreenWidth());
+        int mouseY = (int) (minecraft.mouseHandler.ypos() * height / minecraft.getWindow().getScreenHeight());
+        if (menu.isPlayerGrid()) {
+            Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt(mouseX, mouseY);
+            if (equipmentHit.isPresent()) {
+                GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
+                PacketDistributor.sendToServer(new DropEquipmentStorageEntryPacket(hit.slot(), hit.containerId(), hit.entry().entryId()));
+                return true;
+            }
+        }
+        Optional<GridEntry> entry = entryAt(mouseX, mouseY);
+        if (entry.isPresent()) {
+            PacketDistributor.sendToServer(new DropGridEntryPacket(entry.get().entryId()));
+            return true;
+        }
+        return false;
     }
 
     @Override

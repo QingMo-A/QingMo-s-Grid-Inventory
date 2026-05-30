@@ -18,6 +18,12 @@ public final class ModKeyMappings {
             GLFW.GLFW_KEY_V,
             CATEGORY
     );
+    public static final KeyMapping DROP_HOVERED_GRID_ITEM = new KeyMapping(
+            "key.df_grid_inventory.drop_hovered_grid_item",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_X,
+            CATEGORY
+    );
 
     private ModKeyMappings() {
     }

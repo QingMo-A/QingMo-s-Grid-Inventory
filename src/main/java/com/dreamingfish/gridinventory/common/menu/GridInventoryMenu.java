@@ -163,6 +163,21 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    public boolean dropGridEntry(UUID entryId) {
+        var entry = gridData.getEntry(entryId);
+        if (entry.isEmpty()) {
+            return false;
+        }
+        ItemStack dropped = gridData.extract(entryId, entry.get().stack().getCount());
+        if (dropped.isEmpty()) {
+            return false;
+        }
+        playerInventory.player.drop(dropped, false);
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
     public boolean insertFromPlayerIntoEquipmentStorage(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {
         if (playerSlot < 0 || playerSlot >= 36 || playerSlot >= playerInventory.getContainerSize()) {
             return false;
@@ -205,6 +220,22 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         ItemStack equipped = source.get().inventory().extract(entryId, 1);
         saveEquipmentStorage(sourceSlot, source.get().storage());
         playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
+        playerInventory.setChanged();
+        return true;
+    }
+
+    public boolean dropEquipmentStorageEntry(EquipmentSlot equipmentSlot, String containerId, UUID entryId) {
+        Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(equipmentSlot, containerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = edit.flatMap(storage -> storage.inventory().getEntry(entryId));
+        if (edit.isEmpty() || entry.isEmpty()) {
+            return false;
+        }
+        ItemStack dropped = edit.get().inventory().extract(entryId, entry.get().stack().getCount());
+        if (dropped.isEmpty()) {
+            return false;
+        }
+        playerInventory.player.drop(dropped, false);
+        saveEquipmentStorage(equipmentSlot, edit.get().storage());
         playerInventory.setChanged();
         return true;
     }

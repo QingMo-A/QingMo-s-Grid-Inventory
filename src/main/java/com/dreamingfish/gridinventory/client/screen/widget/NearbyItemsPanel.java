@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.client.screen.widget;
 
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
 import com.dreamingfish.gridinventory.client.pickup.ClientPickupController;
+import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import net.minecraft.ChatFormatting;
@@ -75,9 +76,10 @@ public class NearbyItemsPanel {
             }
             int drawX = gridLeft + entry.x * CELL;
             int color = isInside(mouseX, mouseY, drawX, drawY, entry.view.gridWidth() * CELL, entry.view.gridHeight() * CELL) ? 0x994D6EA8 : 0x77333333;
-            graphics.fill(drawX, drawY, drawX + entry.view.gridWidth() * CELL, drawY + entry.view.gridHeight() * CELL, color);
-            graphics.renderItem(entry.view.stack(), drawX + 2, drawY + 2);
-            graphics.renderItemDecorations(font, entry.view.stack(), drawX + 2, drawY + 2);
+            int areaWidth = entry.view.gridWidth() * CELL;
+            int areaHeight = entry.view.gridHeight() * CELL;
+            graphics.fill(drawX, drawY, drawX + areaWidth, drawY + areaHeight, color);
+            GridItemRenderer.renderStackInArea(graphics, entry.view.stack(), drawX, drawY, areaWidth, areaHeight, 1.0F);
         }
         graphics.disableScissor();
 
@@ -144,8 +146,7 @@ public class NearbyItemsPanel {
                 graphics.renderOutline(x + xx * CELL, y + yy * CELL, CELL, CELL, 0xAAFFFFFF);
             }
         }
-        graphics.renderItem(draggedView.stack(), x + 2, y + 2);
-        graphics.renderItemDecorations(font, draggedView.stack(), x + 2, y + 2);
+        GridItemRenderer.renderStackInArea(graphics, draggedView.stack(), x, y, width, height, 0.85F);
     }
 
     private Optional<Entry> hovered(int mouseX, int mouseY) {

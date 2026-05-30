@@ -31,6 +31,8 @@ public final class ModNetworking {
         registrar.playToServer(MovePlayerFreeSlotPacket.TYPE, MovePlayerFreeSlotPacket.STREAM_CODEC, MovePlayerFreeSlotPacket::handle);
         registrar.playToServer(QuickEquipGridEntryPacket.TYPE, QuickEquipGridEntryPacket.STREAM_CODEC, QuickEquipGridEntryPacket::handle);
         registrar.playToServer(QuickEquipEquipmentStorageEntryPacket.TYPE, QuickEquipEquipmentStorageEntryPacket.STREAM_CODEC, QuickEquipEquipmentStorageEntryPacket::handle);
+        registrar.playToServer(DropGridEntryPacket.TYPE, DropGridEntryPacket.STREAM_CODEC, DropGridEntryPacket::handle);
+        registrar.playToServer(DropEquipmentStorageEntryPacket.TYPE, DropEquipmentStorageEntryPacket.STREAM_CODEC, DropEquipmentStorageEntryPacket::handle);
     }
 
     public static void syncMenu(Player player, GridInventoryMenu menu) {
