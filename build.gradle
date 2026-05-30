@@ -10,6 +10,10 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
+    maven {
+        name = "Curios"
+        url = uri("https://maven.theillusivec4.top/")
+    }
 }
 
 base {
@@ -116,6 +120,8 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+    runtimeOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1"
+    compileOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1:api"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

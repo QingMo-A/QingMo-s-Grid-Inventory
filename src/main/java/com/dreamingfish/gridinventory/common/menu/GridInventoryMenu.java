@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
+import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
 import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
@@ -507,6 +508,42 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         playerInventory.setItem(targetPlayerSlot, source);
         playerInventory.setChanged();
         return true;
+    }
+
+    public boolean insertPlayerSlotIntoCurio(int sourcePlayerSlot, String identifier, int index) {
+        if (!playerGrid) {
+            return false;
+        }
+        return CuriosIntegration.movePlayerSlotToCurio(playerInventory.player, sourcePlayerSlot, identifier, index);
+    }
+
+    public boolean insertGridEntryIntoCurio(UUID entryId, String identifier, int index) {
+        if (!playerGrid) {
+            return false;
+        }
+        boolean moved = CuriosIntegration.moveGridEntryToCurio(playerInventory.player, gridData, entryId, identifier, index);
+        if (moved) {
+            save();
+        }
+        return moved;
+    }
+
+    public boolean extractCurioToPlayerSlot(String identifier, int index, int targetPlayerSlot) {
+        if (!playerGrid || !isFreePlayerSlot(targetPlayerSlot)) {
+            return false;
+        }
+        return CuriosIntegration.moveCurioToPlayerSlot(playerInventory.player, identifier, index, targetPlayerSlot);
+    }
+
+    public boolean extractCurioToGrid(String identifier, int index, int targetX, int targetY, boolean rotated) {
+        if (!playerGrid) {
+            return false;
+        }
+        boolean moved = CuriosIntegration.moveCurioToGrid(playerInventory.player, gridData, identifier, index, targetX, targetY, rotated);
+        if (moved) {
+            save();
+        }
+        return moved;
     }
 
     private boolean isFreePlayerSlot(int playerSlot) {

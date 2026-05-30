@@ -1,29 +1,41 @@
 package com.dreamingfish.gridinventory.client.screen.widget;
 
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
+import com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.world.inventory.Slot;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
-public record FreeSlotWidget(int menuIndex, int x, int y, int size) {
+import java.util.List;
+
+public record CuriosSlotWidget(CuriosSlotView view, int x, int y, int size) {
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= x && mouseY >= y && mouseX < x + size && mouseY < y + size;
     }
 
-    public void render(GuiGraphics graphics, Slot slot, boolean hovered, boolean dragged, @Nullable Boolean dropAllowed) {
-        graphics.fill(x, y, x + size, y + size, hovered ? 0xFF30343A : 0xFF202020);
-        int outline = 0xFF4C4C4C;
+    public void render(GuiGraphics graphics, boolean hovered, @Nullable Boolean dropAllowed, boolean dragged) {
+        graphics.fill(x, y, x + size, y + size, hovered ? 0x6630343A : 0x33202020);
+        int outline = 0xAA7A69A8;
         if (dropAllowed != null) {
             outline = dropAllowed ? 0xFF58DE86 : hovered ? 0xFFF06161 : 0xAA7A4242;
         } else if (hovered) {
             outline = 0xFFE3E8EE;
         }
         graphics.renderOutline(x, y, size, size, outline);
-        if (slot.hasItem()) {
-            renderItem(graphics, slot.getItem(), dragged ? 0.36F : 1.0F);
+        if (view.stack().isEmpty()) {
+            return;
         }
+        renderItem(graphics, view.stack(), dragged ? 0.36F : 1.0F);
+    }
+
+    public List<Component> tooltip() {
+        if (view.stack().isEmpty()) {
+            return List.of(Component.literal(view.identifier()).withStyle(ChatFormatting.GRAY));
+        }
+        return List.of(view.stack().getHoverName(), Component.literal("Curios: " + view.identifier()).withStyle(ChatFormatting.GRAY));
     }
 
     private void renderItem(GuiGraphics graphics, ItemStack stack, float alpha) {
