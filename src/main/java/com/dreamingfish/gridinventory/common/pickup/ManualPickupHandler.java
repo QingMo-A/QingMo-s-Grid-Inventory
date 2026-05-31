@@ -38,10 +38,11 @@ public final class ManualPickupHandler {
 
         int originalCount = groundStack.getCount();
         ItemStack toInsert = groundStack.copy();
+        toInsert = insertIntoPlayerSlots(player, toInsert, 0, 9);
         if (GridInventoryConfig.REPLACE_SURVIVAL_INVENTORY.get()) {
             toInsert = insertIntoPocket(player, toInsert);
         } else {
-            player.getInventory().add(toInsert);
+            toInsert = insertIntoPlayerSlots(player, toInsert, 9, 36);
         }
         int inserted = originalCount - toInsert.getCount();
         if (inserted <= 0) {
@@ -56,6 +57,37 @@ public final class ManualPickupHandler {
         player.inventoryMenu.broadcastChanges();
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
         return true;
+    }
+
+    private static ItemStack insertIntoPlayerSlots(ServerPlayer player, ItemStack stack, int startInclusive, int endExclusive) {
+        if (stack.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack remainder = stack.copy();
+        for (int slot = startInclusive; slot < endExclusive && !remainder.isEmpty(); slot++) {
+            ItemStack existing = player.getInventory().getItem(slot);
+            if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, remainder)) {
+                continue;
+            }
+            int limit = Math.min(existing.getMaxStackSize(), player.getInventory().getMaxStackSize());
+            int moved = Math.min(remainder.getCount(), limit - existing.getCount());
+            if (moved > 0) {
+                existing.grow(moved);
+                remainder.shrink(moved);
+                player.getInventory().setChanged();
+            }
+        }
+        for (int slot = startInclusive; slot < endExclusive && !remainder.isEmpty(); slot++) {
+            ItemStack existing = player.getInventory().getItem(slot);
+            if (!existing.isEmpty()) {
+                continue;
+            }
+            int moved = Math.min(remainder.getCount(), Math.min(remainder.getMaxStackSize(), player.getInventory().getMaxStackSize()));
+            player.getInventory().setItem(slot, remainder.copyWithCount(moved));
+            remainder.shrink(moved);
+            player.getInventory().setChanged();
+        }
+        return remainder;
     }
 
     public static Optional<ItemEntity> findReachableItem(ServerPlayer player, int entityId) {
