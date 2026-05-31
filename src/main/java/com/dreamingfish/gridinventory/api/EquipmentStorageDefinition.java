@@ -28,11 +28,17 @@ public record EquipmentStorageDefinition(GridItemSizeRule.Type type, String targ
         return switch (slot) {
             case "chest" -> EquipmentSlot.CHEST;
             case "legs" -> EquipmentSlot.LEGS;
+            case "back" -> EquipmentSlot.BODY;
             default -> throw new IllegalArgumentException("Unsupported equipment storage slot: " + slot);
         };
     }
 
     private static String encodeSlot(EquipmentSlot slot) {
-        return slot == EquipmentSlot.CHEST ? "chest" : "legs";
+        return switch (slot) {
+            case CHEST -> "chest";
+            case LEGS -> "legs";
+            case BODY -> "back";
+            default -> throw new IllegalArgumentException("Unsupported equipment storage slot: " + slot);
+        };
     }
 }

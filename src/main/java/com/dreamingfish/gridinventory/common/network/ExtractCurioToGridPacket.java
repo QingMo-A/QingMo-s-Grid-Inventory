@@ -28,6 +28,7 @@ public record ExtractCurioToGridPacket(String identifier, int index, int targetX
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
             menu.extractCurioToGrid(packet.identifier(), packet.index(), packet.targetX(), packet.targetY(), packet.rotated());
             menu.broadcastChanges();
+            ModNetworking.syncMenu(context.player(), menu);
         }
     }
 

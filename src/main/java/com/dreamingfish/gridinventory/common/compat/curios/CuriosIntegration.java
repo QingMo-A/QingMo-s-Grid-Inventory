@@ -107,6 +107,79 @@ public final class CuriosIntegration {
         return true;
     }
 
+    public static boolean moveEquipmentEntryToCurio(Player player, GridInventoryData inventory, UUID entryId, String identifier, int index) {
+        if (!isLoaded()) {
+            return false;
+        }
+        Optional<GridEntry> entry = inventory.getEntry(entryId);
+        if (entry.isEmpty() || !validCurio(player, identifier, index, entry.get().stack())) {
+            return false;
+        }
+        Optional<IDynamicStackHandler> target = stacks(player, identifier);
+        if (target.isEmpty() || index < 0 || index >= target.get().getSlots() || !target.get().getStackInSlot(index).isEmpty()) {
+            return false;
+        }
+        ItemStack moved = inventory.extract(entryId, 1);
+        if (moved.isEmpty()) {
+            return false;
+        }
+        target.get().setStackInSlot(index, moved);
+        player.getInventory().setChanged();
+        return true;
+    }
+
+    public static boolean quickEquip(Player player, ItemStack source) {
+        if (!isLoaded() || source.isEmpty()) {
+            return false;
+        }
+        return CuriosApi.getCuriosInventory(player)
+                .map(handler -> {
+                    List<ICurioStacksHandler> handlers = handler.getCurios().values().stream()
+                            .filter(ICurioStacksHandler::isVisible)
+                            .sorted(Comparator.comparing(ICurioStacksHandler::getIdentifier))
+                            .toList();
+                    for (ICurioStacksHandler stacksHandler : handlers) {
+                        IDynamicStackHandler stacks = stacksHandler.getStacks();
+                        String identifier = stacksHandler.getIdentifier();
+                        for (int index = 0; index < stacks.getSlots(); index++) {
+                            if (!handler.isSlotActive(identifier, index) || !stacks.getStackInSlot(index).isEmpty()) {
+                                continue;
+                            }
+                            if (validCurio(player, identifier, index, source)) {
+                                stacks.setStackInSlot(index, source.copyWithCount(1));
+                                source.shrink(1);
+                                player.getInventory().setChanged();
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                })
+                .orElse(false);
+    }
+
+    public static boolean canQuickEquip(Player player, ItemStack stack) {
+        if (!isLoaded() || stack.isEmpty()) {
+            return false;
+        }
+        return CuriosApi.getCuriosInventory(player)
+                .map(handler -> handler.getCurios().values().stream()
+                        .filter(ICurioStacksHandler::isVisible)
+                        .anyMatch(stacksHandler -> {
+                            IDynamicStackHandler stacks = stacksHandler.getStacks();
+                            String identifier = stacksHandler.getIdentifier();
+                            for (int index = 0; index < stacks.getSlots(); index++) {
+                                if (handler.isSlotActive(identifier, index)
+                                        && stacks.getStackInSlot(index).isEmpty()
+                                        && validCurio(player, identifier, index, stack)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }))
+                .orElse(false);
+    }
+
     public static boolean moveCurioToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
         if (!isLoaded() || targetPlayerSlot < 0 || targetPlayerSlot >= player.getInventory().getContainerSize()) {
             return false;
@@ -142,6 +215,30 @@ public final class CuriosIntegration {
         source.get().setStackInSlot(index, ItemStack.EMPTY);
         player.getInventory().setChanged();
         return true;
+    }
+
+    public static Optional<ItemStack> getCurioStack(Player player, String identifier, int index) {
+        if (!isLoaded()) {
+            return Optional.empty();
+        }
+        Optional<IDynamicStackHandler> source = stacks(player, identifier);
+        if (source.isEmpty() || index < 0 || index >= source.get().getSlots()) {
+            return Optional.empty();
+        }
+        ItemStack stack = source.get().getStackInSlot(index);
+        return stack.isEmpty() ? Optional.empty() : Optional.of(stack);
+    }
+
+    public static void setCurioStack(Player player, String identifier, int index, ItemStack stack) {
+        if (!isLoaded()) {
+            return;
+        }
+        Optional<IDynamicStackHandler> source = stacks(player, identifier);
+        if (source.isEmpty() || index < 0 || index >= source.get().getSlots()) {
+            return;
+        }
+        source.get().setStackInSlot(index, stack);
+        player.getInventory().setChanged();
     }
 
     private static Optional<IDynamicStackHandler> stacks(Player player, String identifier) {

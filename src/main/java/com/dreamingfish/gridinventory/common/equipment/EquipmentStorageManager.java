@@ -61,7 +61,8 @@ public final class EquipmentStorageManager {
 
     private static boolean allowedSlot(EquipmentSlot slot) {
         return (slot == EquipmentSlot.CHEST && GridInventoryConfig.ALLOW_CHEST_STORAGE.get())
-                || (slot == EquipmentSlot.LEGS && GridInventoryConfig.ALLOW_LEGS_STORAGE.get());
+                || (slot == EquipmentSlot.LEGS && GridInventoryConfig.ALLOW_LEGS_STORAGE.get())
+                || slot == EquipmentSlot.BODY;
     }
 
     private static boolean matches(EquipmentStorageDefinition rule, ItemStack stack) {

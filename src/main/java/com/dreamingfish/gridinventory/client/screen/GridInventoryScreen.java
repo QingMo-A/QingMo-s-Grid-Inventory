@@ -20,15 +20,19 @@ import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEnt
 import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotPacket;
 import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryPacket;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryPacket;
+import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotPacket;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryPacket;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryPacket;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridPacket;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStoragePacket;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioPacket;
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioPacket;
+import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioPacket;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotPacket;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridPacket;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStoragePacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
+import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
@@ -42,6 +46,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -209,16 +214,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
         nearbyItemsPanel.render(graphics, mouseX, mouseY);
-        hoveredGridEntry(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(
-                entry.stack().getHoverName(),
-                Component.literal("Size: " + entry.width() + " x " + entry.height()).withStyle(ChatFormatting.GRAY),
-                Component.literal("Rotatable: " + (GridItemSizeManager.getSize(entry.stack()).rotatable() ? "Yes" : "No")).withStyle(ChatFormatting.GRAY)
-        ), Optional.empty(), mouseX, mouseY));
+        hoveredGridEntry(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
         if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()) {
             equipmentColumnPanel.slotAt(mouseX, mouseY)
                     .map(slot -> menu.slots.get(slot.menuIndex()))
                     .filter(Slot::hasItem)
-                    .ifPresent(slot -> graphics.renderTooltip(font, slot.getItem(), mouseX, mouseY));
+                    .ifPresent(slot -> graphics.renderTooltip(font, tooltipWithQuickEquipHint(slot.getItem()), Optional.empty(), mouseX, mouseY));
             equipmentColumnPanel.curioSlotAt(mouseX, mouseY)
                     .ifPresent(slot -> graphics.renderTooltip(font, slot.tooltip(), Optional.empty(), mouseX, mouseY));
         }
@@ -403,6 +404,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 selectedPlayerStack = ItemStack.EMPTY;
                 return true;
             }
+            if (button == 1 && hovered.hasItem() && menu.isPlayerGrid()) {
+                PacketDistributor.sendToServer(new QuickEquipPlayerSlotPacket(lastPlayerSlot));
+                return true;
+            }
             if (button == 0 && hovered.hasItem()) {
                 selectedPlayerStack = hovered.getItem().copy();
                 rotatedPreview = false;
@@ -468,7 +473,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (button == 0 && draggingCurioSlot != null) {
-            if (inGrid((int) mouseX, (int) mouseY)) {
+            Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
+            if (equipmentRegion.isPresent()) {
+                GridColumnPanel.Region region = equipmentRegion.get();
+                PacketDistributor.sendToServer(new ExtractCurioToEquipmentStoragePacket(
+                        draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), region.slot(), region.containerId(),
+                        targetRegionX(region, draggingCurioSlot.view().stack(), (int) mouseX),
+                        targetRegionY(region, draggingCurioSlot.view().stack(), (int) mouseY), rotatedPreview));
+            } else if (inGrid((int) mouseX, (int) mouseY)) {
                 PacketDistributor.sendToServer(new ExtractCurioToGridPacket(
                         draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(),
                         targetGridX(draggingCurioSlot.view().stack(), (int) mouseX),
@@ -484,6 +496,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (button == 0 && draggingEquipmentEntry != null) {
+            Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
+            if (curioTarget.isPresent()) {
+                PacketDistributor.sendToServer(new InsertEquipmentStorageEntryIntoCurioPacket(
+                        draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
+                        curioTarget.get().view().identifier(), curioTarget.get().view().index()));
+                clearDragState();
+                return true;
+            }
             Optional<GridColumnPanel.Region> region = gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY);
             if (region.isPresent()) {
                 GridColumnPanel.Region target = region.get();
@@ -644,6 +664,43 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             }
         }
         return hoveredGridEntry(mouseX, mouseY).map(GridEntry::stack);
+    }
+
+    private List<Component> tooltipWithQuickEquipHint(ItemStack stack) {
+        List<Component> tooltip = new java.util.ArrayList<>(getTooltipFromItem(minecraft, stack));
+        Component hint = quickEquipTooltip(stack);
+        if (hint != null) {
+            tooltip.add(hint);
+        }
+        return tooltip;
+    }
+
+    private List<Component> gridEntryTooltip(GridEntry entry) {
+        List<Component> tooltip = new java.util.ArrayList<>();
+        tooltip.add(entry.stack().getHoverName());
+        tooltip.add(Component.literal("Size: " + entry.width() + " x " + entry.height()).withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Rotatable: " + (GridItemSizeManager.getSize(entry.stack()).rotatable() ? "Yes" : "No")).withStyle(ChatFormatting.GRAY));
+        Component hint = quickEquipTooltip(entry.stack());
+        if (hint != null) {
+            tooltip.add(hint);
+        }
+        return tooltip;
+    }
+
+    private Component quickEquipTooltip(ItemStack stack) {
+        if (minecraft.player == null || stack.isEmpty() || !canQuickEquip(stack)) {
+            return null;
+        }
+        return Component.translatable("tooltip.df_grid_inventory.right_click_equip").withStyle(ChatFormatting.GRAY);
+    }
+
+    private boolean canQuickEquip(ItemStack stack) {
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            if (minecraft.player.getItemBySlot(slot).isEmpty() && stack.canEquip(slot, minecraft.player)) {
+                return true;
+            }
+        }
+        return CuriosIntegration.canQuickEquip(minecraft.player, stack);
     }
 
     private boolean inGrid(int mouseX, int mouseY) {

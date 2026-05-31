@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "LCL",
+    "LLL"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "C": {
+      "item": "minecraft:chest"
+    }
+  },
+  "result": {
+    "id": "df_grid_inventory:grid_backpack",
+    "count": 1
+  }
+}

@@ -1,6 +1,7 @@
 {
   "itemGroup.df_grid_inventory": "DF Grid Inventory",
   "item.df_grid_inventory.small_grid_bag": "Small Grid Bag",
+  "item.df_grid_inventory.grid_backpack": "Grid Backpack",
   "container.df_grid_inventory.small_grid_bag": "Small Grid Bag",
   "container.df_grid_inventory.player_grid_inventory": "Inventory",
   "key.categories.df_grid_inventory": "DF Grid Inventory",
@@ -21,5 +22,6 @@
   "screen.df_grid_inventory.nearby_items": "Nearby Items",
   "tooltip.df_grid_inventory.pickup_hint": "Press Pickup Key or Click to pick up",
   "tooltip.df_grid_inventory.nearby_drag_hint": "Press Pickup Key to pick up, or drag into a grid",
-  "tooltip.df_grid_inventory.equipment_storage": "Stored Pockets"
+  "tooltip.df_grid_inventory.equipment_storage": "Stored Pockets",
+  "tooltip.df_grid_inventory.right_click_equip": "Right-click in inventory to equip"
 }

@@ -7,6 +7,8 @@ import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
+import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
+import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -57,6 +59,10 @@ public final class GridColumnPanel {
         if (minecraft.player != null) {
             y = renderEquipmentStorage(graphics, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST), Component.translatable("screen.df_grid_inventory.chest_storage"), y, draggedEquipmentEntry);
             y = renderEquipmentStorage(graphics, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS), Component.translatable("screen.df_grid_inventory.legs_storage"), y, draggedEquipmentEntry);
+            Optional<ItemStack> backpack = CuriosIntegration.getCurioStack(minecraft.player, "back", 0);
+            if (backpack.isPresent()) {
+                y = renderEquipmentStorage(graphics, EquipmentSlot.BODY, backpack.get(), Component.literal("Backpack"), y, draggedEquipmentEntry);
+            }
         }
         graphics.disableScissor();
         contentHeight = Math.max(height, y - top + scroll + 6);
@@ -88,6 +94,9 @@ public final class GridColumnPanel {
     private int renderEquipmentStorage(GuiGraphics graphics, EquipmentSlot slot, ItemStack equipped, Component emptyTitle, int y,
                                        @Nullable EquipmentEntryHit draggedEquipmentEntry) {
         EquipmentStorageData storage = equipped.get(ModDataComponents.EQUIPMENT_STORAGE.get());
+        if ((storage == null || storage.containers().isEmpty()) && !equipped.isEmpty()) {
+            storage = EquipmentStorageManager.initializeStorage(equipped, slot);
+        }
         if (storage == null || storage.containers().isEmpty()) {
             graphics.drawString(Minecraft.getInstance().font, emptyTitle, left + 8, y + 4, 0x787878, false);
             return y + 19;

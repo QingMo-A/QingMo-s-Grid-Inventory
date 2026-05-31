@@ -30,6 +30,7 @@ public record InsertIntoEquipmentStoragePacket(int playerSlot, EquipmentSlot equ
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
             menu.insertFromPlayerIntoEquipmentStorage(packet.playerSlot(), packet.equipmentSlot(), packet.containerId(), packet.targetX(), packet.targetY(), packet.rotated());
             menu.broadcastChanges();
+            ModNetworking.syncMenu(context.player(), menu);
         }
     }
 

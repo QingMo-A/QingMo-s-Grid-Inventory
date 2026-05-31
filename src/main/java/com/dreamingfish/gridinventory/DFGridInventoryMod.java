@@ -27,6 +27,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import org.slf4j.Logger;
+import top.theillusivec4.curios.api.CuriosApi;
 
 @Mod(DFGridInventoryMod.MODID)
 public class DFGridInventoryMod {
@@ -52,6 +53,7 @@ public class DFGridInventoryMod {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> CuriosApi.registerCurio(ModItems.GRID_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.GRID_BACKPACK.get()));
         LOGGER.info("DF Grid Inventory loaded. Vanilla inventories and creative inventory are left untouched.");
     }
 

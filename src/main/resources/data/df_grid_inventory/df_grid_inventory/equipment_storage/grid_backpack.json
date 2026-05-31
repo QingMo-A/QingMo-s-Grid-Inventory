@@ -1,0 +1,21 @@
+{
+  "rules": [
+    {
+      "type": "item",
+      "target": "df_grid_inventory:grid_backpack",
+      "slot": "back",
+      "containers": [
+        {
+          "id": "main_compartment",
+          "title": "Backpack",
+          "layout": [
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA"
+          ]
+        }
+      ]
+    }
+  ]
+}

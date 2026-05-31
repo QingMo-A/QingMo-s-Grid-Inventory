@@ -28,6 +28,7 @@ public record InsertGridEntryIntoCurioPacket(UUID entryId, String identifier, in
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
             menu.insertGridEntryIntoCurio(packet.entryId(), packet.identifier(), packet.index());
             menu.broadcastChanges();
+            ModNetworking.syncMenu(context.player(), menu);
         }
     }
 

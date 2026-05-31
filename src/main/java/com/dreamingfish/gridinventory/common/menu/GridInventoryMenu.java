@@ -160,14 +160,22 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return false;
         }
         Optional<EquipmentSlot> targetSlot = findEmptyArmorSlot(entry.get().stack());
-        if (targetSlot.isEmpty()) {
-            return false;
+        if (targetSlot.isPresent()) {
+            ItemStack equipped = gridData.extract(entryId, 1);
+            playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
+            playerInventory.setChanged();
+            save();
+            return true;
         }
-        ItemStack equipped = gridData.extract(entryId, 1);
-        playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
-        playerInventory.setChanged();
-        save();
-        return true;
+        if (CuriosIntegration.canQuickEquip(playerInventory.player, entry.get().stack())) {
+            ItemStack equipped = gridData.extract(entryId, 1);
+            boolean equippedToCurio = CuriosIntegration.quickEquip(playerInventory.player, equipped);
+            if (equippedToCurio) {
+                save();
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean dropGridEntry(UUID entryId) {
@@ -186,7 +194,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     public boolean insertFromPlayerIntoEquipmentStorage(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {
-        if (playerSlot < 0 || playerSlot >= 36 || playerSlot >= playerInventory.getContainerSize()) {
+        if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize() || !isFreePlayerSlot(playerSlot)) {
+            return false;
+        }
+        if (equipmentPlayerSlotOrInvalid(equipmentSlot) == playerSlot) {
             return false;
         }
         ItemStack source = playerInventory.getItem(playerSlot);
@@ -221,14 +232,22 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return false;
         }
         Optional<EquipmentSlot> targetSlot = findEmptyArmorSlot(entry.get().stack());
-        if (targetSlot.isEmpty()) {
-            return false;
+        if (targetSlot.isPresent()) {
+            ItemStack equipped = source.get().inventory().extract(entryId, 1);
+            saveEquipmentStorage(sourceSlot, source.get().storage());
+            playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
+            playerInventory.setChanged();
+            return true;
         }
-        ItemStack equipped = source.get().inventory().extract(entryId, 1);
-        saveEquipmentStorage(sourceSlot, source.get().storage());
-        playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
-        playerInventory.setChanged();
-        return true;
+        if (CuriosIntegration.canQuickEquip(playerInventory.player, entry.get().stack())) {
+            ItemStack equipped = source.get().inventory().extract(entryId, 1);
+            boolean equippedToCurio = CuriosIntegration.quickEquip(playerInventory.player, equipped);
+            if (equippedToCurio) {
+                saveEquipmentStorage(sourceSlot, source.get().storage());
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean dropEquipmentStorageEntry(EquipmentSlot equipmentSlot, String containerId, UUID entryId) {
@@ -303,6 +322,24 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         target.get().inventory().add(moved, targetX, targetY, rotated);
         gridData.extract(entryId, moved.getCount());
         save();
+        saveEquipmentStorage(equipmentSlot, target.get().storage());
+        return true;
+    }
+
+    public boolean insertCurioIntoEquipmentStorage(String identifier, int index, EquipmentSlot equipmentSlot, String containerId,
+                                                  int targetX, int targetY, boolean rotated) {
+        if (!playerGrid || (equipmentSlot == EquipmentSlot.BODY && "back".equals(identifier) && index == 0)) {
+            return false;
+        }
+        Optional<ItemStack> source = CuriosIntegration.getCurioStack(playerInventory.player, identifier, index);
+        Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
+        if (source.isEmpty() || target.isEmpty()
+                || !GridPlacementValidator.canPlace(target.get().inventory(), source.get(), targetX, targetY, rotated, null)) {
+            return false;
+        }
+        ItemStack moved = source.get().copy();
+        target.get().inventory().add(moved, targetX, targetY, rotated);
+        CuriosIntegration.setCurioStack(playerInventory.player, identifier, index, ItemStack.EMPTY);
         saveEquipmentStorage(equipmentSlot, target.get().storage());
         return true;
     }
@@ -390,8 +427,11 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     private Optional<EquipmentStorageEdit> editableEquipmentInventory(EquipmentSlot slot, String containerId) {
-        ItemStack equipped = playerInventory.player.getItemBySlot(slot);
+        ItemStack equipped = equipmentStorageStack(slot);
         EquipmentStorageData current = equipped.get(ModDataComponents.EQUIPMENT_STORAGE.get());
+        if ((current == null || current.containers().isEmpty()) && !equipped.isEmpty()) {
+            current = EquipmentStorageManager.initializeStorage(equipped, slot);
+        }
         if (current == null) {
             return Optional.empty();
         }
@@ -405,9 +445,23 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     private void saveEquipmentStorage(EquipmentSlot slot, EquipmentStorageData storage) {
-        ItemStack equipped = playerInventory.player.getItemBySlot(slot);
+        ItemStack equipped = equipmentStorageStack(slot);
+        if (equipped.isEmpty()) {
+            return;
+        }
         equipped.set(ModDataComponents.EQUIPMENT_STORAGE.get(), storage);
+        if (slot == EquipmentSlot.BODY) {
+            CuriosIntegration.setCurioStack(playerInventory.player, "back", 0, equipped);
+        }
         playerInventory.setChanged();
+        ModNetworking.syncEquipmentStorage(playerInventory.player, slot, storage);
+    }
+
+    private ItemStack equipmentStorageStack(EquipmentSlot slot) {
+        if (slot == EquipmentSlot.BODY) {
+            return CuriosIntegration.getCurioStack(playerInventory.player, "back", 0).orElse(ItemStack.EMPTY);
+        }
+        return playerInventory.player.getItemBySlot(slot);
     }
 
     private record EquipmentStorageEdit(EquipmentStorageData storage, GridInventoryData inventory) {
@@ -528,6 +582,39 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return moved;
     }
 
+    public boolean insertEquipmentStorageEntryIntoCurio(EquipmentSlot sourceSlot, String containerId, UUID entryId, String identifier, int index) {
+        if (!playerGrid) {
+            return false;
+        }
+        Optional<EquipmentStorageEdit> source = editableEquipmentInventory(sourceSlot, containerId);
+        if (source.isEmpty()) {
+            return false;
+        }
+        boolean moved = CuriosIntegration.moveEquipmentEntryToCurio(playerInventory.player, source.get().inventory(), entryId, identifier, index);
+        if (moved) {
+            saveEquipmentStorage(sourceSlot, source.get().storage());
+        }
+        return moved;
+    }
+
+    public boolean quickEquipPlayerSlot(int playerSlot) {
+        if (!playerGrid || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize() || !isFreePlayerSlot(playerSlot)) {
+            return false;
+        }
+        ItemStack source = playerInventory.getItem(playerSlot);
+        if (source.isEmpty()) {
+            return false;
+        }
+        Optional<EquipmentSlot> targetSlot = findEmptyArmorSlot(source);
+        if (targetSlot.isPresent()) {
+            playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), source.copyWithCount(1));
+            source.shrink(1);
+            playerInventory.setChanged();
+            return true;
+        }
+        return CuriosIntegration.quickEquip(playerInventory.player, source);
+    }
+
     public boolean extractCurioToPlayerSlot(String identifier, int index, int targetPlayerSlot) {
         if (!playerGrid || !isFreePlayerSlot(targetPlayerSlot)) {
             return false;
@@ -570,6 +657,16 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             case LEGS -> 37;
             case FEET -> 36;
             default -> throw new IllegalArgumentException("Unsupported quick equip slot: " + slot);
+        };
+    }
+
+    private int equipmentPlayerSlotOrInvalid(EquipmentSlot slot) {
+        return switch (slot) {
+            case HEAD -> 39;
+            case CHEST -> 38;
+            case LEGS -> 37;
+            case FEET -> 36;
+            default -> -1;
         };
     }
 

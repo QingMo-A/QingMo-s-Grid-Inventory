@@ -14,7 +14,10 @@ public final class ModCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = CREATIVE_MODE_TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.df_grid_inventory"))
             .icon(() -> new ItemStack(ModItems.SMALL_GRID_BAG.get()))
-            .displayItems((parameters, output) -> output.accept(ModItems.SMALL_GRID_BAG.get()))
+            .displayItems((parameters, output) -> {
+                output.accept(ModItems.SMALL_GRID_BAG.get());
+                output.accept(ModItems.GRID_BACKPACK.get());
+            })
             .build());
 
     private ModCreativeTabs() {

@@ -26,6 +26,7 @@ public record ExtractCurioToPlayerSlotPacket(String identifier, int index, int t
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
             menu.extractCurioToPlayerSlot(packet.identifier(), packet.index(), packet.targetPlayerSlot());
             menu.broadcastChanges();
+            ModNetworking.syncMenu(context.player(), menu);
         }
     }
 
