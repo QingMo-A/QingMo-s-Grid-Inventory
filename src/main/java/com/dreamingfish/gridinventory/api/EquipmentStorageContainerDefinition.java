@@ -37,6 +37,7 @@ public record EquipmentStorageContainerDefinition(String id, String title, int c
     }
 
     private static List<GridSection> parseLayout(List<String> rows) {
+        rows = normalizeLayoutRows(rows);
         List<GridSection> parsed = new ArrayList<>();
         Set<GridCell> visited = new HashSet<>();
         for (int y = 0; y < rows.size(); y++) {
@@ -63,6 +64,26 @@ public record EquipmentStorageContainerDefinition(String id, String title, int c
             }
         }
         return List.copyOf(parsed);
+    }
+
+    private static List<String> normalizeLayoutRows(List<String> rows) {
+        if (rows.isEmpty()) {
+            return rows;
+        }
+        int width = rows.stream().mapToInt(String::length).max().orElse(0);
+        boolean explicitBlankCells = rows.stream().anyMatch(row -> row.indexOf('.') >= 0 || row.indexOf(' ') >= 0);
+        List<String> normalized = new ArrayList<>();
+        for (String row : rows) {
+            if (row.length() >= width) {
+                normalized.add(row);
+                continue;
+            }
+            int missing = width - row.length();
+            int leftPadding = explicitBlankCells ? 0 : missing / 2;
+            int rightPadding = missing - leftPadding;
+            normalized.add(".".repeat(leftPadding) + row + ".".repeat(rightPadding));
+        }
+        return normalized;
     }
 
     private static void addAdjacent(List<String> rows, char marker, int x, int y, Set<GridCell> visited, ArrayDeque<GridCell> pending) {

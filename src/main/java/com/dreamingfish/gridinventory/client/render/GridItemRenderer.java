@@ -27,10 +27,10 @@ public final class GridItemRenderer {
     }
 
     public static void renderEntry(GuiGraphics graphics, GridEntry entry, GridInventoryData inventory, int gridLeft, int gridTop, int cell, float alpha) {
-        int x = gridLeft + GridLayoutMetrics.cellLeft(inventory, entry.x(), cell);
-        int y = gridTop + GridLayoutMetrics.cellTop(inventory, entry.y(), cell);
-        int width = GridLayoutMetrics.areaWidth(inventory, entry.x(), entry.width(), cell);
-        int height = GridLayoutMetrics.areaHeight(inventory, entry.y(), entry.height(), cell);
+        int x = gridLeft + GridLayoutMetrics.cellLeft(inventory, entry.x(), entry.y(), cell);
+        int y = gridTop + GridLayoutMetrics.cellTop(inventory, entry.x(), entry.y(), cell);
+        int width = GridLayoutMetrics.areaWidth(inventory, entry.x(), entry.y(), entry.width(), cell);
+        int height = GridLayoutMetrics.areaHeight(inventory, entry.x(), entry.y(), entry.height(), cell);
         int bodyAlpha = Math.round(0xAA * alpha);
         int accentAlpha = Math.round(0xFF * alpha);
         graphics.fill(x + 1, y + 1, x + width, y + height, (bodyAlpha << 24) | 0x2D2D2D);

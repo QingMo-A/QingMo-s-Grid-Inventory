@@ -82,7 +82,7 @@ public final class GridColumnPanel {
         return equipmentRegions.stream()
                 .filter(region -> region.contains(mouseX, mouseY))
                 .flatMap(region -> region.inventory().getEntries().stream()
-                        .filter(entry -> entry.contains(region.cellX(mouseX), region.cellY(mouseY)))
+                        .filter(entry -> entry.contains(region.cellX(mouseX, mouseY), region.cellY(mouseX, mouseY)))
                         .map(entry -> new EquipmentEntryHit(region.slot(), region.containerId(), region.inventory(), entry, region)))
                 .findFirst();
     }
@@ -141,35 +141,61 @@ public final class GridColumnPanel {
 
     public record Region(EquipmentSlot slot, String containerId, GridInventoryData inventory, int left, int top) {
         private boolean contains(int mouseX, int mouseY) {
+            int cellX = cellX(mouseX, mouseY);
+            int cellY = cellY(mouseX, mouseY);
             return mouseX >= left && mouseY >= top
                     && mouseX < left + GridLayoutMetrics.width(inventory, CELL)
                     && mouseY < top + GridLayoutMetrics.height(inventory, CELL)
-                    && cellX(mouseX) >= 0 && cellY(mouseY) >= 0
-                    && inventory.isEnabledCell(cellX(mouseX), cellY(mouseY));
+                    && cellX >= 0 && cellY >= 0
+                    && inventory.isEnabledCell(cellX, cellY);
         }
 
         public int cellX(int mouseX) {
-            return GridLayoutMetrics.cellXAt(inventory, mouseX - left, CELL);
+            return GridLayoutMetrics.cellXAt(inventory, mouseX - left, 0, CELL);
         }
 
         public int cellY(int mouseY) {
-            return GridLayoutMetrics.cellYAt(inventory, mouseY - top, CELL);
+            return GridLayoutMetrics.cellYAt(inventory, 0, mouseY - top, CELL);
+        }
+
+        public int cellX(int mouseX, int mouseY) {
+            return GridLayoutMetrics.cellXAt(inventory, mouseX - left, mouseY - top, CELL);
+        }
+
+        public int cellY(int mouseX, int mouseY) {
+            return GridLayoutMetrics.cellYAt(inventory, mouseX - left, mouseY - top, CELL);
         }
 
         public int drawX(int cellX) {
-            return left + GridLayoutMetrics.cellLeft(inventory, cellX, CELL);
+            return drawX(cellX, 0);
         }
 
         public int drawY(int cellY) {
-            return top + GridLayoutMetrics.cellTop(inventory, cellY, CELL);
+            return drawY(0, cellY);
+        }
+
+        public int drawX(int cellX, int cellY) {
+            return left + GridLayoutMetrics.cellLeft(inventory, cellX, cellY, CELL);
+        }
+
+        public int drawY(int cellX, int cellY) {
+            return top + GridLayoutMetrics.cellTop(inventory, cellX, cellY, CELL);
         }
 
         public int areaWidth(int cellX, int width) {
-            return GridLayoutMetrics.areaWidth(inventory, cellX, width, CELL);
+            return areaWidth(cellX, 0, width);
         }
 
         public int areaHeight(int cellY, int height) {
-            return GridLayoutMetrics.areaHeight(inventory, cellY, height, CELL);
+            return areaHeight(0, cellY, height);
+        }
+
+        public int areaWidth(int cellX, int cellY, int width) {
+            return GridLayoutMetrics.areaWidth(inventory, cellX, cellY, width, CELL);
+        }
+
+        public int areaHeight(int cellX, int cellY, int height) {
+            return GridLayoutMetrics.areaHeight(inventory, cellX, cellY, height, CELL);
         }
     }
 }

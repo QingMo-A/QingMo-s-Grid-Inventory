@@ -11,8 +11,8 @@
           "layout": [
             "AABCD",
             "AABCD",
-            "E.FFF",
-            "E.FFF"
+            "EFFF",
+            "EFFF"
           ]
         }
       ]
@@ -40,10 +40,10 @@
           "id": "chest_storage",
           "title": "Chest Storage",
           "layout": [
-            "ABBB.",
-            "ABBB.",
-            ".....",
-            "C.DD."
+            "ABBB",
+            "ABBB",
+            "C",
+            "DD"
           ]
         }
       ]

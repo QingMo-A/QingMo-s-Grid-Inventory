@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.client.screen;
 import com.dreamingfish.gridinventory.api.GridItemSize;
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridRenderer;
+import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.render.EquipmentStorageTooltipRenderer;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
@@ -189,10 +190,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (equipmentHit.isPresent()) {
                 GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
                 GridEntry entry = hit.entry();
-                int x1 = hit.region().drawX(entry.x());
-                int y1 = hit.region().drawY(entry.y());
-                int width = hit.region().areaWidth(entry.x(), entry.width());
-                int height = hit.region().areaHeight(entry.y(), entry.height());
+                int x1 = hit.region().drawX(entry.x(), entry.y());
+                int y1 = hit.region().drawY(entry.x(), entry.y());
+                int width = hit.region().areaWidth(entry.x(), entry.y(), entry.width());
+                int height = hit.region().areaHeight(entry.x(), entry.y(), entry.height());
                 graphics.fill(x1, y1, x1 + width, y1 + height, 0x22FFFFFF);
                 renderRegionCellOutlines(graphics, hit.region(), entry.x(), entry.y(), entry.width(), entry.height(), 0xFFFFFFFF);
                 return;
@@ -285,10 +286,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             GridItemSize size = GridItemSizeManager.getSize(stack);
             int w = size.placedWidth(rotatedPreview);
             int h = size.placedHeight(rotatedPreview);
-            int drawX = region.drawX(x);
-            int drawY = region.drawY(y);
-            int drawWidth = region.areaWidth(x, w);
-            int drawHeight = region.areaHeight(y, h);
+            int drawX = region.drawX(x, y);
+            int drawY = region.drawY(x, y);
+            int drawWidth = region.areaWidth(x, y, w);
+            int drawHeight = region.areaHeight(x, y, h);
             graphics.fill(drawX, drawY, drawX + drawWidth, drawY + drawHeight, valid ? 0x6630C860 : 0x66D84040);
             renderRegionCellOutlines(graphics, region, x, y, w, h, valid ? 0xCC7DFFA2 : 0xCCFF8888);
         });
@@ -324,7 +325,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                                           int width, int height, int color) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                graphics.renderOutline(region.drawX(targetX + x), region.drawY(targetY + y), CELL, CELL, color);
+                graphics.renderOutline(region.drawX(targetX + x, targetY + y), region.drawY(targetX + x, targetY + y), CELL, CELL, color);
             }
         }
     }
@@ -368,16 +369,16 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     draggingEquipmentEntry = equipmentHit.get();
                     rotatedPreview = equipmentHit.get().entry().rotated();
                     setGridDragAnchor((int) mouseX, (int) mouseY,
-                            draggingEquipmentEntry.region().drawX(draggingEquipmentEntry.entry().x()),
-                            draggingEquipmentEntry.region().drawY(draggingEquipmentEntry.entry().y()),
+                            draggingEquipmentEntry.region().drawX(draggingEquipmentEntry.entry().x(), draggingEquipmentEntry.entry().y()),
+                            draggingEquipmentEntry.region().drawY(draggingEquipmentEntry.entry().x(), draggingEquipmentEntry.entry().y()),
                             draggingEquipmentEntry.entry().width(), draggingEquipmentEntry.entry().height());
                     return true;
                 }
             }
         }
         if (inGrid((int) mouseX, (int) mouseY)) {
-            int x = cellX((int) mouseX);
-            int y = cellY((int) mouseY);
+            int x = cellX((int) mouseX, (int) mouseY);
+            int y = cellY((int) mouseX, (int) mouseY);
             Optional<GridEntry> hit = menu.getGridData().getEntries().stream().filter(entry -> entry.contains(x, y)).findFirst();
             if (hit.isPresent()) {
                 if (button == 1 && menu.isPlayerGrid()) {
@@ -640,8 +641,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (!inGrid(mouseX, mouseY)) {
             return Optional.empty();
         }
-        int x = cellX(mouseX);
-        int y = cellY(mouseY);
+        int x = cellX(mouseX, mouseY);
+        int y = cellY(mouseX, mouseY);
         return menu.getGridData().getEntries().stream().filter(entry -> entry.contains(x, y)).findFirst();
     }
 
@@ -704,15 +705,26 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private boolean inGrid(int mouseX, int mouseY) {
-        return mouseX >= gridLeft && mouseY >= gridTop && mouseX < gridLeft + menu.getGridData().getColumns() * CELL && mouseY < gridTop + menu.getGridData().getRows() * CELL;
+        return mouseX >= gridLeft && mouseY >= gridTop
+                && mouseX < gridLeft + GridLayoutMetrics.width(menu.getGridData(), CELL)
+                && mouseY < gridTop + GridLayoutMetrics.height(menu.getGridData(), CELL)
+                && cellX(mouseX, mouseY) >= 0 && cellY(mouseX, mouseY) >= 0;
     }
 
     private int cellX(int mouseX) {
-        return (mouseX - gridLeft) / CELL;
+        return GridLayoutMetrics.cellXAt(menu.getGridData(), mouseX - gridLeft, CELL);
     }
 
     private int cellY(int mouseY) {
-        return (mouseY - gridTop) / CELL;
+        return GridLayoutMetrics.cellYAt(menu.getGridData(), mouseY - gridTop, CELL);
+    }
+
+    private int cellX(int mouseX, int mouseY) {
+        return GridLayoutMetrics.cellXAt(menu.getGridData(), mouseX - gridLeft, mouseY - gridTop, CELL);
+    }
+
+    private int cellY(int mouseX, int mouseY) {
+        return GridLayoutMetrics.cellYAt(menu.getGridData(), mouseX - gridLeft, mouseY - gridTop, CELL);
     }
 
     private int anchorCellX(ItemStack stack) {
@@ -726,19 +738,19 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private int targetGridX(ItemStack stack, int mouseX) {
-        return cellX(mouseX) - anchorCellX(stack);
+        return cellX(mouseX, currentMouseY()) - anchorCellX(stack);
     }
 
     private int targetGridY(ItemStack stack, int mouseY) {
-        return cellY(mouseY) - anchorCellY(stack);
+        return cellY(currentMouseX(), mouseY) - anchorCellY(stack);
     }
 
     private int targetRegionX(GridColumnPanel.Region region, ItemStack stack, int mouseX) {
-        return region.cellX(mouseX) - anchorCellX(stack);
+        return region.cellX(mouseX, currentMouseY()) - anchorCellX(stack);
     }
 
     private int targetRegionY(GridColumnPanel.Region region, ItemStack stack, int mouseY) {
-        return region.cellY(mouseY) - anchorCellY(stack);
+        return region.cellY(currentMouseX(), mouseY) - anchorCellY(stack);
     }
 
     private void setGridDragAnchor(int mouseX, int mouseY, int itemLeft, int itemTop, int width, int height) {
