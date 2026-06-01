@@ -12,17 +12,7 @@ public final class GridLayoutMetrics {
         if (!inventory.hasCustomSections()) {
             return inventory.getColumns() * cell;
         }
-        int max = 0;
-        for (int y = 0; y < inventory.getRows(); y++) {
-            int right = 0;
-            for (int x = 0; x < inventory.getColumns(); x++) {
-                if (inventory.isEnabledCell(x, y)) {
-                    right = Math.max(right, cellLeft(inventory, x, y, cell) + cell);
-                }
-            }
-            max = Math.max(max, right);
-        }
-        return max;
+        return widestRowWidth(inventory, cell);
     }
 
     public static int height(GridInventoryData inventory, int cell) {
@@ -54,13 +44,7 @@ public final class GridLayoutMetrics {
         if (!inventory.hasCustomSections()) {
             return x * cell;
         }
-        int gaps = 0;
-        for (int column = 0; column < x; column++) {
-            if (hasRowGapAfter(inventory, column, y)) {
-                gaps++;
-            }
-        }
-        return x * cell + gaps * SECTION_GAP;
+        return rowOffset(inventory, y, cell) + rowCellLeft(inventory, x, y, cell);
     }
 
     public static int cellTop(GridInventoryData inventory, int x, int y, int cell) {
@@ -69,7 +53,7 @@ public final class GridLayoutMetrics {
         }
         int gaps = 0;
         for (int row = 0; row < y; row++) {
-            if (hasColumnGapAfter(inventory, x, row)) {
+            if (hasAnyHorizontalSectionGapAfter(inventory, row)) {
                 gaps++;
             }
         }
@@ -239,4 +223,74 @@ public final class GridLayoutMetrics {
         String bottom = inventory.sectionAt(column, row + 1);
         return top != null && bottom != null && !top.equals(bottom);
     }
+
+    private static boolean hasAnyHorizontalSectionGapAfter(GridInventoryData inventory, int row) {
+        if (!inventory.hasCustomSections() || row < 0 || row >= inventory.getRows() - 1) {
+            return false;
+        }
+        for (int column = 0; column < inventory.getColumns(); column++) {
+            if (hasColumnGapAfter(inventory, column, row)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int widestRowWidth(GridInventoryData inventory, int cell) {
+        int max = 0;
+        for (int y = 0; y < inventory.getRows(); y++) {
+            max = Math.max(max, rowWidth(inventory, y, cell));
+        }
+        return max;
+    }
+
+    private static int rowWidth(GridInventoryData inventory, int row, int cell) {
+        int first = firstEnabledColumn(inventory, row);
+        int last = lastEnabledColumn(inventory, row);
+        if (first < 0 || last < 0) {
+            return 0;
+        }
+        return rowCellLeft(inventory, last, row, cell) - rowCellLeft(inventory, first, row, cell) + cell;
+    }
+
+    private static int rowOffset(GridInventoryData inventory, int row, int cell) {
+        int rowWidth = rowWidth(inventory, row, cell);
+        if (rowWidth <= 0) {
+            return 0;
+        }
+        return Math.max(0, (widestRowWidth(inventory, cell) - rowWidth) / 2);
+    }
+
+    private static int rowCellLeft(GridInventoryData inventory, int x, int y, int cell) {
+        int first = firstEnabledColumn(inventory, y);
+        if (first < 0) {
+            return x * cell;
+        }
+        int gaps = 0;
+        for (int column = first; column < x; column++) {
+            if (hasRowGapAfter(inventory, column, y)) {
+                gaps++;
+            }
+        }
+        return (x - first) * cell + gaps * SECTION_GAP;
+    }
+
+    private static int firstEnabledColumn(GridInventoryData inventory, int row) {
+        for (int x = 0; x < inventory.getColumns(); x++) {
+            if (inventory.isEnabledCell(x, row)) {
+                return x;
+            }
+        }
+        return -1;
+    }
+
+    private static int lastEnabledColumn(GridInventoryData inventory, int row) {
+        for (int x = inventory.getColumns() - 1; x >= 0; x--) {
+            if (inventory.isEnabledCell(x, row)) {
+                return x;
+            }
+        }
+        return -1;
+    }
+
 }
