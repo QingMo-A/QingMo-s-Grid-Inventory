@@ -14,7 +14,10 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public final class EquipmentStorageManager {
     private static List<EquipmentStorageDefinition> rules = List.of();
@@ -42,14 +45,35 @@ public final class EquipmentStorageManager {
 
     public static EquipmentStorageData initializeStorage(ItemStack stack, EquipmentSlot slot) {
         EquipmentStorageData current = stack.get(ModDataComponents.EQUIPMENT_STORAGE.get());
+        Optional<EquipmentStorageDefinition> definition = getDefinition(stack, slot);
         if (current != null && !current.isEmpty()) {
+            if (definition.isPresent()) {
+                EquipmentStorageData refreshed = refreshStorageShape(current, definition.get());
+                stack.set(ModDataComponents.EQUIPMENT_STORAGE.get(), refreshed);
+                return refreshed;
+            }
             return current;
         }
-        EquipmentStorageData initialized = getDefinition(stack, slot).map(EquipmentStorageManager::createStorage).orElse(EquipmentStorageData.EMPTY);
+        EquipmentStorageData initialized = definition.map(EquipmentStorageManager::createStorage).orElse(EquipmentStorageData.EMPTY);
         if (!initialized.containers().isEmpty()) {
             stack.set(ModDataComponents.EQUIPMENT_STORAGE.get(), initialized);
         }
         return initialized;
+    }
+
+    private static EquipmentStorageData refreshStorageShape(EquipmentStorageData current, EquipmentStorageDefinition definition) {
+        Map<String, NamedGridInventoryData> existing = current.containers().stream()
+                .collect(Collectors.toMap(NamedGridInventoryData::id, Function.identity(), (first, second) -> first));
+        return new EquipmentStorageData(definition.containers().stream()
+                .map(container -> {
+                    NamedGridInventoryData old = existing.get(container.id());
+                    GridInventoryData inventory = old == null
+                            ? GridInventoryData.withSections(container.resolvedColumns(), container.resolvedRows(), container.resolvedSections())
+                            : new GridInventoryData(container.resolvedColumns(), container.resolvedRows(),
+                                    old.inventory().getEntries(), container.resolvedSections());
+                    return new NamedGridInventoryData(container.id(), container.title(), inventory);
+                })
+                .toList());
     }
 
     private static EquipmentStorageData createStorage(EquipmentStorageDefinition definition) {

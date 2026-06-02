@@ -94,7 +94,7 @@ public final class GridColumnPanel {
     private int renderEquipmentStorage(GuiGraphics graphics, EquipmentSlot slot, ItemStack equipped, Component emptyTitle, int y,
                                        @Nullable EquipmentEntryHit draggedEquipmentEntry) {
         EquipmentStorageData storage = equipped.get(ModDataComponents.EQUIPMENT_STORAGE.get());
-        if ((storage == null || storage.containers().isEmpty()) && !equipped.isEmpty()) {
+        if (!equipped.isEmpty()) {
             storage = EquipmentStorageManager.initializeStorage(equipped, slot);
         }
         if (storage == null || storage.containers().isEmpty()) {

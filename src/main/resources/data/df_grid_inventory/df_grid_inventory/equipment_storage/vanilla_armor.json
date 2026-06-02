@@ -20,6 +20,23 @@
     },
     {
       "type": "item",
+      "target": "minecraft:diamond_chestplate",
+      "slot": "chest",
+      "containers": [
+        {
+          "id": "front_pockets",
+          "title": "Chest Pockets",
+          "layout": [
+            "ABCD",
+            "ABCD",
+            "EEFG",
+            "EEFG"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
       "target": "minecraft:leather_leggings",
       "slot": "legs",
       "containers": [
@@ -27,7 +44,11 @@
           "id": "leg_pockets",
           "title": "Leg Pockets",
           "layout": [
-            "ABCD"
+            "ABCDE",
+            "AFGHE",
+            "IFGHJ",
+            "IKKJ",
+            "IKKJ"
           ]
         }
       ]

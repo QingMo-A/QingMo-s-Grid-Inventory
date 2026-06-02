@@ -13,7 +13,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,7 +48,7 @@ public class GridInventoryData implements IGridInventory {
         this.columns = columns;
         this.rows = rows;
         this.entries = new ArrayList<>(entries);
-        this.sections = List.copyOf(sections);
+        this.sections = normalizeSections(sections);
     }
 
     public static GridInventoryData withSections(int columns, int rows, List<GridSection> sections) {
@@ -262,5 +264,20 @@ public class GridInventoryData implements IGridInventory {
             sections.add(GridSection.decode(buf));
         }
         return new GridInventoryData(columns, rows, entries, sections);
+    }
+
+    private static List<GridSection> normalizeSections(List<GridSection> sections) {
+        Map<String, List<GridCell>> merged = new LinkedHashMap<>();
+        for (GridSection section : sections) {
+            merged.computeIfAbsent(canonicalSectionId(section.id()), ignored -> new ArrayList<>()).addAll(section.cells());
+        }
+        return merged.entrySet().stream()
+                .map(entry -> new GridSection(entry.getKey(), List.copyOf(entry.getValue())))
+                .toList();
+    }
+
+    private static String canonicalSectionId(String id) {
+        int underscore = id.indexOf('_');
+        return underscore > 0 ? id.substring(0, underscore) : id;
     }
 }
