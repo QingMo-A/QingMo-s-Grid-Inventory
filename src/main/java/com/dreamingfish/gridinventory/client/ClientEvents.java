@@ -44,9 +44,30 @@ public final class ClientEvents {
     }
 
     public static void registerItemProperties() {
-        ItemProperties.register(ModItems.GRAY_FIELD_BACKPACK.get(),
-                ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded"),
+        ResourceLocation folded = ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded");
+        ResourceLocation foldedRoll = ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded_roll");
+        ItemProperties.register(ModItems.GRAY_FIELD_BACKPACK.get(), folded,
                 (stack, level, entity, seed) -> GridBackpackItem.isFolded(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.LEATHER_BACKPACK.get(), folded,
+                (stack, level, entity, seed) -> GridBackpackItem.isFolded(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.LEATHER_BACKPACK.get(), foldedRoll,
+                (stack, level, entity, seed) -> isFoldedRoll(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.LIME_HIKING_BACKPACK.get(), folded,
+                (stack, level, entity, seed) -> GridBackpackItem.isFolded(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.LIME_HIKING_BACKPACK.get(), foldedRoll,
+                (stack, level, entity, seed) -> isFoldedRoll(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.MEDIUM_HIKING_BACKPACK.get(), folded,
+                (stack, level, entity, seed) -> GridBackpackItem.isFolded(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.MEDIUM_HIKING_BACKPACK.get(), foldedRoll,
+                (stack, level, entity, seed) -> isFoldedRoll(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.MILITARY_HIKING_BACKPACK.get(), folded,
+                (stack, level, entity, seed) -> GridBackpackItem.isFolded(stack) ? 1.0F : 0.0F);
+        ItemProperties.register(ModItems.TACTICAL_BACKPACK.get(), folded,
+                (stack, level, entity, seed) -> GridBackpackItem.isFolded(stack) ? 1.0F : 0.0F);
+    }
+
+    private static boolean isFoldedRoll(ItemStack stack) {
+        return GridBackpackItem.isFolded(stack) && GridBackpackItem.usesRollFoldedModel(stack);
     }
 
     @SubscribeEvent

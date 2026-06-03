@@ -14,6 +14,7 @@ public final class ModNetworking {
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToClient(SyncItemSizeRulesPacket.TYPE, SyncItemSizeRulesPacket.STREAM_CODEC, SyncItemSizeRulesPacket::handle);
+        registrar.playToClient(SyncBackpackFoldingRulesPacket.TYPE, SyncBackpackFoldingRulesPacket.STREAM_CODEC, SyncBackpackFoldingRulesPacket::handle);
         registrar.playToClient(SyncGridInventoryPacket.TYPE, SyncGridInventoryPacket.STREAM_CODEC, SyncGridInventoryPacket::handle);
         registrar.playToClient(SyncEquipmentStoragePacket.TYPE, SyncEquipmentStoragePacket.STREAM_CODEC, SyncEquipmentStoragePacket::handle);
         registrar.playToServer(MoveGridEntryPacket.TYPE, MoveGridEntryPacket.STREAM_CODEC, MoveGridEntryPacket::handle);

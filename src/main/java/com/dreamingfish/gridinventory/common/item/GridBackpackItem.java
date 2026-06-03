@@ -1,6 +1,7 @@
 package com.dreamingfish.gridinventory.common.item;
 
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
+import com.dreamingfish.gridinventory.common.folding.BackpackFoldingManager;
 import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -34,6 +35,18 @@ public class GridBackpackItem extends Item implements ICurioItem {
         EquipmentStorageData storage = stack.get(ModDataComponents.EQUIPMENT_STORAGE.get());
         return storage == null || storage.containers().stream()
                 .allMatch(container -> container.inventory().getEntries().isEmpty());
+    }
+
+    public static int foldedWidth(ItemStack stack) {
+        return BackpackFoldingManager.foldedWidth(stack);
+    }
+
+    public static int foldedHeight(ItemStack stack) {
+        return BackpackFoldingManager.foldedHeight(stack);
+    }
+
+    public static boolean usesRollFoldedModel(ItemStack stack) {
+        return BackpackFoldingManager.usesRollModel(stack);
     }
 
     public static boolean toggleFolded(ItemStack stack) {

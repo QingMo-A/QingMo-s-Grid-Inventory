@@ -12,6 +12,8 @@ import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
+import com.dreamingfish.gridinventory.common.folding.BackpackFoldingLoader;
+import com.dreamingfish.gridinventory.common.folding.BackpackFoldingSyncManager;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageEvents;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
 import com.mojang.logging.LogUtils;
@@ -68,6 +70,7 @@ public class DFGridInventoryMod {
     @SubscribeEvent
     public void addReloadListener(AddReloadListenerEvent event) {
         event.addListener(new GridItemSizeLoader());
+        event.addListener(new BackpackFoldingLoader());
         event.addListener(new EquipmentStorageLoader());
     }
 
@@ -75,8 +78,10 @@ public class DFGridInventoryMod {
     public void onDatapackSync(OnDatapackSyncEvent event) {
         if (event.getPlayer() != null) {
             GridItemSizeSyncManager.syncTo(event.getPlayer());
+            BackpackFoldingSyncManager.syncTo(event.getPlayer());
         } else {
             GridItemSizeSyncManager.syncToAll();
+            BackpackFoldingSyncManager.syncToAll();
         }
     }
 

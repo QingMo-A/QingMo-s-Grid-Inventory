@@ -23,7 +23,7 @@ public final class GridItemSizeManager {
             return defaultSize();
         }
         if (GridBackpackItem.isFolded(stack)) {
-            return new GridItemSize(GridInventoryConfig.FOLDED_BACKPACK_WIDTH.get(), GridInventoryConfig.FOLDED_BACKPACK_HEIGHT.get(), true);
+            return new GridItemSize(GridBackpackItem.foldedWidth(stack), GridBackpackItem.foldedHeight(stack), true);
         }
         for (GridItemSizeRule rule : rules) {
             if (rule.type() == GridItemSizeRule.Type.ITEM && BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(rule.targetLocation())) {
