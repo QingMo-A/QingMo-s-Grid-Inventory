@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.common.size;
 import com.dreamingfish.gridinventory.api.GridItemSize;
 import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
+import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -20,6 +21,9 @@ public final class GridItemSizeManager {
     public static GridItemSize getSize(ItemStack stack) {
         if (stack.isEmpty()) {
             return defaultSize();
+        }
+        if (GridBackpackItem.isFolded(stack)) {
+            return new GridItemSize(GridInventoryConfig.FOLDED_BACKPACK_WIDTH.get(), GridInventoryConfig.FOLDED_BACKPACK_HEIGHT.get(), true);
         }
         for (GridItemSizeRule rule : rules) {
             if (rule.type() == GridItemSizeRule.Type.ITEM && BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(rule.targetLocation())) {

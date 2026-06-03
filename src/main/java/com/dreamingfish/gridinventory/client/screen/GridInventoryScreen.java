@@ -24,6 +24,8 @@ import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageE
 import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotPacket;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryPacket;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryPacket;
+import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldPacket;
+import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldPacket;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridPacket;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStoragePacket;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioPacket;
@@ -34,6 +36,7 @@ import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridPacket;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStoragePacket;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
+import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
@@ -63,6 +66,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private GridEntry draggingEntry;
     private GridColumnPanel.EquipmentEntryHit draggingEquipmentEntry;
     private CuriosSlotWidget draggingCurioSlot;
+    private ItemStack dragPreviewStack = ItemStack.EMPTY;
     private boolean rotatedPreview;
     private int lastPlayerSlot = -1;
     private ItemStack selectedPlayerStack = ItemStack.EMPTY;
@@ -291,10 +295,30 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private ItemStack draggedStack() {
+        if (!dragPreviewStack.isEmpty()) {
+            return dragPreviewStack;
+        }
         return draggingEntry != null ? draggingEntry.stack()
                 : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack()
                 : draggingCurioSlot != null ? draggingCurioSlot.view().stack()
                 : nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack).orElse(selectedPlayerStack);
+    }
+
+    private boolean toggleDraggedBackpackPreview() {
+        ItemStack stack = draggedStack();
+        if (stack.isEmpty() || !(stack.getItem() instanceof GridBackpackItem)) {
+            return false;
+        }
+        ItemStack toggled = stack.copy();
+        if (!GridBackpackItem.toggleFolded(toggled)) {
+            return false;
+        }
+        dragPreviewStack = toggled;
+        GridItemSize size = GridItemSizeManager.getSize(toggled);
+        if (!size.rotatable()) {
+            rotatedPreview = false;
+        }
+        return true;
     }
 
     private void rotateDraggedPreview() {
@@ -382,6 +406,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 }
                 if (button == 0) {
                     draggingEquipmentEntry = equipmentHit.get();
+                    dragPreviewStack = draggingEquipmentEntry.entry().stack().copy();
                     rotatedPreview = equipmentHit.get().entry().rotated();
                     setGridDragAnchor((int) mouseX, (int) mouseY,
                             draggingEquipmentEntry.region().drawX(draggingEquipmentEntry.entry().x(), draggingEquipmentEntry.entry().y()),
@@ -402,6 +427,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     PacketDistributor.sendToServer(new ExtractToPlayerInventoryPacket(hit.get().entryId(), hit.get().stack().getCount()));
                 } else if (button == 0) {
                     draggingEntry = hit.get();
+                    dragPreviewStack = draggingEntry.stack().copy();
                     rotatedPreview = hit.get().rotated();
                     setGridDragAnchor((int) mouseX, (int) mouseY,
                             gridLeft + draggingEntry.x() * CELL, gridTop + draggingEntry.y() * CELL,
@@ -438,6 +464,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (ModKeyMappings.ROTATE_GRID_ITEM.matches(keyCode, scanCode) && !draggedStack().isEmpty()) {
             rotateDraggedPreview();
+            return true;
+        }
+        if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode) && draggingEntry != null) {
+            toggleDraggedBackpackPreview();
+            return true;
+        }
+        if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode) && draggingEquipmentEntry != null) {
+            toggleDraggedBackpackPreview();
             return true;
         }
         if (ModKeyMappings.PICKUP_ITEM.matches(keyCode, scanCode)
@@ -527,20 +561,20 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         && target.containerId().equals(draggingEquipmentEntry.containerId())) {
                     PacketDistributor.sendToServer(new MoveEquipmentStorageEntryPacket(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
-                            targetRegionX(target, draggingEquipmentEntry.entry().stack(), (int) mouseX),
-                            targetRegionY(target, draggingEquipmentEntry.entry().stack(), (int) mouseY), rotatedPreview));
+                            targetRegionX(target, draggedStack(), (int) mouseX),
+                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
                 } else {
                     PacketDistributor.sendToServer(new TransferEquipmentStorageEntryPacket(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             target.slot(), target.containerId(),
-                            targetRegionX(target, draggingEquipmentEntry.entry().stack(), (int) mouseX),
-                            targetRegionY(target, draggingEquipmentEntry.entry().stack(), (int) mouseY), rotatedPreview));
+                            targetRegionX(target, draggedStack(), (int) mouseX),
+                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview));
                 }
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 PacketDistributor.sendToServer(new TransferEquipmentStorageEntryIntoGridPacket(
                         draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
-                        targetGridX(draggingEquipmentEntry.entry().stack(), (int) mouseX),
-                        targetGridY(draggingEquipmentEntry.entry().stack(), (int) mouseY), rotatedPreview));
+                        targetGridX(draggedStack(), (int) mouseX),
+                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
@@ -565,11 +599,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 GridColumnPanel.Region target = equipmentRegion.get();
                 PacketDistributor.sendToServer(new TransferGridEntryIntoEquipmentStoragePacket(
                         draggingEntry.entryId(), target.slot(), target.containerId(),
-                        targetRegionX(target, draggingEntry.stack(), (int) mouseX),
-                        targetRegionY(target, draggingEntry.stack(), (int) mouseY), rotatedPreview));
+                        targetRegionX(target, draggedStack(), (int) mouseX),
+                        targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 PacketDistributor.sendToServer(new MoveGridEntryPacket(draggingEntry.entryId(),
-                        targetGridX(draggingEntry.stack(), (int) mouseX), targetGridY(draggingEntry.stack(), (int) mouseY), rotatedPreview));
+                        targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
@@ -817,6 +851,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         draggingEntry = null;
         draggingEquipmentEntry = null;
         draggingCurioSlot = null;
+        dragPreviewStack = ItemStack.EMPTY;
         selectedPlayerStack = ItemStack.EMPTY;
         lastPlayerSlot = -1;
         rotatedPreview = false;

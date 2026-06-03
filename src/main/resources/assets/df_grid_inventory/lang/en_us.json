@@ -14,6 +14,7 @@
   "key.df_grid_inventory.pickup_item": "Pick Up Item",
   "key.df_grid_inventory.rotate_grid_item": "Rotate Dragged Grid Item",
   "key.df_grid_inventory.drop_hovered_grid_item": "Drop Hovered Grid Item",
+  "key.df_grid_inventory.toggle_backpack_fold": "Fold / Unfold Dragged Backpack",
   "hud.df_grid_inventory.pickup_prompt": "%s Pick Up",
   "screen.df_grid_inventory.equipment": "Equipment",
   "screen.df_grid_inventory.storage": "Storage",

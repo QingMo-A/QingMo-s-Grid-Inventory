@@ -24,6 +24,12 @@ public final class ModKeyMappings {
             GLFW.GLFW_KEY_X,
             CATEGORY
     );
+    public static final KeyMapping TOGGLE_BACKPACK_FOLD = new KeyMapping(
+            "key.df_grid_inventory.toggle_backpack_fold",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_B,
+            CATEGORY
+    );
 
     private ModKeyMappings() {
     }

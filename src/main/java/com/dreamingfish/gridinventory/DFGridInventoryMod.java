@@ -53,7 +53,15 @@ public class DFGridInventoryMod {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> CuriosApi.registerCurio(ModItems.GRID_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.GRID_BACKPACK.get()));
+        event.enqueueWork(() -> {
+            CuriosApi.registerCurio(ModItems.GRID_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.GRID_BACKPACK.get());
+            CuriosApi.registerCurio(ModItems.GRAY_FIELD_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.GRAY_FIELD_BACKPACK.get());
+            CuriosApi.registerCurio(ModItems.LEATHER_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.LEATHER_BACKPACK.get());
+            CuriosApi.registerCurio(ModItems.LIME_HIKING_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.LIME_HIKING_BACKPACK.get());
+            CuriosApi.registerCurio(ModItems.MEDIUM_HIKING_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.MEDIUM_HIKING_BACKPACK.get());
+            CuriosApi.registerCurio(ModItems.MILITARY_HIKING_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.MILITARY_HIKING_BACKPACK.get());
+            CuriosApi.registerCurio(ModItems.TACTICAL_BACKPACK.get(), (com.dreamingfish.gridinventory.common.item.GridBackpackItem) ModItems.TACTICAL_BACKPACK.get());
+        });
         LOGGER.info("DF Grid Inventory loaded. Vanilla inventories and creative inventory are left untouched.");
     }
 
@@ -80,6 +88,11 @@ public class DFGridInventoryMod {
         @SubscribeEvent
         public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
             ClientEvents.registerScreens(event);
+        }
+
+        @SubscribeEvent
+        public static void clientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+            event.enqueueWork(ClientEvents::registerItemProperties);
         }
     }
 }

@@ -17,6 +17,8 @@ public final class ModNetworking {
         registrar.playToClient(SyncGridInventoryPacket.TYPE, SyncGridInventoryPacket.STREAM_CODEC, SyncGridInventoryPacket::handle);
         registrar.playToClient(SyncEquipmentStoragePacket.TYPE, SyncEquipmentStoragePacket.STREAM_CODEC, SyncEquipmentStoragePacket::handle);
         registrar.playToServer(MoveGridEntryPacket.TYPE, MoveGridEntryPacket.STREAM_CODEC, MoveGridEntryPacket::handle);
+        registrar.playToServer(ToggleGridEntryBackpackFoldPacket.TYPE, ToggleGridEntryBackpackFoldPacket.STREAM_CODEC, ToggleGridEntryBackpackFoldPacket::handle);
+        registrar.playToServer(ToggleEquipmentStorageEntryBackpackFoldPacket.TYPE, ToggleEquipmentStorageEntryBackpackFoldPacket.STREAM_CODEC, ToggleEquipmentStorageEntryBackpackFoldPacket::handle);
         registrar.playToServer(InsertFromPlayerInventoryPacket.TYPE, InsertFromPlayerInventoryPacket.STREAM_CODEC, InsertFromPlayerInventoryPacket::handle);
         registrar.playToServer(ExtractToPlayerInventoryPacket.TYPE, ExtractToPlayerInventoryPacket.STREAM_CODEC, ExtractToPlayerInventoryPacket::handle);
         registrar.playToServer(ExtractGridEntryToPlayerSlotPacket.TYPE, ExtractGridEntryToPlayerSlotPacket.STREAM_CODEC, ExtractGridEntryToPlayerSlotPacket::handle);

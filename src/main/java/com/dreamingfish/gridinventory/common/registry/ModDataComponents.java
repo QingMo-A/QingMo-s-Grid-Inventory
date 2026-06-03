@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.codec.StreamCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -18,6 +19,13 @@ public final class ModDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<EquipmentStorageData>> EQUIPMENT_STORAGE = DATA_COMPONENTS.register(
             "equipment_storage",
             () -> DataComponentType.<EquipmentStorageData>builder().persistent(EquipmentStorageData.CODEC).networkSynchronized(EquipmentStorageData.STREAM_CODEC).build()
+    );
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> BACKPACK_FOLDED = DATA_COMPONENTS.register(
+            "backpack_folded",
+            () -> DataComponentType.<Boolean>builder()
+                    .persistent(com.mojang.serialization.Codec.BOOL)
+                    .networkSynchronized(StreamCodec.of((buf, value) -> buf.writeBoolean(value), buf -> buf.readBoolean()))
+                    .build()
     );
 
     private ModDataComponents() {

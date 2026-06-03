@@ -14,6 +14,7 @@
   "key.df_grid_inventory.pickup_item": "拾取物品",
   "key.df_grid_inventory.rotate_grid_item": "旋转拖拽中的网格物品",
   "key.df_grid_inventory.drop_hovered_grid_item": "丢弃悬浮的网格物品",
+  "key.df_grid_inventory.toggle_backpack_fold": "折叠 / 展开拖拽中的背包",
   "hud.df_grid_inventory.pickup_prompt": "%s 拾取",
   "screen.df_grid_inventory.equipment": "装备",
   "screen.df_grid_inventory.storage": "格子",

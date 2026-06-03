@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.common.compat.curios;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
+import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
@@ -76,7 +77,9 @@ public final class CuriosIntegration {
         if (!existing.isEmpty()) {
             return false;
         }
-        stacks.setStackInSlot(index, source.copyWithCount(1));
+        ItemStack moved = source.copyWithCount(1);
+        GridBackpackItem.unfold(moved);
+        stacks.setStackInSlot(index, moved);
         source.shrink(1);
         player.getInventory().setChanged();
         return true;
@@ -102,6 +105,7 @@ public final class CuriosIntegration {
         if (moved.isEmpty()) {
             return false;
         }
+        GridBackpackItem.unfold(moved);
         target.get().setStackInSlot(index, moved);
         player.getInventory().setChanged();
         return true;
@@ -123,6 +127,7 @@ public final class CuriosIntegration {
         if (moved.isEmpty()) {
             return false;
         }
+        GridBackpackItem.unfold(moved);
         target.get().setStackInSlot(index, moved);
         player.getInventory().setChanged();
         return true;
@@ -146,7 +151,9 @@ public final class CuriosIntegration {
                                 continue;
                             }
                             if (validCurio(player, identifier, index, source)) {
-                                stacks.setStackInSlot(index, source.copyWithCount(1));
+                                ItemStack moved = source.copyWithCount(1);
+                                GridBackpackItem.unfold(moved);
+                                stacks.setStackInSlot(index, moved);
                                 source.shrink(1);
                                 player.getInventory().setChanged();
                                 return true;

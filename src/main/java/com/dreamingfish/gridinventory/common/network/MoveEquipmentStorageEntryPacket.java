@@ -11,7 +11,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
-public record MoveEquipmentStorageEntryPacket(EquipmentSlot equipmentSlot, String containerId, UUID entryId, int targetX, int targetY, boolean rotated) implements CustomPacketPayload {
+public record MoveEquipmentStorageEntryPacket(EquipmentSlot equipmentSlot, String containerId, UUID entryId, int targetX, int targetY, boolean rotated, boolean targetFolded) implements CustomPacketPayload {
     public static final Type<MoveEquipmentStorageEntryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "move_equipment_storage_entry"));
     public static final StreamCodec<RegistryFriendlyByteBuf, MoveEquipmentStorageEntryPacket> STREAM_CODEC = StreamCodec.ofMember(MoveEquipmentStorageEntryPacket::encode, MoveEquipmentStorageEntryPacket::decode);
 
@@ -22,15 +22,16 @@ public record MoveEquipmentStorageEntryPacket(EquipmentSlot equipmentSlot, Strin
         buf.writeVarInt(targetX);
         buf.writeVarInt(targetY);
         buf.writeBoolean(rotated);
+        buf.writeBoolean(targetFolded);
     }
 
     private static MoveEquipmentStorageEntryPacket decode(RegistryFriendlyByteBuf buf) {
-        return new MoveEquipmentStorageEntryPacket(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
+        return new MoveEquipmentStorageEntryPacket(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
     }
 
     public static void handle(MoveEquipmentStorageEntryPacket packet, IPayloadContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.moveEquipmentEntry(packet.equipmentSlot(), packet.containerId(), packet.entryId(), packet.targetX(), packet.targetY(), packet.rotated());
+            menu.moveEquipmentEntry(packet.equipmentSlot(), packet.containerId(), packet.entryId(), packet.targetX(), packet.targetY(), packet.rotated(), packet.targetFolded());
             menu.broadcastChanges();
         }
     }

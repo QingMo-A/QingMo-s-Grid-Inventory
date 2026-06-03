@@ -8,9 +8,13 @@ import com.dreamingfish.gridinventory.client.render.ItemEntityHighlightRenderer;
 import com.dreamingfish.gridinventory.client.render.PickupPromptHud;
 import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
+import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
+import com.dreamingfish.gridinventory.common.registry.ModItems;
+import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -36,6 +40,13 @@ public final class ClientEvents {
         event.register(ModKeyMappings.PICKUP_ITEM);
         event.register(ModKeyMappings.ROTATE_GRID_ITEM);
         event.register(ModKeyMappings.DROP_HOVERED_GRID_ITEM);
+        event.register(ModKeyMappings.TOGGLE_BACKPACK_FOLD);
+    }
+
+    public static void registerItemProperties() {
+        ItemProperties.register(ModItems.GRAY_FIELD_BACKPACK.get(),
+                ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded"),
+                (stack, level, entity, seed) -> GridBackpackItem.isFolded(stack) ? 1.0F : 0.0F);
     }
 
     @SubscribeEvent
