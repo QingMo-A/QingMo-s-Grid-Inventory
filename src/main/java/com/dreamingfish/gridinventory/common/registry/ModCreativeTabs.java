@@ -17,6 +17,12 @@ public final class ModCreativeTabs {
             .displayItems((parameters, output) -> {
                 output.accept(ModItems.SMALL_GRID_BAG.get());
                 output.accept(ModItems.GRID_BACKPACK.get());
+                output.accept(ModItems.GRAY_FIELD_BACKPACK.get());
+                output.accept(ModItems.LEATHER_BACKPACK.get());
+                output.accept(ModItems.LIME_HIKING_BACKPACK.get());
+                output.accept(ModItems.MEDIUM_HIKING_BACKPACK.get());
+                output.accept(ModItems.MILITARY_HIKING_BACKPACK.get());
+                output.accept(ModItems.TACTICAL_BACKPACK.get());
             })
             .build());
 

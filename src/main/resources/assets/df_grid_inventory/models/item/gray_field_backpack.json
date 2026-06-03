@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "df_grid_inventory:item/gray_field_backpack"
+  }
+}

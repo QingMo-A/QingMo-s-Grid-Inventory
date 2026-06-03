@@ -16,6 +16,112 @@
           ]
         }
       ]
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:gray_field_backpack",
+      "slot": "back",
+      "containers": [
+        {
+          "id": "main_compartment",
+          "title": "Gray Field Backpack",
+          "layout": [
+            "AAAAA",
+            "AAAAA",
+            "AAAAA",
+            "AAAAA",
+            "AAAAA",
+            "AAAAA",
+            "AAAAA",
+            "AAAAA"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:leather_backpack",
+      "slot": "back",
+      "containers": [
+        {
+          "id": "main_compartment",
+          "title": "Leather Backpack",
+          "layout": [
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:lime_hiking_backpack",
+      "slot": "back",
+      "containers": [
+        {
+          "id": "main_compartment",
+          "title": "Lime Hiking Backpack",
+          "layout": [
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:medium_hiking_backpack",
+      "slot": "back",
+      "containers": [
+        {
+          "id": "main_compartment",
+          "title": "Medium Hiking Backpack",
+          "layout": [
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:military_hiking_backpack",
+      "slot": "back",
+      "containers": [
+        {
+          "id": "main_compartment",
+          "title": "Military Hiking Backpack",
+          "layout": [
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:tactical_backpack",
+      "slot": "back",
+      "containers": [
+        {
+          "id": "main_compartment",
+          "title": "Tactical Backpack",
+          "layout": [
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA",
+            "AAAAAA"
+          ]
+        }
+      ]
     }
   ]
 }

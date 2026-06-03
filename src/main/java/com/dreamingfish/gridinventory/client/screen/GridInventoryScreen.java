@@ -678,6 +678,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (slotStack.isPresent()) {
                 return slotStack;
             }
+            Optional<ItemStack> curioStack = equipmentColumnPanel.curioSlotAt(mouseX, mouseY)
+                    .map(slot -> slot.view().stack())
+                    .filter(stack -> !stack.isEmpty());
+            if (curioStack.isPresent()) {
+                return curioStack;
+            }
         }
         return hoveredGridEntry(mouseX, mouseY).map(GridEntry::stack);
     }

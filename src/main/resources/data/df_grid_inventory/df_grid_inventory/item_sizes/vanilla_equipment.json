@@ -69,6 +69,13 @@
       "width": 2,
       "height": 3,
       "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:gray_field_backpack",
+      "width": 5,
+      "height": 8,
+      "rotatable": true
     }
   ]
 }
