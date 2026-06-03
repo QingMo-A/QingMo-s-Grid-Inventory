@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
+import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
@@ -207,6 +208,10 @@ public final class CuriosIntegration {
     }
 
     public static boolean moveCurioToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated) {
+        return moveCurioToGrid(player, grid, identifier, index, targetX, targetY, rotated, false);
+    }
+
+    public static boolean moveCurioToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated, boolean targetFolded) {
         if (!isLoaded()) {
             return false;
         }
@@ -215,10 +220,20 @@ public final class CuriosIntegration {
             return false;
         }
         ItemStack curio = source.get().getStackInSlot(index);
-        if (curio.isEmpty() || !GridPlacementValidator.canPlace(grid, curio, targetX, targetY, rotated, null)) {
+        if (curio.isEmpty()) {
             return false;
         }
-        grid.add(curio.copy(), targetX, targetY, rotated);
+        ItemStack moved = curio.copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            moved.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+        }
+        if (!GridPlacementValidator.canPlace(grid, moved, targetX, targetY, rotated, null)) {
+            return false;
+        }
+        grid.add(moved, targetX, targetY, rotated);
         source.get().setStackInSlot(index, ItemStack.EMPTY);
         player.getInventory().setChanged();
         return true;

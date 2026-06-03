@@ -97,6 +97,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     public boolean insertFromPlayerInventory(int playerSlot, int targetX, int targetY, boolean rotated) {
+        return insertFromPlayerInventory(playerSlot, targetX, targetY, rotated, false);
+    }
+
+    public boolean insertFromPlayerInventory(int playerSlot, int targetX, int targetY, boolean rotated, boolean targetFolded) {
         if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
             return false;
         }
@@ -104,10 +108,17 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (source.isEmpty()) {
             return false;
         }
+        ItemStack placedStack = source.copy();
+        if (placedStack.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(placedStack)) {
+                return false;
+            }
+            placedStack.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+        }
         var targetEntry = gridData.getEntries().stream().filter(entry -> entry.contains(targetX, targetY)).findFirst();
         if (GridStackMerger.itemsStackableInGrid()
                 && targetEntry.isPresent()
-                && ItemStack.isSameItemSameComponents(targetEntry.get().stack(), source)
+                && ItemStack.isSameItemSameComponents(targetEntry.get().stack(), placedStack)
                 && targetEntry.get().stack().getCount() < targetEntry.get().stack().getMaxStackSize()) {
             int moved = Math.min(source.getCount(), targetEntry.get().stack().getMaxStackSize() - targetEntry.get().stack().getCount());
             targetEntry.get().stack().grow(moved);
@@ -117,10 +128,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             save();
             return true;
         }
-        if (!GridPlacementValidator.canPlace(gridData, source, targetX, targetY, rotated, null)) {
+        if (!GridPlacementValidator.canPlace(gridData, placedStack, targetX, targetY, rotated, null)) {
             return false;
         }
-        ItemStack inserted = source.copyWithCount(GridStackMerger.itemsStackableInGrid() ? source.getCount() : 1);
+        ItemStack inserted = placedStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? source.getCount() : 1);
         gridData.add(inserted, targetX, targetY, rotated);
         source.shrink(inserted.getCount());
         playerInventory.setChanged();
@@ -236,6 +247,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     public boolean insertFromPlayerIntoEquipmentStorage(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {
+        return insertFromPlayerIntoEquipmentStorage(playerSlot, equipmentSlot, containerId, targetX, targetY, rotated, false);
+    }
+
+    public boolean insertFromPlayerIntoEquipmentStorage(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated, boolean targetFolded) {
         if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize() || !isFreePlayerSlot(playerSlot)) {
             return false;
         }
@@ -244,10 +259,20 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         }
         ItemStack source = playerInventory.getItem(playerSlot);
         Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(equipmentSlot, containerId);
-        if (source.isEmpty() || edit.isEmpty() || !GridPlacementValidator.canPlace(edit.get().inventory(), source, targetX, targetY, rotated, null)) {
+        if (source.isEmpty() || edit.isEmpty()) {
             return false;
         }
-        ItemStack inserted = source.copyWithCount(GridStackMerger.itemsStackableInGrid() ? source.getCount() : 1);
+        ItemStack placedStack = source.copy();
+        if (placedStack.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(placedStack)) {
+                return false;
+            }
+            placedStack.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+        }
+        if (!GridPlacementValidator.canPlace(edit.get().inventory(), placedStack, targetX, targetY, rotated, null)) {
+            return false;
+        }
+        ItemStack inserted = placedStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? source.getCount() : 1);
         edit.get().inventory().add(inserted, targetX, targetY, rotated);
         source.shrink(inserted.getCount());
         saveEquipmentStorage(equipmentSlot, edit.get().storage());
@@ -428,16 +453,29 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     public boolean insertCurioIntoEquipmentStorage(String identifier, int index, EquipmentSlot equipmentSlot, String containerId,
                                                   int targetX, int targetY, boolean rotated) {
+        return insertCurioIntoEquipmentStorage(identifier, index, equipmentSlot, containerId, targetX, targetY, rotated, false);
+    }
+
+    public boolean insertCurioIntoEquipmentStorage(String identifier, int index, EquipmentSlot equipmentSlot, String containerId,
+                                                  int targetX, int targetY, boolean rotated, boolean targetFolded) {
         if (!playerGrid || (equipmentSlot == EquipmentSlot.BODY && "back".equals(identifier) && index == 0)) {
             return false;
         }
         Optional<ItemStack> source = CuriosIntegration.getCurioStack(playerInventory.player, identifier, index);
         Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
-        if (source.isEmpty() || target.isEmpty()
-                || !GridPlacementValidator.canPlace(target.get().inventory(), source.get(), targetX, targetY, rotated, null)) {
+        if (source.isEmpty() || target.isEmpty()) {
             return false;
         }
         ItemStack moved = source.get().copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            moved.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+        }
+        if (!GridPlacementValidator.canPlace(target.get().inventory(), moved, targetX, targetY, rotated, null)) {
+            return false;
+        }
         target.get().inventory().add(moved, targetX, targetY, rotated);
         CuriosIntegration.setCurioStack(playerInventory.player, identifier, index, ItemStack.EMPTY);
         saveEquipmentStorage(equipmentSlot, target.get().storage());
@@ -735,10 +773,14 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     public boolean extractCurioToGrid(String identifier, int index, int targetX, int targetY, boolean rotated) {
+        return extractCurioToGrid(identifier, index, targetX, targetY, rotated, false);
+    }
+
+    public boolean extractCurioToGrid(String identifier, int index, int targetX, int targetY, boolean rotated, boolean targetFolded) {
         if (!playerGrid) {
             return false;
         }
-        boolean moved = CuriosIntegration.moveCurioToGrid(playerInventory.player, gridData, identifier, index, targetX, targetY, rotated);
+        boolean moved = CuriosIntegration.moveCurioToGrid(playerInventory.player, gridData, identifier, index, targetX, targetY, rotated, targetFolded);
         if (moved) {
             save();
         }

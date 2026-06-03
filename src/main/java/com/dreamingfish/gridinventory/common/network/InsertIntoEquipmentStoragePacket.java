@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record InsertIntoEquipmentStoragePacket(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) implements CustomPacketPayload {
+public record InsertIntoEquipmentStoragePacket(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated, boolean targetFolded) implements CustomPacketPayload {
     public static final Type<InsertIntoEquipmentStoragePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "insert_into_equipment_storage"));
     public static final StreamCodec<RegistryFriendlyByteBuf, InsertIntoEquipmentStoragePacket> STREAM_CODEC = StreamCodec.ofMember(InsertIntoEquipmentStoragePacket::encode, InsertIntoEquipmentStoragePacket::decode);
 
@@ -20,15 +20,16 @@ public record InsertIntoEquipmentStoragePacket(int playerSlot, EquipmentSlot equ
         buf.writeVarInt(targetX);
         buf.writeVarInt(targetY);
         buf.writeBoolean(rotated);
+        buf.writeBoolean(targetFolded);
     }
 
     private static InsertIntoEquipmentStoragePacket decode(RegistryFriendlyByteBuf buf) {
-        return new InsertIntoEquipmentStoragePacket(buf.readVarInt(), buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean());
+        return new InsertIntoEquipmentStoragePacket(buf.readVarInt(), buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
     }
 
     public static void handle(InsertIntoEquipmentStoragePacket packet, IPayloadContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.insertFromPlayerIntoEquipmentStorage(packet.playerSlot(), packet.equipmentSlot(), packet.containerId(), packet.targetX(), packet.targetY(), packet.rotated());
+            menu.insertFromPlayerIntoEquipmentStorage(packet.playerSlot(), packet.equipmentSlot(), packet.containerId(), packet.targetX(), packet.targetY(), packet.rotated(), packet.targetFolded());
             menu.broadcastChanges();
             ModNetworking.syncMenu(context.player(), menu);
         }

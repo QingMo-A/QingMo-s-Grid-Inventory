@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record InsertFromPlayerInventoryPacket(int playerSlot, int targetX, int targetY, boolean rotated, boolean quick) implements CustomPacketPayload {
+public record InsertFromPlayerInventoryPacket(int playerSlot, int targetX, int targetY, boolean rotated, boolean quick, boolean targetFolded) implements CustomPacketPayload {
     public static final Type<InsertFromPlayerInventoryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "insert_from_player_inventory"));
     public static final StreamCodec<RegistryFriendlyByteBuf, InsertFromPlayerInventoryPacket> STREAM_CODEC = StreamCodec.ofMember(InsertFromPlayerInventoryPacket::encode, InsertFromPlayerInventoryPacket::decode);
 
@@ -18,10 +18,11 @@ public record InsertFromPlayerInventoryPacket(int playerSlot, int targetX, int t
         buf.writeVarInt(targetY);
         buf.writeBoolean(rotated);
         buf.writeBoolean(quick);
+        buf.writeBoolean(targetFolded);
     }
 
     private static InsertFromPlayerInventoryPacket decode(RegistryFriendlyByteBuf buf) {
-        return new InsertFromPlayerInventoryPacket(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
+        return new InsertFromPlayerInventoryPacket(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
     }
 
     public static void handle(InsertFromPlayerInventoryPacket packet, IPayloadContext context) {
@@ -29,7 +30,7 @@ public record InsertFromPlayerInventoryPacket(int playerSlot, int targetX, int t
             if (packet.quick()) {
                 menu.quickInsertFromPlayerInventory(packet.playerSlot());
             } else {
-                menu.insertFromPlayerInventory(packet.playerSlot(), packet.targetX(), packet.targetY(), packet.rotated());
+                menu.insertFromPlayerInventory(packet.playerSlot(), packet.targetX(), packet.targetY(), packet.rotated(), packet.targetFolded());
             }
             ModNetworking.syncMenu(context.player(), menu);
         }

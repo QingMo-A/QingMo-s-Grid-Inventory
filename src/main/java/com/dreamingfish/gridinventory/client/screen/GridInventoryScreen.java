@@ -442,7 +442,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (hovered != null) {
             lastPlayerSlot = hovered.getSlotIndex();
             if (hasShiftDown() && button == 0) {
-                PacketDistributor.sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot, 0, 0, false, true));
+                PacketDistributor.sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot, 0, 0, false, true, false));
                 selectedPlayerStack = ItemStack.EMPTY;
                 return true;
             }
@@ -471,6 +471,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode) && draggingEquipmentEntry != null) {
+            toggleDraggedBackpackPreview();
+            return true;
+        }
+        if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode)
+                && (draggingCurioSlot != null || !selectedPlayerStack.isEmpty())) {
             toggleDraggedBackpackPreview();
             return true;
         }
@@ -528,13 +533,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 GridColumnPanel.Region region = equipmentRegion.get();
                 PacketDistributor.sendToServer(new ExtractCurioToEquipmentStoragePacket(
                         draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), region.slot(), region.containerId(),
-                        targetRegionX(region, draggingCurioSlot.view().stack(), (int) mouseX),
-                        targetRegionY(region, draggingCurioSlot.view().stack(), (int) mouseY), rotatedPreview));
+                        targetRegionX(region, draggedStack(), (int) mouseX),
+                        targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 PacketDistributor.sendToServer(new ExtractCurioToGridPacket(
                         draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(),
-                        targetGridX(draggingCurioSlot.view().stack(), (int) mouseX),
-                        targetGridY(draggingCurioSlot.view().stack(), (int) mouseY), rotatedPreview));
+                        targetGridX(draggedStack(), (int) mouseX),
+                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
@@ -625,11 +630,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region region = equipmentRegion.get();
                 PacketDistributor.sendToServer(new InsertIntoEquipmentStoragePacket(lastPlayerSlot, region.slot(), region.containerId(),
-                        targetRegionX(region, selectedPlayerStack, (int) mouseX),
-                        targetRegionY(region, selectedPlayerStack, (int) mouseY), rotatedPreview));
+                        targetRegionX(region, draggedStack(), (int) mouseX),
+                        targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 PacketDistributor.sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot,
-                        targetGridX(selectedPlayerStack, (int) mouseX), targetGridY(selectedPlayerStack, (int) mouseY), rotatedPreview, false));
+                        targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, false, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null && hovered.getSlotIndex() != lastPlayerSlot) {

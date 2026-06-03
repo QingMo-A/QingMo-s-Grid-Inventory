@@ -20,6 +20,9 @@ public class GridBackpackItem extends Item implements ICurioItem {
 
     @Override
     public boolean canEquipFromUse(SlotContext slotContext, ItemStack stack) {
+        if ("back".equals(slotContext.identifier())) {
+            unfold(stack);
+        }
         return canEquip(slotContext, stack);
     }
 
@@ -65,7 +68,7 @@ public class GridBackpackItem extends Item implements ICurioItem {
     }
 
     public static void unfold(ItemStack stack) {
-        if (stack.has(ModDataComponents.BACKPACK_FOLDED.get())) {
+        if (stack.getItem() instanceof GridBackpackItem) {
             stack.set(ModDataComponents.BACKPACK_FOLDED.get(), false);
         }
     }
