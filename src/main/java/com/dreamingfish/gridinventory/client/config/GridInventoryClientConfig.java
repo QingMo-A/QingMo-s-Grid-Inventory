@@ -41,7 +41,7 @@ public final class GridInventoryClientConfig {
         SHOW_EQUIPMENT_PANEL = BUILDER.define("show_equipment_panel", true);
         SHOW_GRID_COLUMN = BUILDER.define("show_grid_column", true);
         BUILDER.define("show_nearby_items_panel", true);
-        GRID_CELL_SIZE = BUILDER.defineInRange("grid_cell_size", 18, 12, 32);
+        GRID_CELL_SIZE = BUILDER.defineInRange("grid_cell_size", 27, 12, 64);
         GRID_ITEM_INNER_PADDING = BUILDER.comment("Inner spacing, in pixels, between an enlarged grid item icon and its occupied area.")
                 .defineInRange("grid_item_inner_padding", 2, 0, 8);
         EQUIPMENT_FREE_SLOT_SIZE = BUILDER.comment("Rendered size of armor free slots in the survival grid inventory UI.")

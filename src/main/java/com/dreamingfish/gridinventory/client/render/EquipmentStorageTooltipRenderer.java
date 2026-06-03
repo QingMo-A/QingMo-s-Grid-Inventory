@@ -11,7 +11,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
 public final class EquipmentStorageTooltipRenderer {
-    private static final int CELL = 14;
+    private static final int CELL = 21;
     private static final int PADDING = 6;
     private static final int TITLE_HEIGHT = 13;
     private static final int CONTAINER_LABEL_HEIGHT = 11;

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 public final class GridColumnPanel {
-    private static final int CELL = 18;
+    private static final int CELL = 27;
     private int left;
     private int top;
     private int width;

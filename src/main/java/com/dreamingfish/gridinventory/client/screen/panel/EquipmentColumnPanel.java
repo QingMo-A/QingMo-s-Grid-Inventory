@@ -74,7 +74,7 @@ public final class EquipmentColumnPanel {
         if (!curiosExpanded) {
             return;
         }
-        int slotSize = Math.max(18, Math.min(26, GridInventoryClientConfig.HOTBAR_FREE_SLOT_SIZE.get()));
+        int slotSize = GridInventoryClientConfig.GRID_CELL_SIZE.get();
         int startX = left + 8;
         int startY = top + 45;
         List<com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView> views = CuriosIntegration.collectSlots(minecraft.player);

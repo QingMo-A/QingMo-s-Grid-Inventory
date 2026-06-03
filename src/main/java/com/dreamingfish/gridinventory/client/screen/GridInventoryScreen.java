@@ -57,7 +57,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMenu> {
-    private static final int CELL = 18;
+    private static final int CELL = 27;
     private int gridLeft;
     private int gridTop;
     private GridEntry draggingEntry;
