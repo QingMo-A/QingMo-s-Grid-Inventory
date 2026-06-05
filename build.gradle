@@ -1,6 +1,7 @@
 plugins {
     id 'idea'
     id 'net.neoforged.moddev' version '2.0.141' apply false
+    id 'fabric-loom' version "${fabric_loom_version}" apply false
 }
 
 allprojects {
@@ -17,6 +18,14 @@ allprojects {
         maven {
             name = "Curios"
             url = uri("https://maven.theillusivec4.top/")
+        }
+        maven {
+            name = "TerraformersMC"
+            url = uri("https://maven.terraformersmc.com/releases/")
+        }
+        maven {
+            name = "Ladysnake"
+            url = uri("https://maven.ladysnake.org/releases")
         }
     }
 }

@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -12,7 +12,7 @@ import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 import java.util.UUID;
 
 public record QuickEquipEquipmentStorageEntryPacket(EquipmentSlot sourceSlot, String containerId, UUID entryId) implements CustomPacketPayload {
-    public static final Type<QuickEquipEquipmentStorageEntryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "quick_equip_equipment_storage_entry"));
+    public static final Type<QuickEquipEquipmentStorageEntryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "quick_equip_equipment_storage_entry"));
     public static final StreamCodec<RegistryFriendlyByteBuf, QuickEquipEquipmentStorageEntryPacket> STREAM_CODEC = StreamCodec.ofMember(QuickEquipEquipmentStorageEntryPacket::encode, QuickEquipEquipmentStorageEntryPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

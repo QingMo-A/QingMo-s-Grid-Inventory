@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -13,7 +13,7 @@ import java.util.UUID;
 
 public record InsertEquipmentStorageEntryIntoCurioPacket(EquipmentSlot sourceSlot, String containerId, UUID entryId,
                                                          String identifier, int index) implements CustomPacketPayload {
-    public static final Type<InsertEquipmentStorageEntryIntoCurioPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "insert_equipment_storage_entry_into_curio"));
+    public static final Type<InsertEquipmentStorageEntryIntoCurioPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "insert_equipment_storage_entry_into_curio"));
     public static final StreamCodec<RegistryFriendlyByteBuf, InsertEquipmentStorageEntryIntoCurioPacket> STREAM_CODEC = StreamCodec.ofMember(InsertEquipmentStorageEntryIntoCurioPacket::encode, InsertEquipmentStorageEntryIntoCurioPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

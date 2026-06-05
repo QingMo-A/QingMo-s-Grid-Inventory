@@ -1,4 +1,4 @@
-package com.dreamingfish.gridinventory.mixin.client;
+package com.dreamingfish.gridinventory.fabric.mixin.client;
 
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import net.minecraft.client.Minecraft;
@@ -48,5 +48,4 @@ public abstract class InventoryScreenMixin extends EffectRenderingInventoryScree
             cir.setReturnValue(true);
         }
     }
-
 }

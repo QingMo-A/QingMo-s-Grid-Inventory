@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupHandler;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -10,7 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 
 public record ManualPickupItemPacket(int entityId) implements CustomPacketPayload {
-    public static final Type<ManualPickupItemPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "manual_pickup_item"));
+    public static final Type<ManualPickupItemPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "manual_pickup_item"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ManualPickupItemPacket> STREAM_CODEC = StreamCodec.ofMember(ManualPickupItemPacket::encode, ManualPickupItemPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

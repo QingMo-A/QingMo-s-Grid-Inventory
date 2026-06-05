@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.dreamingfish.gridinventory.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "PlayerMixin"
+  ],
+  "client": [
+    "client.MinecraftMixin",
+    "client.InventoryScreenMixin",
+    "client.SlotAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

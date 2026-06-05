@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.equipment;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.api.EquipmentStorageDefinition;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -30,11 +30,11 @@ public class EquipmentStorageLoader extends SimpleJsonResourceReloadListener {
                     : List.of(root);
             for (JsonElement rule : rules) {
                 EquipmentStorageDefinition.CODEC.parse(JsonOps.INSTANCE, rule)
-                        .resultOrPartial(message -> DFGridInventoryMod.LOGGER.warn("Invalid equipment storage rule in {}: {}", entry.getKey(), message))
+                        .resultOrPartial(message -> DFGridInventory.LOGGER.warn("Invalid equipment storage rule in {}: {}", entry.getKey(), message))
                         .ifPresent(loaded::add);
             }
         }
         EquipmentStorageManager.replaceRules(loaded);
-        DFGridInventoryMod.LOGGER.info("Loaded {} equipment storage rules", loaded.size());
+        DFGridInventory.LOGGER.info("Loaded {} equipment storage rules", loaded.size());
     }
 }

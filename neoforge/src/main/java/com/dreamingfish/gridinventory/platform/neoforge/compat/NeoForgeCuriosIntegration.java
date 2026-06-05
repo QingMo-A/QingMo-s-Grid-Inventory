@@ -1,11 +1,11 @@
-package com.dreamingfish.gridinventory.common.compat.curios;
+package com.dreamingfish.gridinventory.platform.neoforge.compat;
 
+import com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
-import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
@@ -20,14 +20,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class CuriosIntegration {
+public final class NeoForgeCuriosIntegration {
     private static final ResourceLocation FALLBACK_ICON = ResourceLocation.fromNamespaceAndPath("curios", "slot/empty_curio_slot");
 
-    private CuriosIntegration() {
+    private NeoForgeCuriosIntegration() {
     }
 
     public static boolean isLoaded() {
-        return GridInventoryServices.platform().isModLoaded("curios");
+        return net.neoforged.fml.ModList.get().isLoaded("curios");
     }
 
     public static List<CuriosSlotView> collectSlots(Player player) {

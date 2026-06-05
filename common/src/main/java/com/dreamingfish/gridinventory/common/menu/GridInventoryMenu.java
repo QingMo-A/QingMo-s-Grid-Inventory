@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
+import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
@@ -12,9 +13,9 @@ import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
 import com.dreamingfish.gridinventory.common.network.ModNetworking;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupHandler;
-import com.dreamingfish.gridinventory.common.registry.ModAttachments;
 import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
+import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -54,11 +55,11 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     public static GridInventoryMenu fromNetwork(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf buf) {
-        int slot = buf.readVarInt();
-        InteractionHand hand = buf.readEnum(InteractionHand.class);
-        boolean playerGrid = buf.readBoolean();
-        GridInventoryData data = GridInventoryData.decode(buf);
-        return new GridInventoryMenu(containerId, playerInventory, slot, hand, data, playerGrid);
+        return fromOpenData(containerId, playerInventory, GridInventoryMenuOpenData.decode(buf));
+    }
+
+    public static GridInventoryMenu fromOpenData(int containerId, Inventory playerInventory, GridInventoryMenuOpenData data) {
+        return new GridInventoryMenu(containerId, playerInventory, data.sourceSlot(), data.hand(), data.data(), data.playerInventory());
     }
 
     private void addPlayerSlots(Inventory inventory) {
@@ -792,12 +793,12 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     private Optional<Slot> findPlayerSlotView(int playerSlot) {
-        return slots.stream().filter(slot -> slot.getSlotIndex() == playerSlot).findFirst();
+        return slots.stream().filter(slot -> slot.index == playerSlot).findFirst();
     }
 
     private Optional<EquipmentSlot> findEmptyArmorSlot(ItemStack stack) {
         for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-            if (playerInventory.player.getItemBySlot(slot).isEmpty() && stack.canEquip(slot, playerInventory.player)) {
+            if (playerInventory.player.getItemBySlot(slot).isEmpty() && EquipmentSlotHelper.canEquip(stack, slot, playerInventory.player)) {
                 return Optional.of(slot);
             }
         }
@@ -826,10 +827,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     private boolean mayInsertIntoVanillaSlot(int playerSlot, ItemStack stack) {
         return switch (playerSlot) {
-            case 39 -> stack.canEquip(EquipmentSlot.HEAD, playerInventory.player);
-            case 38 -> stack.canEquip(EquipmentSlot.CHEST, playerInventory.player);
-            case 37 -> stack.canEquip(EquipmentSlot.LEGS, playerInventory.player);
-            case 36 -> stack.canEquip(EquipmentSlot.FEET, playerInventory.player);
+            case 39 -> EquipmentSlotHelper.canEquip(stack, EquipmentSlot.HEAD, playerInventory.player);
+            case 38 -> EquipmentSlotHelper.canEquip(stack, EquipmentSlot.CHEST, playerInventory.player);
+            case 37 -> EquipmentSlotHelper.canEquip(stack, EquipmentSlot.LEGS, playerInventory.player);
+            case 36 -> EquipmentSlotHelper.canEquip(stack, EquipmentSlot.FEET, playerInventory.player);
             default -> true;
         };
     }
@@ -843,7 +844,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     public void save() {
         if (playerGrid) {
-            playerInventory.player.setData(ModAttachments.PLAYER_GRID_INVENTORY, gridData.copy());
+            GridInventoryServices.playerData().setPlayerGridInventory(playerInventory.player, gridData.copy());
             return;
         }
         ItemStack stack = bagStack();
@@ -855,7 +856,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         if (index >= 0 && index < slots.size()) {
-            int playerSlot = slots.get(index).getSlotIndex();
+            int playerSlot = slots.get(index).index;
             quickInsertFromPlayerInventory(playerSlot);
         }
         return ItemStack.EMPTY;
@@ -884,7 +885,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
-            return stack.canEquip(equipmentSlot, owner);
+            return EquipmentSlotHelper.canEquip(stack, equipmentSlot, owner);
         }
 
         @Override

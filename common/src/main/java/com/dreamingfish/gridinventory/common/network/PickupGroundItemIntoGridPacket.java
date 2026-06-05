@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 
 public record PickupGroundItemIntoGridPacket(int entityId, int targetX, int targetY, boolean rotated) implements CustomPacketPayload {
-    public static final Type<PickupGroundItemIntoGridPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "pickup_ground_item_into_grid"));
+    public static final Type<PickupGroundItemIntoGridPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "pickup_ground_item_into_grid"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PickupGroundItemIntoGridPacket> STREAM_CODEC = StreamCodec.ofMember(PickupGroundItemIntoGridPacket::encode, PickupGroundItemIntoGridPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

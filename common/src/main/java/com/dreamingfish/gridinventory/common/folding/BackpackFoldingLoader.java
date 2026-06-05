@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.folding;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.api.BackpackFoldingDefinition;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -31,14 +31,14 @@ public class BackpackFoldingLoader extends SimpleJsonResourceReloadListener {
                         : List.of(root);
                 for (JsonElement rule : rules) {
                     BackpackFoldingDefinition.CODEC.parse(JsonOps.INSTANCE, rule)
-                            .resultOrPartial(message -> DFGridInventoryMod.LOGGER.warn("Invalid backpack folding rule in {}: {}", entry.getKey(), message))
+                            .resultOrPartial(message -> DFGridInventory.LOGGER.warn("Invalid backpack folding rule in {}: {}", entry.getKey(), message))
                             .ifPresent(loaded::add);
                 }
             } catch (Exception exception) {
-                DFGridInventoryMod.LOGGER.warn("Failed to load backpack folding rules from {}", entry.getKey(), exception);
+                DFGridInventory.LOGGER.warn("Failed to load backpack folding rules from {}", entry.getKey(), exception);
             }
         }
         BackpackFoldingManager.replaceRules(loaded);
-        DFGridInventoryMod.LOGGER.info("Loaded {} backpack folding rules", loaded.size());
+        DFGridInventory.LOGGER.info("Loaded {} backpack folding rules", loaded.size());
     }
 }

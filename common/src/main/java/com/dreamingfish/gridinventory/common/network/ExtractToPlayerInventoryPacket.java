@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -11,7 +11,7 @@ import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 import java.util.UUID;
 
 public record ExtractToPlayerInventoryPacket(UUID entryId, int amount) implements CustomPacketPayload {
-    public static final Type<ExtractToPlayerInventoryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "extract_to_player_inventory"));
+    public static final Type<ExtractToPlayerInventoryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "extract_to_player_inventory"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ExtractToPlayerInventoryPacket> STREAM_CODEC = StreamCodec.ofMember(ExtractToPlayerInventoryPacket::encode, ExtractToPlayerInventoryPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

@@ -8,6 +8,7 @@ import com.dreamingfish.gridinventory.client.render.GridRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.render.EquipmentStorageTooltipRenderer;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
+import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryPacket;
@@ -46,7 +47,7 @@ import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
-import com.dreamingfish.gridinventory.mixin.client.SlotAccessor;
+import com.dreamingfish.gridinventory.client.access.SlotPositionAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -180,7 +181,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void setSlotPosition(int menuIndex, int absoluteX, int absoluteY) {
-        SlotAccessor accessor = (SlotAccessor) (Object) menu.slots.get(menuIndex);
+        SlotPositionAccessor accessor = (SlotPositionAccessor) menu.slots.get(menuIndex);
         accessor.df_grid_inventory$setX(absoluteX - leftPos);
         accessor.df_grid_inventory$setY(absoluteY - topPos);
     }
@@ -440,7 +441,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
         Slot hovered = findHoveredSlot(mouseX, mouseY);
         if (hovered != null) {
-            lastPlayerSlot = hovered.getSlotIndex();
+            lastPlayerSlot = hovered.index;
             if (hasShiftDown() && button == 0) {
                 GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot, 0, 0, false, true, false));
                 selectedPlayerStack = ItemStack.EMPTY;
@@ -544,7 +545,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new ExtractCurioToPlayerSlotPacket(
-                            draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), hovered.getSlotIndex()));
+                            draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), hovered.index));
                 }
             }
             clearDragState();
@@ -585,7 +586,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new ExtractEquipmentStorageEntryPacket(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
-                            hovered.getSlotIndex(), draggingEquipmentEntry.entry().stack().getCount()));
+                            hovered.index, draggingEquipmentEntry.entry().stack().getCount()));
                 }
             }
             clearDragState();
@@ -612,7 +613,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotPacket(draggingEntry.entryId(), hovered.getSlotIndex(), draggingEntry.stack().getCount()));
+                    GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotPacket(draggingEntry.entryId(), hovered.index, draggingEntry.stack().getCount()));
                 }
             }
             clearDragState();
@@ -637,8 +638,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, false, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null && hovered.getSlotIndex() != lastPlayerSlot) {
-                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotPacket(lastPlayerSlot, hovered.getSlotIndex()));
+                if (hovered != null && hovered.index != lastPlayerSlot) {
+                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotPacket(lastPlayerSlot, hovered.index));
                 }
             }
             clearDragState();
@@ -757,7 +758,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private boolean canQuickEquip(ItemStack stack) {
         for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-            if (minecraft.player.getItemBySlot(slot).isEmpty() && stack.canEquip(slot, minecraft.player)) {
+            if (minecraft.player.getItemBySlot(slot).isEmpty() && EquipmentSlotHelper.canEquip(stack, slot, minecraft.player)) {
                 return true;
             }
         }

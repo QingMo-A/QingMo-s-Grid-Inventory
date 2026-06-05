@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record SyncItemSizeRulesPacket(List<GridItemSizeRule> rules) implements CustomPacketPayload {
-    public static final Type<SyncItemSizeRulesPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "sync_item_size_rules"));
+    public static final Type<SyncItemSizeRulesPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "sync_item_size_rules"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SyncItemSizeRulesPacket> STREAM_CODEC = StreamCodec.ofMember(SyncItemSizeRulesPacket::encode, SyncItemSizeRulesPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

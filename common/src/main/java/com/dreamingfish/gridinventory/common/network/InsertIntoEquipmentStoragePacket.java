@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -10,7 +10,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 
 public record InsertIntoEquipmentStoragePacket(int playerSlot, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated, boolean targetFolded) implements CustomPacketPayload {
-    public static final Type<InsertIntoEquipmentStoragePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "insert_into_equipment_storage"));
+    public static final Type<InsertIntoEquipmentStoragePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "insert_into_equipment_storage"));
     public static final StreamCodec<RegistryFriendlyByteBuf, InsertIntoEquipmentStoragePacket> STREAM_CODEC = StreamCodec.ofMember(InsertIntoEquipmentStoragePacket::encode, InsertIntoEquipmentStoragePacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

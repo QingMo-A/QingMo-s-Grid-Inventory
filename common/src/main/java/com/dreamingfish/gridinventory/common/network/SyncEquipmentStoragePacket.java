@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 
 public record SyncEquipmentStoragePacket(EquipmentSlot slot, EquipmentStorageData storage) implements CustomPacketPayload {
-    public static final Type<SyncEquipmentStoragePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "sync_equipment_storage"));
+    public static final Type<SyncEquipmentStoragePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "sync_equipment_storage"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SyncEquipmentStoragePacket> STREAM_CODEC = StreamCodec.ofMember(SyncEquipmentStoragePacket::encode, SyncEquipmentStoragePacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

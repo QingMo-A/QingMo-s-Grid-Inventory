@@ -1,6 +1,7 @@
 package com.dreamingfish.gridinventory.platform.neoforge;
 
 import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.common.menu.GridInventoryMenuOpenData;
 import com.dreamingfish.gridinventory.platform.GridInventoryRegistryBridge;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -34,7 +35,7 @@ public final class NeoForgeGridInventoryRegistryBridge implements GridInventoryR
 
     @Override
     public <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
-        return menus.register(name, () -> new MenuType<>((IContainerFactory<T>) factory::create, net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
+        return menus.register(name, () -> new MenuType<>((IContainerFactory<T>) (containerId, inventory, buffer) -> factory.create(containerId, inventory, GridInventoryMenuOpenData.decode(buffer)), net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
     }
 
     @Override

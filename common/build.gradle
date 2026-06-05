@@ -2,12 +2,16 @@ plugins {
     id 'java-library'
 }
 
-// The physical common sources are compiled by the NeoForge module's Minecraft-aware
-// source set for now. This keeps common free of loader APIs while avoiding a separate
-// Minecraft classpath model during the first split.
 sourceSets {
     main {
-        java.setSrcDirs([])
+        java {
+            srcDir "src/main/java"
+            include "com/dreamingfish/gridinventory/DFGridInventory.java"
+        }
         resources.setSrcDirs([])
     }
+}
+
+dependencies {
+    compileOnly "org.slf4j:slf4j-api:2.0.9"
 }

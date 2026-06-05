@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 
 public record ExtractCurioToGridPacket(String identifier, int index, int targetX, int targetY, boolean rotated, boolean targetFolded) implements CustomPacketPayload {
-    public static final Type<ExtractCurioToGridPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "extract_curio_to_grid"));
+    public static final Type<ExtractCurioToGridPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "extract_curio_to_grid"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ExtractCurioToGridPacket> STREAM_CODEC = StreamCodec.ofMember(ExtractCurioToGridPacket::encode, ExtractCurioToGridPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

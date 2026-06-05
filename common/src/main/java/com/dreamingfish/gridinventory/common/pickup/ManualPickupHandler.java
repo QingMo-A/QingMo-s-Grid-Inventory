@@ -6,7 +6,6 @@ import com.dreamingfish.gridinventory.api.GridInsertMode;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ModNetworking;
-import com.dreamingfish.gridinventory.common.registry.ModAttachments;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -119,10 +118,10 @@ public final class ManualPickupHandler {
             ModNetworking.syncMenu(player, menu);
             return remainder;
         }
-        GridInventoryData pocket = player.getData(ModAttachments.PLAYER_GRID_INVENTORY).copy();
+        GridInventoryData pocket = GridInventoryServices.playerData().copyPlayerGridInventory(player);
         ItemStack remainder = pocket.insert(stack, GridInsertMode.EXECUTE);
         if (remainder.getCount() != stack.getCount()) {
-            player.setData(ModAttachments.PLAYER_GRID_INVENTORY, pocket);
+            GridInventoryServices.playerData().setPlayerGridInventory(player, pocket);
         }
         return remainder;
     }

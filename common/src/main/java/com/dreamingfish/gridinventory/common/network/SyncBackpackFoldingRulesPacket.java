@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.api.BackpackFoldingDefinition;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record SyncBackpackFoldingRulesPacket(List<BackpackFoldingDefinition> rules) implements CustomPacketPayload {
-    public static final Type<SyncBackpackFoldingRulesPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "sync_backpack_folding_rules"));
+    public static final Type<SyncBackpackFoldingRulesPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "sync_backpack_folding_rules"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SyncBackpackFoldingRulesPacket> STREAM_CODEC = StreamCodec.ofMember(SyncBackpackFoldingRulesPacket::encode, SyncBackpackFoldingRulesPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

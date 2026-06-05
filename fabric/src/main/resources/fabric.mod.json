@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "df_grid_inventory",
+  "version": "${version}",
+  "name": "DF Grid Inventory",
+  "description": "A data-driven Tetris-style grid inventory foundation.",
+  "authors": [],
+  "license": "Apache-2.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.dreamingfish.gridinventory.fabric.DFGridInventoryFabric"
+    ],
+    "client": [
+      "com.dreamingfish.gridinventory.fabric.client.DFGridInventoryFabricClient"
+    ]
+  },
+  "mixins": [
+    "df_grid_inventory.fabric.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.1",
+    "fabric-api": "*",
+    "trinkets": "*"
+  }
+}

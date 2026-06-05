@@ -6,7 +6,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
 public final class PickupPromptHud {
     private static float alpha;
@@ -25,7 +24,7 @@ public final class PickupPromptHud {
         }
     }
 
-    public static void render(RenderGuiEvent.Post event) {
+    public static void render(GuiGraphics graphics) {
         if (alpha <= 0.0F) {
             return;
         }
@@ -34,7 +33,6 @@ public final class PickupPromptHud {
             return;
         }
 
-        GuiGraphics graphics = event.getGuiGraphics();
         Font font = minecraft.font;
         Component text = Component.translatable(
                 "hud.df_grid_inventory.pickup_prompt",

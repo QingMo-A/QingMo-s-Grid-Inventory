@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.size;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.google.gson.JsonElement;
 import com.google.gson.Gson;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 public class GridItemSizeLoader extends SimpleJsonResourceReloadListener {
-    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "item_sizes");
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "item_sizes");
 
     public GridItemSizeLoader() {
         super(new Gson(), "df_grid_inventory/item_sizes");
@@ -35,14 +35,14 @@ public class GridItemSizeLoader extends SimpleJsonResourceReloadListener {
                     parseRule(root).ifPresent(loaded::add);
                 }
             } catch (Exception exception) {
-                DFGridInventoryMod.LOGGER.warn("Failed to load grid item size rules from {}", entry.getKey(), exception);
+                DFGridInventory.LOGGER.warn("Failed to load grid item size rules from {}", entry.getKey(), exception);
             }
         }
         GridItemSizeManager.replaceRules(loaded);
-        DFGridInventoryMod.LOGGER.info("Loaded {} grid item size rules", loaded.size());
+        DFGridInventory.LOGGER.info("Loaded {} grid item size rules", loaded.size());
     }
 
     private static java.util.Optional<GridItemSizeRule> parseRule(JsonElement element) {
-        return GridItemSizeRule.CODEC.parse(JsonOps.INSTANCE, element).resultOrPartial(message -> DFGridInventoryMod.LOGGER.warn("Invalid grid item size rule: {}", message));
+        return GridItemSizeRule.CODEC.parse(JsonOps.INSTANCE, element).resultOrPartial(message -> DFGridInventory.LOGGER.warn("Invalid grid item size rule: {}", message));
     }
 }

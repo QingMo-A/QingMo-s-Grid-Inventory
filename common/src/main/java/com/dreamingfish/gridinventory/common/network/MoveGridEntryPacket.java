@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.DFGridInventoryMod;
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -11,7 +11,7 @@ import com.dreamingfish.gridinventory.platform.network.GridPacketContext;
 import java.util.UUID;
 
 public record MoveGridEntryPacket(UUID entryId, int targetX, int targetY, boolean rotated, boolean targetFolded) implements CustomPacketPayload {
-    public static final Type<MoveGridEntryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "move_grid_entry"));
+    public static final Type<MoveGridEntryPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(DFGridInventory.MODID, "move_grid_entry"));
     public static final StreamCodec<RegistryFriendlyByteBuf, MoveGridEntryPacket> STREAM_CODEC = StreamCodec.ofMember(MoveGridEntryPacket::encode, MoveGridEntryPacket::decode);
 
     private void encode(RegistryFriendlyByteBuf buf) {

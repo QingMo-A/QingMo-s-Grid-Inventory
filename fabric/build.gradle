@@ -1,0 +1,38 @@
+plugins {
+    id 'java-library'
+    id 'fabric-loom'
+}
+
+base {
+    archivesName = "${mod_id}-fabric"
+}
+
+sourceSets {
+    main {
+        java.srcDir "../common/src/main/java"
+        resources {
+            srcDir "../neoforge/src/main/resources"
+            exclude "df_grid_inventory.mixins.json"
+            exclude "META-INF/**"
+        }
+    }
+}
+
+dependencies {
+    implementation project(":common")
+
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    modImplementation "dev.emi:trinkets:${trinkets_version}"
+}
+
+def fabricModVersion = project.version.toString()
+
+tasks.named("processResources", ProcessResources) {
+    inputs.property "version", fabricModVersion
+    filesMatching("fabric.mod.json") {
+        expand "version": fabricModVersion
+    }
+}

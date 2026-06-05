@@ -1,7 +1,7 @@
 package com.dreamingfish.gridinventory.platform;
 
+import com.dreamingfish.gridinventory.common.menu.GridInventoryMenuOpenData;
 import net.minecraft.core.component.DataComponentType;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
@@ -21,6 +21,6 @@ public interface GridInventoryRegistryBridge {
 
     @FunctionalInterface
     interface MenuFactory<T extends AbstractContainerMenu> {
-        T create(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf buffer);
+        T create(int containerId, Inventory playerInventory, GridInventoryMenuOpenData data);
     }
 }
