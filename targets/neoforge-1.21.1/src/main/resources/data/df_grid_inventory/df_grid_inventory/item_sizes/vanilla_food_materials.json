@@ -1,0 +1,74 @@
+{
+  "rules": [
+    {
+      "type": "tag",
+      "target": "minecraft:meat",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:fishes",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:cake",
+      "width": 2,
+      "height": 2,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:golden_apple",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:enchanted_golden_apple",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "tag",
+      "target": "c:gems",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "tag",
+      "target": "c:nuggets",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "tag",
+      "target": "c:dusts",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:ender_pearl",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:ender_eye",
+      "width": 1,
+      "height": 1,
+      "rotatable": false
+    }
+  ]
+}

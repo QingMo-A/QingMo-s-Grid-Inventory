@@ -1,0 +1,46 @@
+{
+  "rules": [
+    {
+      "type": "item",
+      "target": "df_grid_inventory:gray_field_backpack",
+      "folded_width": 2,
+      "folded_height": 2,
+      "folded_model": "square"
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:leather_backpack",
+      "folded_width": 2,
+      "folded_height": 1,
+      "folded_model": "roll"
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:lime_hiking_backpack",
+      "folded_width": 2,
+      "folded_height": 1,
+      "folded_model": "roll"
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:medium_hiking_backpack",
+      "folded_width": 2,
+      "folded_height": 1,
+      "folded_model": "roll"
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:military_hiking_backpack",
+      "folded_width": 2,
+      "folded_height": 2,
+      "folded_model": "square"
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:tactical_backpack",
+      "folded_width": 2,
+      "folded_height": 2,
+      "folded_model": "square"
+    }
+  ]
+}

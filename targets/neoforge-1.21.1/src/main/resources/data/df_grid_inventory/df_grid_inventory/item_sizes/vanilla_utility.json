@@ -1,0 +1,130 @@
+{
+  "rules": [
+    {
+      "type": "tag",
+      "target": "minecraft:boats",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:chest_boats",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:minecart",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:chest_minecart",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:furnace_minecart",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:tnt_minecart",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:hopper_minecart",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:bucket",
+      "width": 2,
+      "height": 2,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:water_bucket",
+      "width": 2,
+      "height": 2,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:lava_bucket",
+      "width": 2,
+      "height": 2,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:powder_snow_bucket",
+      "width": 2,
+      "height": 2,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:milk_bucket",
+      "width": 2,
+      "height": 2,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:fishing_rod",
+      "width": 1,
+      "height": 3,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:spyglass",
+      "width": 1,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:shears",
+      "width": 2,
+      "height": 1,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:flint_and_steel",
+      "width": 2,
+      "height": 1,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:brush",
+      "width": 1,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:totem_of_undying",
+      "width": 1,
+      "height": 2,
+      "rotatable": false
+    }
+  ]
+}

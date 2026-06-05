@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.dreamingfish.gridinventory.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "client.MinecraftMixin",
+    "client.InventoryScreenMixin",
+    "client.SlotAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

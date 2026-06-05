@@ -1,0 +1,81 @@
+{
+  "rules": [
+    {
+      "type": "tag",
+      "target": "minecraft:head_armor",
+      "width": 4,
+      "height": 4,
+      "rotatable": false
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:chest_armor",
+      "width": 5,
+      "height": 4,
+      "rotatable": true
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:leg_armor",
+      "width": 3,
+      "height": 4,
+      "rotatable": true
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:foot_armor",
+      "width": 2,
+      "height": 1,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:elytra",
+      "width": 2,
+      "height": 3,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:saddle",
+      "width": 2,
+      "height": 2,
+      "rotatable": false
+    },
+    {
+      "type": "item",
+      "target": "minecraft:leather_horse_armor",
+      "width": 2,
+      "height": 3,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:iron_horse_armor",
+      "width": 2,
+      "height": 3,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:golden_horse_armor",
+      "width": 2,
+      "height": 3,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "minecraft:diamond_horse_armor",
+      "width": 2,
+      "height": 3,
+      "rotatable": true
+    },
+    {
+      "type": "item",
+      "target": "df_grid_inventory:gray_field_backpack",
+      "width": 5,
+      "height": 8,
+      "rotatable": true
+    }
+  ]
+}

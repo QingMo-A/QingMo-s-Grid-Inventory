@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "df_grid_inventory:item/folded_military_hiking_backpack"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "rules": [
+    {
+      "type": "item",
+      "target": "minecraft:leather_chestplate",
+      "slot": "chest",
+      "containers": [
+        {
+          "id": "front_pockets",
+          "title": "Chest Pockets",
+          "layout": [
+            "AB",
+            "CDEF",
+            "CDEF",
+            "GGHH",
+            "GGHH"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "minecraft:diamond_chestplate",
+      "slot": "chest",
+      "containers": [
+        {
+          "id": "front_pockets",
+          "title": "Chest Pockets",
+          "layout": [
+            "ABCD",
+            "ABCD",
+            "EEFG",
+            "EEFG"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "item",
+      "target": "minecraft:leather_leggings",
+      "slot": "legs",
+      "containers": [
+        {
+          "id": "leg_pockets",
+          "title": "Leg Pockets",
+          "layout": [
+            "ABCDE",
+            "AFGHE",
+            "IFGHJ",
+            "IKKJ",
+            "IKKJ"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:chest_armor",
+      "slot": "chest",
+      "containers": [
+        {
+          "id": "chest_storage",
+          "title": "Chest Storage",
+          "layout": [
+            "ABBB",
+            "ABBB",
+            "C",
+            "DD"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:leg_armor",
+      "slot": "legs",
+      "containers": [
+        {
+          "id": "leg_storage",
+          "title": "Leg Storage",
+          "layout": [
+            "ABCD"
+          ]
+        }
+      ]
+    }
+  ]
+}

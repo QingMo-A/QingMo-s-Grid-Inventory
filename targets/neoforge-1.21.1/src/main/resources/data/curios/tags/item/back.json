@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "df_grid_inventory:grid_backpack",
+    "df_grid_inventory:gray_field_backpack",
+    "df_grid_inventory:leather_backpack",
+    "df_grid_inventory:lime_hiking_backpack",
+    "df_grid_inventory:medium_hiking_backpack",
+    "df_grid_inventory:military_hiking_backpack",
+    "df_grid_inventory:tactical_backpack"
+  ]
+}
