@@ -6,6 +6,7 @@ import com.dreamingfish.gridinventory.client.render.GridRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.render.EquipmentStorageTooltipRenderer;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
+import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryPacket;
@@ -194,22 +195,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (equipmentHit.isPresent()) {
                 GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
                 GridEntry entry = hit.entry();
-                int x1 = hit.region().drawX(entry.x(), entry.y());
-                int y1 = hit.region().drawY(entry.x(), entry.y());
-                int width = hit.region().areaWidth(entry.x(), entry.y(), entry.width());
-                int height = hit.region().areaHeight(entry.x(), entry.y(), entry.height());
-                graphics.fill(x1, y1, x1 + width, y1 + height, 0x22FFFFFF);
-                renderRegionCellOutlines(graphics, hit.region(), entry.x(), entry.y(), entry.width(), entry.height(), 0xFFFFFFFF);
+                renderGridAreaHighlight(graphics, hit.region().inventory(), hit.region().left(), hit.region().top(),
+                        entry.x(), entry.y(), entry.width(), entry.height(), 0x22FFFFFF, 0xFFFFFFFF);
                 return;
             }
         }
         entryAt(mouseX, mouseY).ifPresent(entry -> {
-            int x1 = gridLeft + entry.x() * CELL;
-            int y1 = gridTop + entry.y() * CELL;
-            int x2 = x1 + entry.width() * CELL;
-            int y2 = y1 + entry.height() * CELL;
-            graphics.fill(x1, y1, x2, y2, 0x22FFFFFF);
-            graphics.renderOutline(x1, y1, x2 - x1, y2 - y1, 0xFFFFFFFF);
+            renderGridAreaHighlight(graphics, menu.getGridData(), gridLeft, gridTop,
+                    entry.x(), entry.y(), entry.width(), entry.height(), 0x22FFFFFF, 0xFFFFFFFF);
         });
     }
 
@@ -332,19 +325,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
     }
 
-    private void renderCellOutlines(GuiGraphics graphics, int left, int top, int width, int height, int color) {
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                graphics.renderOutline(left + x * CELL, top + y * CELL, CELL, CELL, color);
-            }
-        }
-    }
-
-    private void renderPlacementPreview(GuiGraphics graphics, com.dreamingfish.gridinventory.common.data.GridInventoryData inventory,
+    private void renderPlacementPreview(GuiGraphics graphics, GridInventoryData inventory,
                                         int left, int top, int targetX, int targetY, int width, int height,
                                         int anchorX, int anchorY,
                                         int fillColor, int outlineColor) {
         String originSection = inventory.sectionAt(anchorX, anchorY);
+        boolean[][] occupied = new boolean[height][width];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int cellX = targetX + x;
@@ -352,21 +338,63 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 if (originSection == null || !originSection.equals(inventory.sectionAt(cellX, cellY))) {
                     continue;
                 }
+                occupied[y][x] = true;
                 int drawX = left + GridLayoutMetrics.cellLeft(inventory, cellX, cellY, CELL);
                 int drawY = top + GridLayoutMetrics.cellTop(inventory, cellX, cellY, CELL);
                 graphics.fill(drawX, drawY, drawX + CELL, drawY + CELL, fillColor);
-                graphics.renderOutline(drawX, drawY, CELL, CELL, outlineColor);
+            }
+        }
+        renderOccupiedOuterOutline(graphics, inventory, left, top, targetX, targetY, occupied, outlineColor);
+    }
+
+    private void renderGridAreaHighlight(GuiGraphics graphics, GridInventoryData inventory, int left, int top,
+                                         int targetX, int targetY, int width, int height, int fillColor, int outlineColor) {
+        boolean[][] occupied = new boolean[height][width];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int cellX = targetX + x;
+                int cellY = targetY + y;
+                if (!inventory.isEnabledCell(cellX, cellY)) {
+                    continue;
+                }
+                occupied[y][x] = true;
+                int drawX = left + GridLayoutMetrics.cellLeft(inventory, cellX, cellY, CELL);
+                int drawY = top + GridLayoutMetrics.cellTop(inventory, cellX, cellY, CELL);
+                graphics.fill(drawX, drawY, drawX + CELL, drawY + CELL, fillColor);
+            }
+        }
+        renderOccupiedOuterOutline(graphics, inventory, left, top, targetX, targetY, occupied, outlineColor);
+    }
+
+    private void renderOccupiedOuterOutline(GuiGraphics graphics, GridInventoryData inventory, int left, int top,
+                                            int targetX, int targetY, boolean[][] occupied, int color) {
+        for (int y = 0; y < occupied.length; y++) {
+            for (int x = 0; x < occupied[y].length; x++) {
+                if (!occupied[y][x]) {
+                    continue;
+                }
+                int cellX = targetX + x;
+                int cellY = targetY + y;
+                int drawX = left + GridLayoutMetrics.cellLeft(inventory, cellX, cellY, CELL);
+                int drawY = top + GridLayoutMetrics.cellTop(inventory, cellX, cellY, CELL);
+                if (!isOccupied(occupied, x - 1, y)) {
+                    graphics.fill(drawX, drawY, drawX + 1, drawY + CELL, color);
+                }
+                if (!isOccupied(occupied, x + 1, y)) {
+                    graphics.fill(drawX + CELL - 1, drawY, drawX + CELL, drawY + CELL, color);
+                }
+                if (!isOccupied(occupied, x, y - 1)) {
+                    graphics.fill(drawX, drawY, drawX + CELL, drawY + 1, color);
+                }
+                if (!isOccupied(occupied, x, y + 1)) {
+                    graphics.fill(drawX, drawY + CELL - 1, drawX + CELL, drawY + CELL, color);
+                }
             }
         }
     }
 
-    private void renderRegionCellOutlines(GuiGraphics graphics, GridColumnPanel.Region region, int targetX, int targetY,
-                                          int width, int height, int color) {
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                graphics.renderOutline(region.drawX(targetX + x, targetY + y), region.drawY(targetX + x, targetY + y), CELL, CELL, color);
-            }
-        }
+    private boolean isOccupied(boolean[][] occupied, int x, int y) {
+        return y >= 0 && y < occupied.length && x >= 0 && x < occupied[y].length && occupied[y][x];
     }
 
     @Override
