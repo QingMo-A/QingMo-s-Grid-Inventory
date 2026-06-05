@@ -25,6 +25,8 @@ public interface GridInventoryPlatform {
 
     GridInventoryAccessoryBridge accessories();
 
+    GridInventoryItemStackDataBridge itemStackData();
+
     GridInventoryRegistryBridge registry();
 
     GridInventoryMenuBridge menus();

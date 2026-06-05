@@ -2,7 +2,6 @@ package com.dreamingfish.gridinventory.common.item;
 
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingManager;
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -15,12 +14,12 @@ public class GridBackpackItem extends Item {
         if (!(stack.getItem() instanceof GridBackpackItem)) {
             return false;
         }
-        Boolean folded = stack.get(ModDataComponents.BACKPACK_FOLDED.get());
+        Boolean folded = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().isBackpackFolded(stack);
         return folded == null || folded;
     }
 
     public static boolean canFold(ItemStack stack) {
-        EquipmentStorageData storage = stack.get(ModDataComponents.EQUIPMENT_STORAGE.get());
+        EquipmentStorageData storage = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getEquipmentStorage(stack);
         return storage == null || storage.containers().stream()
                 .allMatch(container -> container.inventory().getEntries().isEmpty());
     }
@@ -48,13 +47,13 @@ public class GridBackpackItem extends Item {
         if (!canFold(stack)) {
             return false;
         }
-        stack.set(ModDataComponents.BACKPACK_FOLDED.get(), true);
+        com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(stack, true);
         return true;
     }
 
     public static void unfold(ItemStack stack) {
         if (stack.getItem() instanceof GridBackpackItem) {
-            stack.set(ModDataComponents.BACKPACK_FOLDED.get(), false);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(stack, false);
         }
     }
 }

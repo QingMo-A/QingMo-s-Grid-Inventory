@@ -36,6 +36,10 @@ public final class GridInventoryServices {
         return platform().accessories();
     }
 
+    public static GridInventoryItemStackDataBridge itemStackData() {
+        return platform().itemStackData();
+    }
+
     public static GridInventoryRegistryBridge registry() {
         return platform().registry();
     }

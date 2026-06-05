@@ -11,32 +11,32 @@ import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
-import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryPacket;
-import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotPacket;
-import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryPacket;
-import com.dreamingfish.gridinventory.common.network.MoveGridEntryPacket;
-import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStoragePacket;
-import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryPacket;
-import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryPacket;
-import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStoragePacket;
-import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridPacket;
-import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryPacket;
-import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotPacket;
-import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryPacket;
-import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryPacket;
-import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotPacket;
-import com.dreamingfish.gridinventory.common.network.DropGridEntryPacket;
-import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryPacket;
-import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldPacket;
-import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldPacket;
-import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridPacket;
-import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStoragePacket;
-import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioPacket;
-import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioPacket;
-import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioPacket;
-import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotPacket;
-import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridPacket;
-import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStoragePacket;
+import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotMessage;
+import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
+import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMessage;
+import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
+import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
@@ -401,7 +401,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt((int) mouseX, (int) mouseY);
             if (equipmentHit.isPresent()) {
                 if (button == 1) {
-                    GridInventoryServices.network().sendToServer(new QuickEquipEquipmentStorageEntryPacket(
+                    GridInventoryServices.network().sendToServer(new QuickEquipEquipmentStorageEntryMessage(
                             equipmentHit.get().slot(), equipmentHit.get().containerId(), equipmentHit.get().entry().entryId()));
                     return true;
                 }
@@ -423,9 +423,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridEntry> hit = menu.getGridData().getEntries().stream().filter(entry -> entry.contains(x, y)).findFirst();
             if (hit.isPresent()) {
                 if (button == 1 && menu.isPlayerGrid()) {
-                    GridInventoryServices.network().sendToServer(new QuickEquipGridEntryPacket(hit.get().entryId()));
+                    GridInventoryServices.network().sendToServer(new QuickEquipGridEntryMessage(hit.get().entryId()));
                 } else if (hasShiftDown() && button == 0) {
-                    GridInventoryServices.network().sendToServer(new ExtractToPlayerInventoryPacket(hit.get().entryId(), hit.get().stack().getCount()));
+                    GridInventoryServices.network().sendToServer(new ExtractToPlayerInventoryMessage(hit.get().entryId(), hit.get().stack().getCount()));
                 } else if (button == 0) {
                     draggingEntry = hit.get();
                     dragPreviewStack = draggingEntry.stack().copy();
@@ -443,12 +443,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (hovered != null) {
             lastPlayerSlot = hovered.index;
             if (hasShiftDown() && button == 0) {
-                GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot, 0, 0, false, true, false));
+                GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryMessage(lastPlayerSlot, 0, 0, false, true, false));
                 selectedPlayerStack = ItemStack.EMPTY;
                 return true;
             }
             if (button == 1 && hovered.hasItem() && menu.isPlayerGrid()) {
-                GridInventoryServices.network().sendToServer(new QuickEquipPlayerSlotPacket(lastPlayerSlot));
+                GridInventoryServices.network().sendToServer(new QuickEquipPlayerSlotMessage(lastPlayerSlot));
                 return true;
             }
             if (button == 0 && hovered.hasItem()) {
@@ -498,13 +498,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt(mouseX, mouseY);
             if (equipmentHit.isPresent()) {
                 GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
-                GridInventoryServices.network().sendToServer(new DropEquipmentStorageEntryPacket(hit.slot(), hit.containerId(), hit.entry().entryId()));
+                GridInventoryServices.network().sendToServer(new DropEquipmentStorageEntryMessage(hit.slot(), hit.containerId(), hit.entry().entryId()));
                 return true;
             }
         }
         Optional<GridEntry> entry = entryAt(mouseX, mouseY);
         if (entry.isPresent()) {
-            GridInventoryServices.network().sendToServer(new DropGridEntryPacket(entry.get().entryId()));
+            GridInventoryServices.network().sendToServer(new DropGridEntryMessage(entry.get().entryId()));
             return true;
         }
         return false;
@@ -532,19 +532,19 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region region = equipmentRegion.get();
-                GridInventoryServices.network().sendToServer(new ExtractCurioToEquipmentStoragePacket(
+                GridInventoryServices.network().sendToServer(new ExtractCurioToEquipmentStorageMessage(
                         draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), region.slot(), region.containerId(),
                         targetRegionX(region, draggedStack(), (int) mouseX),
                         targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new ExtractCurioToGridPacket(
+                GridInventoryServices.network().sendToServer(new ExtractCurioToGridMessage(
                         draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(),
                         targetGridX(draggedStack(), (int) mouseX),
                         targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractCurioToPlayerSlotPacket(
+                    GridInventoryServices.network().sendToServer(new ExtractCurioToPlayerSlotMessage(
                             draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), hovered.index));
                 }
             }
@@ -554,7 +554,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (button == 0 && draggingEquipmentEntry != null) {
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
-                GridInventoryServices.network().sendToServer(new InsertEquipmentStorageEntryIntoCurioPacket(
+                GridInventoryServices.network().sendToServer(new InsertEquipmentStorageEntryIntoCurioMessage(
                         draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                         curioTarget.get().view().identifier(), curioTarget.get().view().index()));
                 clearDragState();
@@ -565,26 +565,26 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 GridColumnPanel.Region target = region.get();
                 if (target.slot() == draggingEquipmentEntry.slot()
                         && target.containerId().equals(draggingEquipmentEntry.containerId())) {
-                    GridInventoryServices.network().sendToServer(new MoveEquipmentStorageEntryPacket(
+                    GridInventoryServices.network().sendToServer(new MoveEquipmentStorageEntryMessage(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             targetRegionX(target, draggedStack(), (int) mouseX),
                             targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
                 } else {
-                    GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryPacket(
+                    GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryMessage(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             target.slot(), target.containerId(),
                             targetRegionX(target, draggedStack(), (int) mouseX),
                             targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview));
                 }
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryIntoGridPacket(
+                GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryIntoGridMessage(
                         draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                         targetGridX(draggedStack(), (int) mouseX),
                         targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractEquipmentStorageEntryPacket(
+                    GridInventoryServices.network().sendToServer(new ExtractEquipmentStorageEntryMessage(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             hovered.index, draggingEquipmentEntry.entry().stack().getCount()));
                 }
@@ -595,7 +595,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (button == 0 && draggingEntry != null) {
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
-                GridInventoryServices.network().sendToServer(new InsertGridEntryIntoCurioPacket(
+                GridInventoryServices.network().sendToServer(new InsertGridEntryIntoCurioMessage(
                         draggingEntry.entryId(), curioTarget.get().view().identifier(), curioTarget.get().view().index()));
                 clearDragState();
                 return true;
@@ -603,17 +603,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region target = equipmentRegion.get();
-                GridInventoryServices.network().sendToServer(new TransferGridEntryIntoEquipmentStoragePacket(
+                GridInventoryServices.network().sendToServer(new TransferGridEntryIntoEquipmentStorageMessage(
                         draggingEntry.entryId(), target.slot(), target.containerId(),
                         targetRegionX(target, draggedStack(), (int) mouseX),
                         targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new MoveGridEntryPacket(draggingEntry.entryId(),
+                GridInventoryServices.network().sendToServer(new MoveGridEntryMessage(draggingEntry.entryId(),
                         targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotPacket(draggingEntry.entryId(), hovered.index, draggingEntry.stack().getCount()));
+                    GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotMessage(draggingEntry.entryId(), hovered.index, draggingEntry.stack().getCount()));
                 }
             }
             clearDragState();
@@ -622,7 +622,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (button == 0 && !selectedPlayerStack.isEmpty() && lastPlayerSlot >= 0) {
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
-                GridInventoryServices.network().sendToServer(new InsertPlayerSlotIntoCurioPacket(
+                GridInventoryServices.network().sendToServer(new InsertPlayerSlotIntoCurioMessage(
                         lastPlayerSlot, curioTarget.get().view().identifier(), curioTarget.get().view().index()));
                 clearDragState();
                 return true;
@@ -630,16 +630,16 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region region = equipmentRegion.get();
-                GridInventoryServices.network().sendToServer(new InsertIntoEquipmentStoragePacket(lastPlayerSlot, region.slot(), region.containerId(),
+                GridInventoryServices.network().sendToServer(new InsertIntoEquipmentStorageMessage(lastPlayerSlot, region.slot(), region.containerId(),
                         targetRegionX(region, draggedStack(), (int) mouseX),
                         targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryPacket(lastPlayerSlot,
+                GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryMessage(lastPlayerSlot,
                         targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, false, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null && hovered.index != lastPlayerSlot) {
-                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotPacket(lastPlayerSlot, hovered.index));
+                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotMessage(lastPlayerSlot, hovered.index));
                 }
             }
             clearDragState();
@@ -658,11 +658,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
         if (equipmentRegion.isPresent()) {
             GridColumnPanel.Region region = equipmentRegion.get();
-            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoEquipmentStoragePacket(
+            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoEquipmentStorageMessage(
                     view.entityId(), region.slot(), region.containerId(),
                     targetRegionX(region, view.stack(), mouseX), targetRegionY(region, view.stack(), mouseY), rotatedPreview));
         } else if (inGrid(mouseX, mouseY)) {
-            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoGridPacket(
+            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoGridMessage(
                     view.entityId(), targetGridX(view.stack(), mouseX), targetGridY(view.stack(), mouseY), rotatedPreview));
         }
         rotatedPreview = false;

@@ -1,7 +1,7 @@
 package com.dreamingfish.gridinventory.client.pickup;
 
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
-import com.dreamingfish.gridinventory.common.network.ManualPickupItemPacket;
+import com.dreamingfish.gridinventory.common.network.ManualPickupItemMessage;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionHand;
@@ -32,7 +32,7 @@ public final class ClientPickupController {
         }
         attractEntityId = entityId;
         attractTicks = 8;
-        GridInventoryServices.network().sendToServer(new ManualPickupItemPacket(entityId));
+        GridInventoryServices.network().sendToServer(new ManualPickupItemMessage(entityId));
     }
 
     private static void tickAttractEffect() {

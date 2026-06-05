@@ -1,14 +1,11 @@
 package com.dreamingfish.gridinventory.platform.network;
 
+import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
 
-public interface GridPacketContext {
-    Player player();
-
+@Deprecated(forRemoval = true)
+public interface GridPacketContext extends GridMessageContext {
     default ServerPlayer serverPlayer() {
-        return player() instanceof ServerPlayer serverPlayer ? serverPlayer : null;
+        return serverPlayerOrNull();
     }
-
-    void enqueueWork(Runnable task);
 }

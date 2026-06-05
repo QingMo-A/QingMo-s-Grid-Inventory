@@ -3,7 +3,6 @@ package com.dreamingfish.gridinventory.common.item;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,28 +34,28 @@ public class SmallGridBagItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        GridInventoryData data = stack.get(ModDataComponents.GRID_INVENTORY.get());
+        GridInventoryData data = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getGridInventory(stack);
         if (data != null) {
             tooltip.add(Component.literal(data.getColumns() + " x " + data.getRows()).withStyle(ChatFormatting.GRAY));
         }
     }
 
     public static GridInventoryData getData(ItemStack stack) {
-        GridInventoryData data = stack.get(ModDataComponents.GRID_INVENTORY.get());
+        GridInventoryData data = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getGridInventory(stack);
         if (data == null) {
             data = createDefault();
-            stack.set(ModDataComponents.GRID_INVENTORY.get(), data);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setGridInventory(stack, data);
         }
         return data.copy();
     }
 
     public static void setData(ItemStack stack, GridInventoryData data) {
-        stack.set(ModDataComponents.GRID_INVENTORY.get(), data.copy());
+        com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setGridInventory(stack, data.copy());
     }
 
     public static void ensureData(ItemStack stack) {
-        if (!stack.has(ModDataComponents.GRID_INVENTORY.get())) {
-            stack.set(ModDataComponents.GRID_INVENTORY.get(), createDefault());
+        if (com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getGridInventory(stack) == null) {
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setGridInventory(stack, createDefault());
         }
     }
 

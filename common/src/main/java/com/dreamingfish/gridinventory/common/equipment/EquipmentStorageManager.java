@@ -7,7 +7,6 @@ import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -45,19 +44,19 @@ public final class EquipmentStorageManager {
     }
 
     public static EquipmentStorageData initializeStorage(ItemStack stack, EquipmentSlot slot) {
-        EquipmentStorageData current = stack.get(ModDataComponents.EQUIPMENT_STORAGE.get());
+        EquipmentStorageData current = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getEquipmentStorage(stack);
         Optional<EquipmentStorageDefinition> definition = getDefinition(stack, slot);
         if (current != null && !current.isEmpty()) {
             if (definition.isPresent()) {
                 EquipmentStorageData refreshed = refreshStorageShape(current, definition.get());
-                stack.set(ModDataComponents.EQUIPMENT_STORAGE.get(), refreshed);
+                com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(stack, refreshed);
                 return refreshed;
             }
             return current;
         }
         EquipmentStorageData initialized = definition.map(EquipmentStorageManager::createStorage).orElse(EquipmentStorageData.EMPTY);
         if (!initialized.containers().isEmpty()) {
-            stack.set(ModDataComponents.EQUIPMENT_STORAGE.get(), initialized);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(stack, initialized);
         }
         return initialized;
     }

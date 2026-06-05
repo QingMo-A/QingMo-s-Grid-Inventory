@@ -1,7 +1,6 @@
 package com.dreamingfish.gridinventory.platform;
 
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenuOpenData;
-import net.minecraft.core.component.DataComponentType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
@@ -14,8 +13,6 @@ public interface GridInventoryRegistryBridge {
     <T extends Item> Supplier<T> registerItem(String name, Supplier<T> item);
 
     <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerMenu(String name, MenuFactory<T> factory);
-
-    <T> Supplier<DataComponentType<T>> registerDataComponent(String name, Supplier<DataComponentType<T>> component);
 
     Supplier<CreativeModeTab> registerCreativeTab(String name, Supplier<CreativeModeTab> tab);
 

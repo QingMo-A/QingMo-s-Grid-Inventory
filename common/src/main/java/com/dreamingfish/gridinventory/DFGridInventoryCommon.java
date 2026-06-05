@@ -1,7 +1,6 @@
 package com.dreamingfish.gridinventory;
 
 import com.dreamingfish.gridinventory.common.registry.ModCreativeTabs;
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.platform.GridInventoryRegistryBridge;
@@ -16,7 +15,6 @@ public final class DFGridInventoryCommon {
         Objects.requireNonNull(registry, "registry");
         ModItems.bootstrap();
         ModMenus.bootstrap();
-        ModDataComponents.bootstrap();
         ModCreativeTabs.bootstrap();
     }
 }

@@ -13,7 +13,6 @@ import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
 import com.dreamingfish.gridinventory.common.network.ModNetworking;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupHandler;
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -114,7 +113,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             if (targetFolded && !GridBackpackItem.canFold(placedStack)) {
                 return false;
             }
-            placedStack.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(placedStack, targetFolded);
         }
         var targetEntry = gridData.getEntries().stream().filter(entry -> entry.contains(targetX, targetY)).findFirst();
         if (GridStackMerger.itemsStackableInGrid()
@@ -165,21 +164,21 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (entry.isEmpty()) {
             return false;
         }
-        Boolean previousFolded = entry.get().stack().get(ModDataComponents.BACKPACK_FOLDED.get());
+        Boolean previousFolded = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().isBackpackFolded(entry.get().stack());
         if (entry.get().stack().getItem() instanceof GridBackpackItem) {
             if (targetFolded && !GridBackpackItem.canFold(entry.get().stack())) {
                 return false;
             }
-            entry.get().stack().set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(entry.get().stack(), targetFolded);
         }
         boolean moved = gridData.move(entryId, targetX, targetY, rotated);
         if (moved) {
             save();
         } else if (entry.get().stack().getItem() instanceof GridBackpackItem) {
             if (previousFolded == null) {
-                entry.get().stack().remove(ModDataComponents.BACKPACK_FOLDED.get());
+                com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().removeBackpackFolded(entry.get().stack());
             } else {
-                entry.get().stack().set(ModDataComponents.BACKPACK_FOLDED.get(), previousFolded);
+                com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(entry.get().stack(), previousFolded);
             }
         }
         return moved;
@@ -197,7 +196,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (!GridPlacementValidator.canPlace(gridData, toggled, targetX, targetY, rotated, entryId)) {
             return false;
         }
-        entry.get().stack().set(ModDataComponents.BACKPACK_FOLDED.get(), GridBackpackItem.isFolded(toggled));
+        com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(entry.get().stack(), GridBackpackItem.isFolded(toggled));
         boolean moved = gridData.move(entryId, targetX, targetY, rotated);
         if (moved) {
             save();
@@ -268,7 +267,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             if (targetFolded && !GridBackpackItem.canFold(placedStack)) {
                 return false;
             }
-            placedStack.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(placedStack, targetFolded);
         }
         if (!GridPlacementValidator.canPlace(edit.get().inventory(), placedStack, targetX, targetY, rotated, null)) {
             return false;
@@ -291,19 +290,19 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (edit.isEmpty() || entry.isEmpty()) {
             return false;
         }
-        Boolean previousFolded = entry.get().stack().get(ModDataComponents.BACKPACK_FOLDED.get());
+        Boolean previousFolded = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().isBackpackFolded(entry.get().stack());
         if (entry.get().stack().getItem() instanceof GridBackpackItem) {
             if (targetFolded && !GridBackpackItem.canFold(entry.get().stack())) {
                 return false;
             }
-            entry.get().stack().set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(entry.get().stack(), targetFolded);
         }
         if (!edit.get().inventory().move(entryId, targetX, targetY, rotated)) {
             if (entry.get().stack().getItem() instanceof GridBackpackItem) {
                 if (previousFolded == null) {
-                    entry.get().stack().remove(ModDataComponents.BACKPACK_FOLDED.get());
+                    com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().removeBackpackFolded(entry.get().stack());
                 } else {
-                    entry.get().stack().set(ModDataComponents.BACKPACK_FOLDED.get(), previousFolded);
+                    com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(entry.get().stack(), previousFolded);
                 }
             }
             return false;
@@ -328,7 +327,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (!GridPlacementValidator.canPlace(edit.get().inventory(), toggled, targetX, targetY, rotated, entryId)) {
             return false;
         }
-        entry.get().stack().set(ModDataComponents.BACKPACK_FOLDED.get(), GridBackpackItem.isFolded(toggled));
+        com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(entry.get().stack(), GridBackpackItem.isFolded(toggled));
         if (!edit.get().inventory().move(entryId, targetX, targetY, rotated)) {
             return false;
         }
@@ -440,7 +439,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             if (targetFolded && !GridBackpackItem.canFold(moved)) {
                 return false;
             }
-            moved.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
         }
         if (!GridPlacementValidator.canPlace(target.get().inventory(), moved, targetX, targetY, rotated, null)) {
             return false;
@@ -472,7 +471,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             if (targetFolded && !GridBackpackItem.canFold(moved)) {
                 return false;
             }
-            moved.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
         }
         if (!GridPlacementValidator.canPlace(target.get().inventory(), moved, targetX, targetY, rotated, null)) {
             return false;
@@ -498,7 +497,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             if (targetFolded && !GridBackpackItem.canFold(moved)) {
                 return false;
             }
-            moved.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
         }
         if (!GridPlacementValidator.canPlace(gridData, moved, targetX, targetY, rotated, null)) {
             return false;
@@ -579,7 +578,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     private Optional<EquipmentStorageEdit> editableEquipmentInventory(EquipmentSlot slot, String containerId) {
         ItemStack equipped = equipmentStorageStack(slot);
-        EquipmentStorageData current = equipped.get(ModDataComponents.EQUIPMENT_STORAGE.get());
+        EquipmentStorageData current = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getEquipmentStorage(equipped);
         if ((current == null || current.containers().isEmpty()) && !equipped.isEmpty()) {
             current = EquipmentStorageManager.initializeStorage(equipped, slot);
         }
@@ -600,7 +599,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (equipped.isEmpty()) {
             return;
         }
-        equipped.set(ModDataComponents.EQUIPMENT_STORAGE.get(), storage);
+        com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(equipped, storage);
         if (slot == EquipmentSlot.BODY) {
             CuriosIntegration.setCurioStack(playerInventory.player, "back", 0, equipped);
         }

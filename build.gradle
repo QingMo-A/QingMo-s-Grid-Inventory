@@ -1,7 +1,7 @@
 plugins {
     id 'idea'
     id 'net.neoforged.moddev' version '2.0.141' apply false
-    id 'fabric-loom' version "${fabric_loom_version}" apply false
+    id 'net.minecraftforge.gradle' version '6.0.36' apply false
 }
 
 allprojects {
@@ -20,19 +20,9 @@ allprojects {
             url = uri("https://maven.theillusivec4.top/")
         }
         maven {
-            name = "TerraformersMC"
-            url = uri("https://maven.terraformersmc.com/releases/")
+            name = "Forge"
+            url = uri("https://maven.minecraftforge.net/")
         }
-        maven {
-            name = "Ladysnake"
-            url = uri("https://maven.ladysnake.org/releases")
-        }
-    }
-}
-
-subprojects {
-    pluginManager.withPlugin("java") {
-        java.toolchain.languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
