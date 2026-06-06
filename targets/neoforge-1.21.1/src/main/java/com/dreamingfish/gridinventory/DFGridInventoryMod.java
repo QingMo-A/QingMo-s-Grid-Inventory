@@ -12,6 +12,7 @@ import com.dreamingfish.gridinventory.common.folding.BackpackFoldingLoader;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingSyncManager;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageEvents;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
+import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionLoader;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.platform.neoforge.NeoForgeGridInventoryPlatform;
 import com.dreamingfish.gridinventory.target.neoforge1211.protocol.NeoForge1211ProtocolCompat;
@@ -64,6 +65,7 @@ public class DFGridInventoryMod {
     public void addReloadListener(AddReloadListenerEvent event) {
         event.addListener(new GridItemSizeLoader());
         event.addListener(new BackpackFoldingLoader());
+        event.addListener(new PlayerPocketDefinitionLoader());
         event.addListener(new EquipmentStorageLoader());
     }
 
