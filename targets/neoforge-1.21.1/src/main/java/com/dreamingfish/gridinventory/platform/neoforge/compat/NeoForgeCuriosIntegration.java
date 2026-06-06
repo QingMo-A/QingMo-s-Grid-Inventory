@@ -5,7 +5,7 @@ import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
+import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211DataComponents;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.resources.ResourceLocation;
@@ -228,7 +228,7 @@ public final class NeoForgeCuriosIntegration {
             if (targetFolded && !GridBackpackItem.canFold(moved)) {
                 return false;
             }
-            moved.set(ModDataComponents.BACKPACK_FOLDED.get(), targetFolded);
+            moved.set(NeoForge1211DataComponents.BACKPACK_FOLDED.get(), targetFolded);
         }
         if (!GridPlacementValidator.canPlace(grid, moved, targetX, targetY, rotated, null)) {
             return false;

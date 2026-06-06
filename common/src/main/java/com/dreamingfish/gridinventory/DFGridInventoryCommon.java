@@ -13,8 +13,8 @@ public final class DFGridInventoryCommon {
 
     public static void registerContent(GridInventoryRegistryBridge registry) {
         Objects.requireNonNull(registry, "registry");
-        ModItems.bootstrap();
-        ModMenus.bootstrap();
-        ModCreativeTabs.bootstrap();
+        ModItems.register(registry);
+        ModMenus.register(registry);
+        ModCreativeTabs.register(registry);
     }
 }

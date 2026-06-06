@@ -6,7 +6,6 @@ import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
 import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupEvents;
 import com.dreamingfish.gridinventory.common.registry.ModAttachments;
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingLoader;
@@ -16,6 +15,7 @@ import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.platform.neoforge.NeoForgeGridInventoryPlatform;
 import com.dreamingfish.gridinventory.target.neoforge1211.protocol.NeoForge1211ProtocolCompat;
+import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211DataComponents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -37,7 +37,7 @@ public class DFGridInventoryMod {
         GridInventoryServices.init(platform);
 
         DFGridInventoryCommon.registerContent(platform.registry());
-        ModDataComponents.bootstrap();
+        NeoForge1211DataComponents.register(platform.registry());
         platform.registry().registerItems(modEventBus);
         platform.registry().registerMenus(modEventBus);
         ModAttachments.ATTACHMENT_TYPES.register(modEventBus);

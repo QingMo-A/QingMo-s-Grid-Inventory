@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.common.equipment;
 
-import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
+import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211DataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -22,7 +22,7 @@ public final class EquipmentStorageEvents {
 
     private static void initializeEquippedStorage(ServerPlayer player, EquipmentSlot slot) {
         ItemStack stack = player.getItemBySlot(slot);
-        if (stack.isEmpty() || stack.get(ModDataComponents.EQUIPMENT_STORAGE.get()) != null) {
+        if (stack.isEmpty() || stack.get(NeoForge1211DataComponents.EQUIPMENT_STORAGE.get()) != null) {
             return;
         }
         if (!EquipmentStorageManager.initializeStorage(stack, slot).containers().isEmpty()) {
