@@ -21,10 +21,19 @@ public final class NeoForgeGridInventoryRegistryBridge implements GridInventoryR
     private final DeferredRegister<DataComponentType<?>> dataComponents = DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, DFGridInventoryMod.MODID);
     private final DeferredRegister<CreativeModeTab> creativeTabs = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, DFGridInventoryMod.MODID);
 
-    public void register(IEventBus modEventBus) {
+    public void registerItems(IEventBus modEventBus) {
         items.register(modEventBus);
+    }
+
+    public void registerMenus(IEventBus modEventBus) {
         menus.register(modEventBus);
+    }
+
+    public void registerDataComponents(IEventBus modEventBus) {
         dataComponents.register(modEventBus);
+    }
+
+    public void registerCreativeTabs(IEventBus modEventBus) {
         creativeTabs.register(modEventBus);
     }
 
@@ -35,7 +44,10 @@ public final class NeoForgeGridInventoryRegistryBridge implements GridInventoryR
 
     @Override
     public <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
-        return menus.register(name, () -> new MenuType<>((IContainerFactory<T>) (containerId, inventory, buffer) -> factory.create(containerId, inventory, GridInventoryMenuOpenData.decode(buffer)), net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
+        return menus.register(name, () -> new MenuType<>(
+                (IContainerFactory<T>) (containerId, inventory, buffer) -> factory.create(containerId, inventory, GridInventoryMenuOpenData.decode(buffer)),
+                net.minecraft.world.flag.FeatureFlags.VANILLA_SET
+        ));
     }
 
     public <T> Supplier<DataComponentType<T>> registerDataComponent(String name, Supplier<DataComponentType<T>> component) {

@@ -7,7 +7,6 @@ import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupEvents;
 import com.dreamingfish.gridinventory.common.registry.ModAttachments;
 import com.dreamingfish.gridinventory.common.registry.ModDataComponents;
-import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingLoader;
@@ -39,8 +38,11 @@ public class DFGridInventoryMod {
 
         DFGridInventoryCommon.registerContent(platform.registry());
         ModDataComponents.bootstrap();
+        platform.registry().registerItems(modEventBus);
+        platform.registry().registerMenus(modEventBus);
         ModAttachments.ATTACHMENT_TYPES.register(modEventBus);
-        platform.registry().register(modEventBus);
+        platform.registry().registerDataComponents(modEventBus);
+        platform.registry().registerCreativeTabs(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(NeoForge1211ProtocolCompat::register);
