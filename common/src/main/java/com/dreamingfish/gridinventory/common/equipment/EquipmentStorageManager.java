@@ -44,19 +44,19 @@ public final class EquipmentStorageManager {
     }
 
     public static EquipmentStorageData initializeStorage(ItemStack stack, EquipmentSlot slot) {
-        EquipmentStorageData current = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getEquipmentStorage(stack);
+        EquipmentStorageData current = GridInventoryServices.itemStackData().getEquipmentStorage(stack);
         Optional<EquipmentStorageDefinition> definition = getDefinition(stack, slot);
         if (current != null && !current.isEmpty()) {
             if (definition.isPresent()) {
                 EquipmentStorageData refreshed = refreshStorageShape(current, definition.get());
-                com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(stack, refreshed);
+                GridInventoryServices.itemStackData().setEquipmentStorage(stack, refreshed);
                 return refreshed;
             }
             return current;
         }
         EquipmentStorageData initialized = definition.map(EquipmentStorageManager::createStorage).orElse(EquipmentStorageData.EMPTY);
         if (!initialized.containers().isEmpty()) {
-            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(stack, initialized);
+            GridInventoryServices.itemStackData().setEquipmentStorage(stack, initialized);
         }
         return initialized;
     }

@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.client.render;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
+import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,7 +23,7 @@ public final class EquipmentStorageTooltipRenderer {
     }
 
     public static void render(GuiGraphics graphics, ItemStack stack, int mouseX, int mouseY, int screenWidth, int screenHeight) {
-        EquipmentStorageData storage = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getEquipmentStorage(stack);
+        EquipmentStorageData storage = GridInventoryServices.itemStackData().getEquipmentStorage(stack);
         if (storage == null || storage.containers().isEmpty()) {
             storage = EquipmentStorageManager.initializeStorage(stack, EquipmentSlot.BODY);
         }

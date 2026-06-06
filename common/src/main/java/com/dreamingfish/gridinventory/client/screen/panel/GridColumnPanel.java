@@ -9,6 +9,7 @@ import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
+import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -92,7 +93,7 @@ public final class GridColumnPanel {
 
     private int renderEquipmentStorage(GuiGraphics graphics, EquipmentSlot slot, ItemStack equipped, Component emptyTitle, int y,
                                        @Nullable EquipmentEntryHit draggedEquipmentEntry) {
-        EquipmentStorageData storage = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getEquipmentStorage(equipped);
+        EquipmentStorageData storage = GridInventoryServices.itemStackData().getEquipmentStorage(equipped);
         if (!equipped.isEmpty()) {
             storage = EquipmentStorageManager.initializeStorage(equipped, slot);
         }

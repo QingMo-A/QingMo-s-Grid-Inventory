@@ -34,28 +34,28 @@ public class SmallGridBagItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        GridInventoryData data = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getGridInventory(stack);
+        GridInventoryData data = GridInventoryServices.itemStackData().getGridInventory(stack);
         if (data != null) {
             tooltip.add(Component.literal(data.getColumns() + " x " + data.getRows()).withStyle(ChatFormatting.GRAY));
         }
     }
 
     public static GridInventoryData getData(ItemStack stack) {
-        GridInventoryData data = com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getGridInventory(stack);
+        GridInventoryData data = GridInventoryServices.itemStackData().getGridInventory(stack);
         if (data == null) {
             data = createDefault();
-            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setGridInventory(stack, data);
+            GridInventoryServices.itemStackData().setGridInventory(stack, data);
         }
         return data.copy();
     }
 
     public static void setData(ItemStack stack, GridInventoryData data) {
-        com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setGridInventory(stack, data.copy());
+        GridInventoryServices.itemStackData().setGridInventory(stack, data.copy());
     }
 
     public static void ensureData(ItemStack stack) {
-        if (com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().getGridInventory(stack) == null) {
-            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setGridInventory(stack, createDefault());
+        if (GridInventoryServices.itemStackData().getGridInventory(stack) == null) {
+            GridInventoryServices.itemStackData().setGridInventory(stack, createDefault());
         }
     }
 

@@ -18,6 +18,11 @@ public final class NeoForgeGridInventoryItemStackDataBridge implements GridInven
     }
 
     @Override
+    public void removeGridInventory(ItemStack stack) {
+        stack.remove(NeoForge1211DataComponents.GRID_INVENTORY.get());
+    }
+
+    @Override
     public EquipmentStorageData getEquipmentStorage(ItemStack stack) {
         return stack.get(NeoForge1211DataComponents.EQUIPMENT_STORAGE.get());
     }
@@ -25,6 +30,11 @@ public final class NeoForgeGridInventoryItemStackDataBridge implements GridInven
     @Override
     public void setEquipmentStorage(ItemStack stack, EquipmentStorageData data) {
         stack.set(NeoForge1211DataComponents.EQUIPMENT_STORAGE.get(), data);
+    }
+
+    @Override
+    public void removeEquipmentStorage(ItemStack stack) {
+        stack.remove(NeoForge1211DataComponents.EQUIPMENT_STORAGE.get());
     }
 
     @Override

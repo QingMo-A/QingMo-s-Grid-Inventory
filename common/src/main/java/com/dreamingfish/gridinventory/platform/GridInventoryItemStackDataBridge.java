@@ -9,9 +9,13 @@ public interface GridInventoryItemStackDataBridge {
 
     void setGridInventory(ItemStack stack, GridInventoryData data);
 
+    void removeGridInventory(ItemStack stack);
+
     EquipmentStorageData getEquipmentStorage(ItemStack stack);
 
     void setEquipmentStorage(ItemStack stack, EquipmentStorageData data);
+
+    void removeEquipmentStorage(ItemStack stack);
 
     Boolean isBackpackFolded(ItemStack stack);
 
