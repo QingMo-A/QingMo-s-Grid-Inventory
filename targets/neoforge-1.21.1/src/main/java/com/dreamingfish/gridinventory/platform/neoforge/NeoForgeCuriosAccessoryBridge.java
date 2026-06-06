@@ -2,11 +2,15 @@ package com.dreamingfish.gridinventory.platform.neoforge;
 
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.platform.GridInventoryAccessoryBridge;
 import com.dreamingfish.gridinventory.platform.neoforge.compat.NeoForgeCuriosIntegration;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.ModList;
+import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.SlotContext;
+import top.theillusivec4.curios.api.type.capability.ICurioItem;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +20,17 @@ public final class NeoForgeCuriosAccessoryBridge implements GridInventoryAccesso
     @Override
     public boolean isLoaded() {
         return ModList.get().isLoaded("curios");
+    }
+
+    @Override
+    public void registerBackpackAccessories() {
+        CuriosApi.registerCurio(ModItems.GRID_BACKPACK.get(), backpackCurio());
+        CuriosApi.registerCurio(ModItems.GRAY_FIELD_BACKPACK.get(), backpackCurio());
+        CuriosApi.registerCurio(ModItems.LEATHER_BACKPACK.get(), backpackCurio());
+        CuriosApi.registerCurio(ModItems.LIME_HIKING_BACKPACK.get(), backpackCurio());
+        CuriosApi.registerCurio(ModItems.MEDIUM_HIKING_BACKPACK.get(), backpackCurio());
+        CuriosApi.registerCurio(ModItems.MILITARY_HIKING_BACKPACK.get(), backpackCurio());
+        CuriosApi.registerCurio(ModItems.TACTICAL_BACKPACK.get(), backpackCurio());
     }
 
     @Override
@@ -76,5 +91,22 @@ public final class NeoForgeCuriosAccessoryBridge implements GridInventoryAccesso
     @Override
     public void setCurioStack(Player player, String identifier, int index, ItemStack stack) {
         NeoForgeCuriosIntegration.setCurioStack(player, identifier, index, stack);
+    }
+
+    private static ICurioItem backpackCurio() {
+        return new ICurioItem() {
+            @Override
+            public boolean canEquip(SlotContext slotContext, ItemStack stack) {
+                return "back".equals(slotContext.identifier());
+            }
+
+            @Override
+            public boolean canEquipFromUse(SlotContext slotContext, ItemStack stack) {
+                if ("back".equals(slotContext.identifier())) {
+                    com.dreamingfish.gridinventory.common.item.GridBackpackItem.unfold(stack);
+                }
+                return canEquip(slotContext, stack);
+            }
+        };
     }
 }

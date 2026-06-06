@@ -6,20 +6,10 @@ import com.dreamingfish.gridinventory.protocol.GridMessageType;
 
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 
 public record SyncEquipmentStorageMessage(EquipmentSlot slot, EquipmentStorageData storage) implements GridMessage {
-        
-    public void encode(RegistryFriendlyByteBuf buf) {
-        buf.writeEnum(slot);
-        EquipmentStorageData.STREAM_CODEC.encode(buf, storage);
-    }
-
-    public static SyncEquipmentStorageMessage decode(RegistryFriendlyByteBuf buf) {
-        return new SyncEquipmentStorageMessage(buf.readEnum(EquipmentSlot.class), EquipmentStorageData.STREAM_CODEC.decode(buf));
-    }
 
     public static void handle(SyncEquipmentStorageMessage packet, GridMessageContext context) {
         ItemStack stack = packet.slot() == EquipmentSlot.BODY

@@ -28,9 +28,6 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
-import top.theillusivec4.curios.api.CuriosApi;
-import top.theillusivec4.curios.api.SlotContext;
-import top.theillusivec4.curios.api.type.capability.ICurioItem;
 
 @Mod(DFGridInventoryMod.MODID)
 public class DFGridInventoryMod {
@@ -57,33 +54,8 @@ public class DFGridInventoryMod {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            CuriosApi.registerCurio(ModItems.GRID_BACKPACK.get(), backpackCurio());
-            CuriosApi.registerCurio(ModItems.GRAY_FIELD_BACKPACK.get(), backpackCurio());
-            CuriosApi.registerCurio(ModItems.LEATHER_BACKPACK.get(), backpackCurio());
-            CuriosApi.registerCurio(ModItems.LIME_HIKING_BACKPACK.get(), backpackCurio());
-            CuriosApi.registerCurio(ModItems.MEDIUM_HIKING_BACKPACK.get(), backpackCurio());
-            CuriosApi.registerCurio(ModItems.MILITARY_HIKING_BACKPACK.get(), backpackCurio());
-            CuriosApi.registerCurio(ModItems.TACTICAL_BACKPACK.get(), backpackCurio());
-        });
+        event.enqueueWork(() -> GridInventoryServices.accessories().registerBackpackAccessories());
         DFGridInventory.LOGGER.info("DF Grid Inventory loaded. Vanilla inventories and creative inventory are left untouched.");
-    }
-
-    private static ICurioItem backpackCurio() {
-        return new ICurioItem() {
-            @Override
-            public boolean canEquip(SlotContext slotContext, net.minecraft.world.item.ItemStack stack) {
-                return "back".equals(slotContext.identifier());
-            }
-
-            @Override
-            public boolean canEquipFromUse(SlotContext slotContext, net.minecraft.world.item.ItemStack stack) {
-                if ("back".equals(slotContext.identifier())) {
-                    com.dreamingfish.gridinventory.common.item.GridBackpackItem.unfold(stack);
-                }
-                return canEquip(slotContext, stack);
-            }
-        };
     }
 
     @SubscribeEvent

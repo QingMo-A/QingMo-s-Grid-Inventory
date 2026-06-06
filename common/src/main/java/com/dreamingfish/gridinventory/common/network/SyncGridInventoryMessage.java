@@ -6,17 +6,8 @@ import com.dreamingfish.gridinventory.protocol.GridMessageType;
 
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 
 public record SyncGridInventoryMessage(GridInventoryData data) implements GridMessage {
-        
-    public void encode(RegistryFriendlyByteBuf buf) {
-        data.encode(buf);
-    }
-
-    public static SyncGridInventoryMessage decode(RegistryFriendlyByteBuf buf) {
-        return new SyncGridInventoryMessage(GridInventoryData.decode(buf));
-    }
 
     public static void handle(SyncGridInventoryMessage packet, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {

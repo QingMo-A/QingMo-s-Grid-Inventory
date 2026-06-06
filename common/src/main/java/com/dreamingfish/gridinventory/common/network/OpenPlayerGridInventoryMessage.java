@@ -7,7 +7,6 @@ import com.dreamingfish.gridinventory.protocol.GridMessageType;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.common.inventory.PlayerGridInventoryOpener;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 public record OpenPlayerGridInventoryMessage() implements GridMessage {

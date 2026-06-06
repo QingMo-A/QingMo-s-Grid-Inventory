@@ -12,6 +12,8 @@ import java.util.UUID;
 public interface GridInventoryAccessoryBridge {
     boolean isLoaded();
 
+    void registerBackpackAccessories();
+
     boolean canQuickEquip(Player player, ItemStack stack);
 
     boolean quickEquip(Player player, ItemStack source);
