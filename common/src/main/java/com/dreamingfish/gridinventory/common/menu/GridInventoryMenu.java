@@ -15,7 +15,6 @@ import com.dreamingfish.gridinventory.common.network.ModNetworking;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupHandler;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -51,10 +50,6 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         this.gridData = gridData;
         this.gridData.setChangeListener(this::save);
         addPlayerSlots(playerInventory);
-    }
-
-    public static GridInventoryMenu fromNetwork(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf buf) {
-        return fromOpenData(containerId, playerInventory, GridInventoryMenuOpenData.decode(buf));
     }
 
     public static GridInventoryMenu fromOpenData(int containerId, Inventory playerInventory, GridInventoryMenuOpenData data) {
