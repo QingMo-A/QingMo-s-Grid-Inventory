@@ -441,7 +441,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
         Slot hovered = findHoveredSlot(mouseX, mouseY);
         if (hovered != null) {
-            lastPlayerSlot = hovered.index;
+            lastPlayerSlot = hovered.getSlotIndex();
             if (hasShiftDown() && button == 0) {
                 GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryMessage(lastPlayerSlot, 0, 0, false, true, false));
                 selectedPlayerStack = ItemStack.EMPTY;
@@ -545,7 +545,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new ExtractCurioToPlayerSlotMessage(
-                            draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), hovered.index));
+                            draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), hovered.getSlotIndex()));
                 }
             }
             clearDragState();
@@ -586,7 +586,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new ExtractEquipmentStorageEntryMessage(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
-                            hovered.index, draggingEquipmentEntry.entry().stack().getCount()));
+                            hovered.getSlotIndex(), draggingEquipmentEntry.entry().stack().getCount()));
                 }
             }
             clearDragState();
@@ -613,7 +613,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotMessage(draggingEntry.entryId(), hovered.index, draggingEntry.stack().getCount()));
+                    GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotMessage(draggingEntry.entryId(), hovered.getSlotIndex(), draggingEntry.stack().getCount()));
                 }
             }
             clearDragState();
@@ -638,8 +638,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, false, GridBackpackItem.isFolded(draggedStack())));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null && hovered.index != lastPlayerSlot) {
-                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotMessage(lastPlayerSlot, hovered.index));
+                if (hovered != null && hovered.getSlotIndex() != lastPlayerSlot) {
+                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotMessage(lastPlayerSlot, hovered.getSlotIndex()));
                 }
             }
             clearDragState();

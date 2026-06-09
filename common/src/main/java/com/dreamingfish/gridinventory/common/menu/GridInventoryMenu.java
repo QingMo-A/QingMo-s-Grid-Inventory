@@ -789,7 +789,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     private Optional<Slot> findPlayerSlotView(int playerSlot) {
-        return slots.stream().filter(slot -> slot.index == playerSlot).findFirst();
+        return slots.stream().filter(slot -> slot.getSlotIndex() == playerSlot).findFirst();
     }
 
     private Optional<EquipmentSlot> findEmptyArmorSlot(ItemStack stack) {
@@ -852,7 +852,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         if (index >= 0 && index < slots.size()) {
-            int playerSlot = slots.get(index).index;
+            int playerSlot = slots.get(index).getSlotIndex();
             quickInsertFromPlayerInventory(playerSlot);
         }
         return ItemStack.EMPTY;

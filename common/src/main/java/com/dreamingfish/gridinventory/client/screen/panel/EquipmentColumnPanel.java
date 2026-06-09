@@ -135,7 +135,7 @@ public final class EquipmentColumnPanel {
             Boolean dropAllowed = !draggedStack.isEmpty()
                     ? supportsDropToFreeSlot && canReceive(slot, draggedStack, slots, draggedPlayerSlot, minecraft.player) : null;
             freeSlot.render(graphics, slot, hovered,
-                    draggedPlayerSlot >= 0 && slot.index == draggedPlayerSlot, dropAllowed);
+                    draggedPlayerSlot >= 0 && slot.getSlotIndex() == draggedPlayerSlot, dropAllowed);
         }
         for (CuriosSlotWidget curioSlot : curiosSlots) {
             boolean hovered = curioSlot.contains(mouseX, mouseY);
@@ -157,10 +157,10 @@ public final class EquipmentColumnPanel {
                     || GridItemStacks.sameItemSameData(existing, draggedStack)
                     && existing.getCount() < Math.min(existing.getMaxStackSize(), slot.getMaxStackSize());
         }
-        if (slot.index == draggedPlayerSlot) {
+        if (slot.getSlotIndex() == draggedPlayerSlot) {
             return false;
         }
-        Optional<Slot> source = slots.stream().filter(candidate -> candidate.index == draggedPlayerSlot).findFirst();
+        Optional<Slot> source = slots.stream().filter(candidate -> candidate.getSlotIndex() == draggedPlayerSlot).findFirst();
         if (source.isEmpty() || !source.get().mayPickup(player)) {
             return false;
         }

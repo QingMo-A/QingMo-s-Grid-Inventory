@@ -6,6 +6,7 @@ import com.dreamingfish.gridinventory.protocol.GridMessageDirection;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public final class NeoForge1211ProtocolCompat {
@@ -39,12 +40,17 @@ public final class NeoForge1211ProtocolCompat {
         var payloadType = NeoForge1211PayloadAdapters.payloadType(messageType);
         var codec = NeoForge1211PayloadAdapters.codec(messageType);
         if (messageType.direction() == GridMessageDirection.SERVER_TO_CLIENT) {
-            registrar.playToClient(payloadType, codec, (payload, context) -> payload.messageType().handle(payload.message(), new NeoForge1211MessageContext(context)));
+            registrar.playToClient(payloadType, codec, NeoForge1211ProtocolCompat::handlePayload);
         } else if (messageType.direction() == GridMessageDirection.CLIENT_TO_SERVER) {
-            registrar.playToServer(payloadType, codec, (payload, context) -> payload.messageType().handle(payload.message(), new NeoForge1211MessageContext(context)));
+            registrar.playToServer(payloadType, codec, NeoForge1211ProtocolCompat::handlePayload);
         } else {
-            registrar.playBidirectional(payloadType, codec, (payload, context) -> payload.messageType().handle(payload.message(), new NeoForge1211MessageContext(context)));
+            registrar.playBidirectional(payloadType, codec, NeoForge1211ProtocolCompat::handlePayload);
         }
+    }
+
+    private static <T extends GridMessage> void handlePayload(NeoForge1211PayloadAdapters.Payload<T> payload, IPayloadContext context) {
+        NeoForge1211MessageContext messageContext = new NeoForge1211MessageContext(context);
+        payload.messageType().handle(payload.message(), messageContext);
     }
 
     @SuppressWarnings("unchecked")
