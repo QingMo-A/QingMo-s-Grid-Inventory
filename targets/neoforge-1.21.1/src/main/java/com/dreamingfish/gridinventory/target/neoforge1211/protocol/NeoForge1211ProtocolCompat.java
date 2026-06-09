@@ -34,9 +34,6 @@ public final class NeoForge1211ProtocolCompat {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static <T extends GridMessage> void register(PayloadRegistrar registrar, GridMessageType<T> messageType) {
-        if (!NeoForge1211MessageCodecs.hasCodec(messageType)) {
-            throw new IllegalStateException("Missing NeoForge 1.21.1 codec for " + messageType.id());
-        }
         var payloadType = NeoForge1211PayloadAdapters.payloadType(messageType);
         var codec = NeoForge1211PayloadAdapters.codec(messageType);
         if (messageType.direction() == GridMessageDirection.SERVER_TO_CLIENT) {

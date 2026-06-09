@@ -26,19 +26,15 @@ public final class NeoForge1211MessageCodecs {
     private NeoForge1211MessageCodecs() {
     }
 
-    public static boolean hasCodec(GridMessageType<?> type) {
-        return CODECS.containsKey(type);
-    }
-
     public static void encode(GridMessage message, RegistryFriendlyByteBuf buf) {
-        codec(message.type()).encodeUnchecked(message, buf);
+        encode(cast(message.type()), message, buf);
     }
 
     public static <T extends GridMessage> T decode(GridMessageType<T> type, RegistryFriendlyByteBuf buf) {
         return type.messageClass().cast(codec(type).decode(buf));
     }
 
-    private static void registerAll() {
+    public static void registerAll() {
         register(GridMessages.DROP_EQUIPMENT_STORAGE_ENTRY, codec(
                 (m, b) -> { b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); },
                 b -> new DropEquipmentStorageEntryMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID())
@@ -63,19 +59,52 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> { b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); b.writeVarInt(m.playerSlot()); b.writeVarInt(m.amount()); },
                 b -> new ExtractEquipmentStorageEntryMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt())
         ));
-        register(GridMessages.EXTRACT_GRID_ENTRY_TO_PLAYER_SLOT, uuidSlotAmount(ExtractGridEntryToPlayerSlotMessage::new));
-        register(GridMessages.EXTRACT_TO_PLAYER_INVENTORY, codec(
-                (m, b) -> { b.writeUUID(m.entryId()); b.writeVarInt(m.amount()); },
-                b -> new ExtractToPlayerInventoryMessage(b.readUUID(), b.readVarInt())
-        ));
+        register(GridMessages.EXTRACT_GRID_ENTRY_TO_PLAYER_SLOT, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(ExtractGridEntryToPlayerSlotMessage message, RegistryFriendlyByteBuf buf) {
+                buf.writeUUID(message.entryId());
+                buf.writeVarInt(message.playerSlot());
+                buf.writeVarInt(message.amount());
+            }
+
+            @Override
+            public ExtractGridEntryToPlayerSlotMessage decode(RegistryFriendlyByteBuf buf) {
+                return new ExtractGridEntryToPlayerSlotMessage(buf.readUUID(), buf.readVarInt(), buf.readVarInt());
+            }
+        });
+        register(GridMessages.EXTRACT_TO_PLAYER_INVENTORY, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(ExtractToPlayerInventoryMessage message, RegistryFriendlyByteBuf buf) {
+                buf.writeUUID(message.entryId());
+                buf.writeVarInt(message.amount());
+            }
+
+            @Override
+            public ExtractToPlayerInventoryMessage decode(RegistryFriendlyByteBuf buf) {
+                return new ExtractToPlayerInventoryMessage(buf.readUUID(), buf.readVarInt());
+            }
+        });
         register(GridMessages.INSERT_EQUIPMENT_STORAGE_ENTRY_INTO_CURIO, codec(
                 (m, b) -> { b.writeEnum(m.sourceSlot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); b.writeUtf(m.identifier()); b.writeVarInt(m.index()); },
                 b -> new InsertEquipmentStorageEntryIntoCurioMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readUtf(), b.readVarInt())
         ));
-        register(GridMessages.INSERT_FROM_PLAYER_INVENTORY, codec(
-                (m, b) -> { b.writeVarInt(m.playerSlot()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.quick()); b.writeBoolean(m.targetFolded()); },
-                b -> new InsertFromPlayerInventoryMessage(b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean(), b.readBoolean())
-        ));
+        register(GridMessages.INSERT_FROM_PLAYER_INVENTORY, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(InsertFromPlayerInventoryMessage message, RegistryFriendlyByteBuf buf) {
+                buf.writeVarInt(message.playerSlot());
+                buf.writeVarInt(message.targetX());
+                buf.writeVarInt(message.targetY());
+                buf.writeBoolean(message.rotated());
+                buf.writeBoolean(message.quick());
+                buf.writeBoolean(message.targetFolded());
+            }
+
+            @Override
+            public InsertFromPlayerInventoryMessage decode(RegistryFriendlyByteBuf buf) {
+                return new InsertFromPlayerInventoryMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                        buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
+            }
+        });
         register(GridMessages.INSERT_GRID_ENTRY_INTO_CURIO, codec(
                 (m, b) -> { b.writeUUID(m.entryId()); b.writeUtf(m.identifier()); b.writeVarInt(m.index()); },
                 b -> new InsertGridEntryIntoCurioMessage(b.readUUID(), b.readUtf(), b.readVarInt())
@@ -96,15 +125,36 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> { b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new MoveEquipmentStorageEntryMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
-        register(GridMessages.MOVE_GRID_ENTRY, codec(
-                (m, b) -> { b.writeUUID(m.entryId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
-                b -> new MoveGridEntryMessage(b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
-        ));
+        register(GridMessages.MOVE_GRID_ENTRY, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(MoveGridEntryMessage message, RegistryFriendlyByteBuf buf) {
+                buf.writeUUID(message.entryId());
+                buf.writeVarInt(message.targetX());
+                buf.writeVarInt(message.targetY());
+                buf.writeBoolean(message.rotated());
+                buf.writeBoolean(message.targetFolded());
+            }
+
+            @Override
+            public MoveGridEntryMessage decode(RegistryFriendlyByteBuf buf) {
+                return new MoveGridEntryMessage(buf.readUUID(), buf.readVarInt(), buf.readVarInt(),
+                        buf.readBoolean(), buf.readBoolean());
+            }
+        });
         register(GridMessages.MOVE_PLAYER_FREE_SLOT, codec(
                 (m, b) -> { b.writeVarInt(m.sourcePlayerSlot()); b.writeVarInt(m.targetPlayerSlot()); },
                 b -> new MovePlayerFreeSlotMessage(b.readVarInt(), b.readVarInt())
         ));
-        register(GridMessages.OPEN_PLAYER_GRID_INVENTORY, unit(OpenPlayerGridInventoryMessage.INSTANCE));
+        register(GridMessages.OPEN_PLAYER_GRID_INVENTORY, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(OpenPlayerGridInventoryMessage message, RegistryFriendlyByteBuf buf) {
+            }
+
+            @Override
+            public OpenPlayerGridInventoryMessage decode(RegistryFriendlyByteBuf buf) {
+                return OpenPlayerGridInventoryMessage.INSTANCE;
+            }
+        });
         register(GridMessages.PICKUP_GROUND_ITEM_INTO_EQUIPMENT_STORAGE, codec(
                 (m, b) -> { b.writeVarInt(m.entityId()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); },
                 b -> new PickupGroundItemIntoEquipmentStorageMessage(b.readVarInt(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean())
@@ -122,22 +172,67 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> b.writeVarInt(m.playerSlot()),
                 b -> new QuickEquipPlayerSlotMessage(b.readVarInt())
         ));
-        register(GridMessages.SYNC_BACKPACK_FOLDING_RULES, codec(
-                (m, b) -> { b.writeVarInt(m.rules().size()); for (BackpackFoldingDefinition rule : m.rules()) rule.encode(b); },
-                b -> { int count = b.readVarInt(); List<BackpackFoldingDefinition> rules = new ArrayList<>(count); for (int i = 0; i < count; i++) rules.add(BackpackFoldingDefinition.decode(b)); return new SyncBackpackFoldingRulesMessage(rules); }
-        ));
-        register(GridMessages.SYNC_EQUIPMENT_STORAGE, codec(
-                (m, b) -> { b.writeEnum(m.slot()); m.storage().encode(b); },
-                b -> new SyncEquipmentStorageMessage(b.readEnum(EquipmentSlot.class), EquipmentStorageData.decode(b))
-        ));
-        register(GridMessages.SYNC_GRID_INVENTORY, codec(
-                (m, b) -> m.data().encode(b),
-                b -> new SyncGridInventoryMessage(GridInventoryData.decode(b))
-        ));
-        register(GridMessages.SYNC_ITEM_SIZE_RULES, codec(
-                (m, b) -> { b.writeVarInt(m.rules().size()); for (GridItemSizeRule rule : m.rules()) rule.encode(b); },
-                b -> { int count = b.readVarInt(); List<GridItemSizeRule> rules = new ArrayList<>(count); for (int i = 0; i < count; i++) rules.add(GridItemSizeRule.decode(b)); return new SyncItemSizeRulesMessage(rules); }
-        ));
+        register(GridMessages.SYNC_BACKPACK_FOLDING_RULES, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(SyncBackpackFoldingRulesMessage message, RegistryFriendlyByteBuf buf) {
+                buf.writeVarInt(message.rules().size());
+                for (BackpackFoldingDefinition rule : message.rules()) {
+                    rule.encode(buf);
+                }
+            }
+
+            @Override
+            public SyncBackpackFoldingRulesMessage decode(RegistryFriendlyByteBuf buf) {
+                int count = buf.readVarInt();
+                List<BackpackFoldingDefinition> rules = new ArrayList<>(count);
+                for (int i = 0; i < count; i++) {
+                    rules.add(BackpackFoldingDefinition.decode(buf));
+                }
+                return new SyncBackpackFoldingRulesMessage(rules);
+            }
+        });
+        register(GridMessages.SYNC_EQUIPMENT_STORAGE, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(SyncEquipmentStorageMessage message, RegistryFriendlyByteBuf buf) {
+                buf.writeEnum(message.slot());
+                message.storage().encode(buf);
+            }
+
+            @Override
+            public SyncEquipmentStorageMessage decode(RegistryFriendlyByteBuf buf) {
+                return new SyncEquipmentStorageMessage(buf.readEnum(EquipmentSlot.class), EquipmentStorageData.decode(buf));
+            }
+        });
+        register(GridMessages.SYNC_GRID_INVENTORY, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(SyncGridInventoryMessage message, RegistryFriendlyByteBuf buf) {
+                message.data().encode(buf);
+            }
+
+            @Override
+            public SyncGridInventoryMessage decode(RegistryFriendlyByteBuf buf) {
+                return new SyncGridInventoryMessage(GridInventoryData.decode(buf));
+            }
+        });
+        register(GridMessages.SYNC_ITEM_SIZE_RULES, new NeoForge1211MessageCodec<>() {
+            @Override
+            public void encode(SyncItemSizeRulesMessage message, RegistryFriendlyByteBuf buf) {
+                buf.writeVarInt(message.rules().size());
+                for (GridItemSizeRule rule : message.rules()) {
+                    rule.encode(buf);
+                }
+            }
+
+            @Override
+            public SyncItemSizeRulesMessage decode(RegistryFriendlyByteBuf buf) {
+                int count = buf.readVarInt();
+                List<GridItemSizeRule> rules = new ArrayList<>(count);
+                for (int i = 0; i < count; i++) {
+                    rules.add(GridItemSizeRule.decode(buf));
+                }
+                return new SyncItemSizeRulesMessage(rules);
+            }
+        });
         register(GridMessages.TOGGLE_EQUIPMENT_STORAGE_ENTRY_BACKPACK_FOLD, codec(
                 (m, b) -> { b.writeEnum(m.slot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); },
                 b -> new ToggleEquipmentStorageEntryBackpackFoldMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean())
@@ -165,16 +260,16 @@ public final class NeoForge1211MessageCodecs {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T extends GridMessage> CheckedCodec<T> codec(GridMessageType<?> type) {
+    public static <T extends GridMessage> NeoForge1211MessageCodec<T> codec(GridMessageType<T> type) {
         NeoForge1211MessageCodec<?> codec = CODECS.get(type);
         if (codec == null) {
             throw new IllegalStateException("Missing NeoForge 1.21.1 codec for " + type.id());
         }
-        return new CheckedCodec<>((NeoForge1211MessageCodec<T>) codec);
+        return (NeoForge1211MessageCodec<T>) codec;
     }
 
-    private static <T extends GridMessage> NeoForge1211MessageCodec<T> unit(T instance) {
-        return codec((message, buf) -> { }, buf -> instance);
+    private static <T extends GridMessage> void encode(GridMessageType<T> type, GridMessage message, RegistryFriendlyByteBuf buf) {
+        codec(type).encode(type.messageClass().cast(message), buf);
     }
 
     private static <T extends GridMessage> NeoForge1211MessageCodec<T> codec(Encoder<T> encoder, Decoder<T> decoder) {
@@ -191,14 +286,14 @@ public final class NeoForge1211MessageCodecs {
         };
     }
 
-    private static NeoForge1211MessageCodec<ExtractGridEntryToPlayerSlotMessage> uuidSlotAmount(UuidSlotAmountFactory<ExtractGridEntryToPlayerSlotMessage> factory) {
-        return codec((m, b) -> { b.writeUUID(m.entryId()); b.writeVarInt(m.playerSlot()); b.writeVarInt(m.amount()); },
-                b -> factory.create(b.readUUID(), b.readVarInt(), b.readVarInt()));
-    }
-
     private static NeoForge1211MessageCodec<QuickEquipEquipmentStorageEntryMessage> equipmentUuid(EquipmentUuidFactory<QuickEquipEquipmentStorageEntryMessage> factory) {
         return codec((m, b) -> { b.writeEnum(m.sourceSlot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); },
                 b -> factory.create(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID()));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends GridMessage> GridMessageType<T> cast(GridMessageType<?> type) {
+        return (GridMessageType<T>) type;
     }
 
     @FunctionalInterface
@@ -212,23 +307,7 @@ public final class NeoForge1211MessageCodecs {
     }
 
     @FunctionalInterface
-    private interface UuidSlotAmountFactory<T extends GridMessage> {
-        T create(UUID entryId, int playerSlot, int amount);
-    }
-
-    @FunctionalInterface
     private interface EquipmentUuidFactory<T extends GridMessage> {
         T create(EquipmentSlot slot, String containerId, UUID entryId);
-    }
-
-    private record CheckedCodec<T extends GridMessage>(NeoForge1211MessageCodec<T> delegate) {
-        @SuppressWarnings("unchecked")
-        void encodeUnchecked(GridMessage message, RegistryFriendlyByteBuf buf) {
-            delegate.encode((T) message, buf);
-        }
-
-        T decode(RegistryFriendlyByteBuf buf) {
-            return delegate.decode(buf);
-        }
     }
 }

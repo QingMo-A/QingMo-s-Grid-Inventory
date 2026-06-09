@@ -21,7 +21,7 @@ public final class NeoForge1211PayloadAdapters {
         }
 
         public void encode(RegistryFriendlyByteBuf buf) {
-            NeoForge1211MessageCodecs.encode(message, buf);
+            NeoForge1211MessageCodecs.codec(messageType).encode(message, buf);
         }
     }
 
@@ -35,6 +35,7 @@ public final class NeoForge1211PayloadAdapters {
 
     public static <T extends GridMessage> StreamCodec<RegistryFriendlyByteBuf, Payload<T>> codec(GridMessageType<T> messageType) {
         CustomPacketPayload.Type<Payload<T>> payloadType = payloadType(messageType);
-        return StreamCodec.ofMember(Payload::encode, buf -> new Payload<>(payloadType, messageType, NeoForge1211MessageCodecs.decode(messageType, buf)));
+        NeoForge1211MessageCodec<T> messageCodec = NeoForge1211MessageCodecs.codec(messageType);
+        return StreamCodec.ofMember(Payload::encode, buf -> new Payload<>(payloadType, messageType, messageCodec.decode(buf)));
     }
 }
