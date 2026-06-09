@@ -11,7 +11,7 @@ public final class PlayerGridInventoryOpener {
     }
 
     public static void open(ServerPlayer player) {
-        GridInventoryData data = GridInventoryServices.playerData().copyPlayerGridInventory(player);
+        GridInventoryData data = PlayerPocketDefinitionManager.refreshShape(GridInventoryServices.playerData().getPlayerGridInventory(player)).copy();
         data.setChangeListener(() -> GridInventoryServices.playerData().setPlayerGridInventory(player, data.copy()));
         EquipmentStorageManager.initializeStorage(player.getItemBySlot(EquipmentSlot.CHEST), EquipmentSlot.CHEST);
         EquipmentStorageManager.initializeStorage(player.getItemBySlot(EquipmentSlot.LEGS), EquipmentSlot.LEGS);

@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.api.GridInsertMode;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionManager;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ModNetworking;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
@@ -119,7 +120,7 @@ public final class ManualPickupHandler {
             ModNetworking.syncMenu(player, menu);
             return remainder;
         }
-        GridInventoryData pocket = GridInventoryServices.playerData().copyPlayerGridInventory(player);
+        GridInventoryData pocket = PlayerPocketDefinitionManager.refreshShape(GridInventoryServices.playerData().getPlayerGridInventory(player)).copy();
         ItemStack remainder = pocket.insert(stack, GridInsertMode.EXECUTE);
         if (remainder.getCount() != stack.getCount()) {
             GridInventoryServices.playerData().setPlayerGridInventory(player, pocket);
