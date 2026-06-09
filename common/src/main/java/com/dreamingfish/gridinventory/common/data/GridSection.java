@@ -2,7 +2,7 @@ package com.dreamingfish.gridinventory.common.data;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ public record GridSection(String id, List<GridCell> cells) {
         return cells.stream().anyMatch(cell -> cell.x() == x && cell.y() == y);
     }
 
-    public void encode(RegistryFriendlyByteBuf buf) {
+    public void encode(FriendlyByteBuf buf) {
         buf.writeUtf(id);
         buf.writeVarInt(cells.size());
         for (GridCell cell : cells) {
@@ -24,7 +24,7 @@ public record GridSection(String id, List<GridCell> cells) {
         }
     }
 
-    public static GridSection decode(RegistryFriendlyByteBuf buf) {
+    public static GridSection decode(FriendlyByteBuf buf) {
         String id = buf.readUtf();
         int size = buf.readVarInt();
         java.util.ArrayList<GridCell> cells = new java.util.ArrayList<>();

@@ -127,8 +127,8 @@ public final class NeoForge1211MessageCodecs {
                 b -> { int count = b.readVarInt(); List<BackpackFoldingDefinition> rules = new ArrayList<>(count); for (int i = 0; i < count; i++) rules.add(BackpackFoldingDefinition.decode(b)); return new SyncBackpackFoldingRulesMessage(rules); }
         ));
         register(GridMessages.SYNC_EQUIPMENT_STORAGE, codec(
-                (m, b) -> { b.writeEnum(m.slot()); EquipmentStorageData.STREAM_CODEC.encode(b, m.storage()); },
-                b -> new SyncEquipmentStorageMessage(b.readEnum(EquipmentSlot.class), EquipmentStorageData.STREAM_CODEC.decode(b))
+                (m, b) -> { b.writeEnum(m.slot()); m.storage().encode(b); },
+                b -> new SyncEquipmentStorageMessage(b.readEnum(EquipmentSlot.class), EquipmentStorageData.decode(b))
         ));
         register(GridMessages.SYNC_GRID_INVENTORY, codec(
                 (m, b) -> m.data().encode(b),

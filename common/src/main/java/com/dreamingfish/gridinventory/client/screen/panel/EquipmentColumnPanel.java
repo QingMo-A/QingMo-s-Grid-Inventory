@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
+import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -153,7 +154,7 @@ public final class EquipmentColumnPanel {
         ItemStack existing = slot.getItem();
         if (draggedPlayerSlot < 0) {
             return existing.isEmpty()
-                    || ItemStack.isSameItemSameComponents(existing, draggedStack)
+                    || GridItemStacks.sameItemSameData(existing, draggedStack)
                     && existing.getCount() < Math.min(existing.getMaxStackSize(), slot.getMaxStackSize());
         }
         if (slot.index == draggedPlayerSlot) {
@@ -167,7 +168,7 @@ public final class EquipmentColumnPanel {
         if (existing.isEmpty()) {
             return targetLimit > 0;
         }
-        if (ItemStack.isSameItemSameComponents(existing, draggedStack)) {
+        if (GridItemStacks.sameItemSameData(existing, draggedStack)) {
             return existing.getCount() < targetLimit;
         }
         int sourceLimit = Math.min(existing.getMaxStackSize(), source.get().getMaxStackSize());

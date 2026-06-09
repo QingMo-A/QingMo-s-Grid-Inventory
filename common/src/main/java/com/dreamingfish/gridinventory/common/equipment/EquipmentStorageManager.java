@@ -86,7 +86,7 @@ public final class EquipmentStorageManager {
     private static boolean allowedSlot(EquipmentSlot slot) {
         return (slot == EquipmentSlot.CHEST && GridInventoryServices.config().allowChestStorage())
                 || (slot == EquipmentSlot.LEGS && GridInventoryServices.config().allowLegsStorage())
-                || slot == EquipmentSlot.BODY;
+                || GridEquipmentSlots.isBack(slot);
     }
 
     private static boolean matches(EquipmentStorageDefinition rule, ItemStack stack) {

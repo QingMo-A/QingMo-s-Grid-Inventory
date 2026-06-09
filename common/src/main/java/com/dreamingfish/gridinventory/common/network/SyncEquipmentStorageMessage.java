@@ -6,20 +6,21 @@ import com.dreamingfish.gridinventory.protocol.GridMessageType;
 
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
+import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 
 public record SyncEquipmentStorageMessage(EquipmentSlot slot, EquipmentStorageData storage) implements GridMessage {
 
     public static void handle(SyncEquipmentStorageMessage packet, GridMessageContext context) {
-        ItemStack stack = packet.slot() == EquipmentSlot.BODY
+        ItemStack stack = GridEquipmentSlots.isBack(packet.slot())
                 ? CuriosIntegration.getCurioStack(context.player(), "back", 0).orElse(ItemStack.EMPTY)
                 : context.player().getItemBySlot(packet.slot());
         if (stack.isEmpty()) {
             return;
         }
         com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(stack, packet.storage());
-        if (packet.slot() == EquipmentSlot.BODY) {
+        if (GridEquipmentSlots.isBack(packet.slot())) {
             CuriosIntegration.setCurioStack(context.player(), "back", 0, stack);
         }
     }

@@ -6,10 +6,10 @@ import com.dreamingfish.gridinventory.common.inventory.GridAutoInsertHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
+import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -20,8 +20,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class GridInventoryData implements IGridInventory {
-    public static final StreamCodec<RegistryFriendlyByteBuf, GridInventoryData> STREAM_CODEC = StreamCodec.ofMember(GridInventoryData::encode, GridInventoryData::decode);
-
     public static final Codec<GridInventoryData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.fieldOf("columns").forGetter(GridInventoryData::getColumns),
             Codec.INT.fieldOf("rows").forGetter(GridInventoryData::getRows),
@@ -186,7 +184,7 @@ public class GridInventoryData implements IGridInventory {
                         GridEntry target = entries.get(targetIndex);
                         if (!target.entryId().equals(entryId)
                                 && target.contains(x, y)
-                                && ItemStack.isSameItemSameComponents(target.stack(), old.stack())
+                                && GridItemStacks.sameItemSameData(target.stack(), old.stack())
                                 && target.stack().getCount() < target.stack().getMaxStackSize()) {
                             int moved = Math.min(old.stack().getCount(), target.stack().getMaxStackSize() - target.stack().getCount());
                             target.stack().grow(moved);
@@ -237,7 +235,7 @@ public class GridInventoryData implements IGridInventory {
         changeListener.run();
     }
 
-    public void encode(RegistryFriendlyByteBuf buf) {
+    public void encode(FriendlyByteBuf buf) {
         buf.writeVarInt(columns);
         buf.writeVarInt(rows);
         buf.writeVarInt(entries.size());
@@ -250,7 +248,7 @@ public class GridInventoryData implements IGridInventory {
         }
     }
 
-    public static GridInventoryData decode(RegistryFriendlyByteBuf buf) {
+    public static GridInventoryData decode(FriendlyByteBuf buf) {
         int columns = buf.readVarInt();
         int rows = buf.readVarInt();
         int count = buf.readVarInt();

@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.api;
 
+import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.ResourceLocation;
@@ -28,16 +29,18 @@ public record EquipmentStorageDefinition(GridItemSizeRule.Type type, String targ
         return switch (slot) {
             case "chest" -> EquipmentSlot.CHEST;
             case "legs" -> EquipmentSlot.LEGS;
-            case "back" -> EquipmentSlot.BODY;
+            case "back" -> GridEquipmentSlots.back();
             default -> throw new IllegalArgumentException("Unsupported equipment storage slot: " + slot);
         };
     }
 
     private static String encodeSlot(EquipmentSlot slot) {
+        if (GridEquipmentSlots.isBack(slot)) {
+            return "back";
+        }
         return switch (slot) {
             case CHEST -> "chest";
             case LEGS -> "legs";
-            case BODY -> "back";
             default -> throw new IllegalArgumentException("Unsupported equipment storage slot: " + slot);
         };
     }

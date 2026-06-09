@@ -38,7 +38,16 @@ minecraft {
 
 sourceSets {
     main {
-        java.srcDir rootProject.project(":common").file("src/main/java")
+        java.setSrcDirs([file("src/main/java"), rootProject.project(":common").file("src/main/java")])
+        java.exclude { details ->
+            def commonSource = rootProject.project(":common").file("src/main/java").toPath()
+            def filePath = details.file.toPath()
+            if (!filePath.startsWith(commonSource)) {
+                return false
+            }
+            return details.path.startsWith("com/dreamingfish/gridinventory/client/")
+                    || details.path == "com/dreamingfish/gridinventory/common/item/SmallGridBagItem.java"
+        }
         resources.srcDir rootProject.project(":common").file("src/main/resources")
     }
 }

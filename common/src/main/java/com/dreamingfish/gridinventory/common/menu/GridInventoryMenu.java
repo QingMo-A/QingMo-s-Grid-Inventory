@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
+import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
@@ -14,6 +15,7 @@ import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
 import com.dreamingfish.gridinventory.common.network.ModNetworking;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupHandler;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
+import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -113,7 +115,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         var targetEntry = gridData.getEntries().stream().filter(entry -> entry.contains(targetX, targetY)).findFirst();
         if (GridStackMerger.itemsStackableInGrid()
                 && targetEntry.isPresent()
-                && ItemStack.isSameItemSameComponents(targetEntry.get().stack(), placedStack)
+                && GridItemStacks.sameItemSameData(targetEntry.get().stack(), placedStack)
                 && targetEntry.get().stack().getCount() < targetEntry.get().stack().getMaxStackSize()) {
             int moved = Math.min(source.getCount(), targetEntry.get().stack().getMaxStackSize() - targetEntry.get().stack().getCount());
             targetEntry.get().stack().grow(moved);
@@ -453,7 +455,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     public boolean insertCurioIntoEquipmentStorage(String identifier, int index, EquipmentSlot equipmentSlot, String containerId,
                                                   int targetX, int targetY, boolean rotated, boolean targetFolded) {
-        if (!playerGrid || (equipmentSlot == EquipmentSlot.BODY && "back".equals(identifier) && index == 0)) {
+        if (!playerGrid || (GridEquipmentSlots.isBack(equipmentSlot) && "back".equals(identifier) && index == 0)) {
             return false;
         }
         Optional<ItemStack> source = CuriosIntegration.getCurioStack(playerInventory.player, identifier, index);
@@ -559,7 +561,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         int amountToMove = Math.min(amount, stack.getCount());
         if (destination.isEmpty()) {
             playerInventory.setItem(playerSlot, edit.get().inventory().extract(entryId, amountToMove));
-        } else if (ItemStack.isSameItemSameComponents(destination, stack) && destination.getCount() < destination.getMaxStackSize()) {
+        } else if (GridItemStacks.sameItemSameData(destination, stack) && destination.getCount() < destination.getMaxStackSize()) {
             int accepted = Math.min(amountToMove, destination.getMaxStackSize() - destination.getCount());
             edit.get().inventory().extract(entryId, accepted);
             destination.grow(accepted);
@@ -595,7 +597,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return;
         }
         com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(equipped, storage);
-        if (slot == EquipmentSlot.BODY) {
+        if (GridEquipmentSlots.isBack(slot)) {
             CuriosIntegration.setCurioStack(playerInventory.player, "back", 0, equipped);
         }
         playerInventory.setChanged();
@@ -603,7 +605,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     private ItemStack equipmentStorageStack(EquipmentSlot slot) {
-        if (slot == EquipmentSlot.BODY) {
+        if (GridEquipmentSlots.isBack(slot)) {
             return CuriosIntegration.getCurioStack(playerInventory.player, "back", 0).orElse(ItemStack.EMPTY);
         }
         return playerInventory.player.getItemBySlot(slot);
@@ -649,7 +651,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             save();
             return true;
         }
-        if (!ItemStack.isSameItemSameComponents(target, stack) || target.getCount() >= target.getMaxStackSize()) {
+        if (!GridItemStacks.sameItemSameData(target, stack) || target.getCount() >= target.getMaxStackSize()) {
             return false;
         }
         int accepted = Math.min(moveCount, target.getMaxStackSize() - target.getCount());
@@ -686,7 +688,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             playerInventory.setChanged();
             return true;
         }
-        if (ItemStack.isSameItemSameComponents(source, target)) {
+        if (GridItemStacks.sameItemSameData(source, target)) {
             int moved = Math.min(source.getCount(), Math.max(0, targetLimit - target.getCount()));
             if (moved <= 0) {
                 return false;

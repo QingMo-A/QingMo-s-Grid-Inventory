@@ -6,6 +6,7 @@ import com.dreamingfish.gridinventory.api.GridInsertMode;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ModNetworking;
+import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -66,7 +67,7 @@ public final class ManualPickupHandler {
         ItemStack remainder = stack.copy();
         for (int slot = startInclusive; slot < endExclusive && !remainder.isEmpty(); slot++) {
             ItemStack existing = player.getInventory().getItem(slot);
-            if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, remainder)) {
+            if (existing.isEmpty() || !GridItemStacks.sameItemSameData(existing, remainder)) {
                 continue;
             }
             int limit = Math.min(existing.getMaxStackSize(), player.getInventory().getMaxStackSize());

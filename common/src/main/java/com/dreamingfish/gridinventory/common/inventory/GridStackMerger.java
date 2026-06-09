@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.common.inventory;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import net.minecraft.world.item.ItemStack;
 
 public final class GridStackMerger {
@@ -19,7 +20,7 @@ public final class GridStackMerger {
         ItemStack remainder = stack.copy();
         for (var entry : inventory.getEntries()) {
             ItemStack existing = entry.stack();
-            if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, remainder) && existing.getCount() < existing.getMaxStackSize()) {
+            if (!existing.isEmpty() && GridItemStacks.sameItemSameData(existing, remainder) && existing.getCount() < existing.getMaxStackSize()) {
                 int moved = Math.min(remainder.getCount(), existing.getMaxStackSize() - existing.getCount());
                 existing.grow(moved);
                 remainder.shrink(moved);
@@ -42,7 +43,7 @@ public final class GridStackMerger {
         int remaining = stack.getCount();
         for (var entry : inventory.getEntries()) {
             ItemStack existing = entry.stack();
-            if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, stack) && existing.getCount() < existing.getMaxStackSize()) {
+            if (!existing.isEmpty() && GridItemStacks.sameItemSameData(existing, stack) && existing.getCount() < existing.getMaxStackSize()) {
                 remaining -= existing.getMaxStackSize() - existing.getCount();
                 if (remaining <= 0) {
                     return true;
