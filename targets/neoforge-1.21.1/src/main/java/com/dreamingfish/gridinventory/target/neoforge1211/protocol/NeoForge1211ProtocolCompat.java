@@ -47,7 +47,7 @@ public final class NeoForge1211ProtocolCompat {
 
     private static <T extends GridMessage> void handlePayload(NeoForge1211PayloadAdapters.Payload<T> payload, IPayloadContext context) {
         NeoForge1211MessageContext messageContext = new NeoForge1211MessageContext(context);
-        payload.messageType().handle(payload.message(), messageContext);
+        messageContext.enqueueWork(() -> payload.messageType().handle(payload.message(), messageContext));
     }
 
     @SuppressWarnings("unchecked")
