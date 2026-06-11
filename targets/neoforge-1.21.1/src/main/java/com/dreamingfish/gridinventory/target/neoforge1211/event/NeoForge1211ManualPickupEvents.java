@@ -1,14 +1,13 @@
-package com.dreamingfish.gridinventory.common.pickup;
+package com.dreamingfish.gridinventory.target.neoforge1211.event;
 
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
-
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 
-public final class ManualPickupEvents {
-    private ManualPickupEvents() {
+public final class NeoForge1211ManualPickupEvents {
+    private NeoForge1211ManualPickupEvents() {
     }
 
     @SubscribeEvent

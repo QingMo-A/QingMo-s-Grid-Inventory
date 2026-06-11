@@ -1,5 +1,6 @@
-package com.dreamingfish.gridinventory.common.equipment;
+package com.dreamingfish.gridinventory.target.neoforge1211.event;
 
+import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211DataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -7,8 +8,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-public final class EquipmentStorageEvents {
-    private EquipmentStorageEvents() {
+public final class NeoForge1211EquipmentStorageEvents {
+    private NeoForge1211EquipmentStorageEvents() {
     }
 
     @SubscribeEvent

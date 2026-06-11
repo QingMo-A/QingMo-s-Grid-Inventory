@@ -3,18 +3,18 @@ package com.dreamingfish.gridinventory;
 import com.dreamingfish.gridinventory.DFGridInventoryCommon;
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
 import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
-import com.dreamingfish.gridinventory.common.pickup.ManualPickupEvents;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingLoader;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingSyncManager;
-import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageEvents;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
 import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionLoader;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.platform.neoforge.NeoForgeGridInventoryPlatform;
 import com.dreamingfish.gridinventory.target.neoforge1211.protocol.NeoForge1211ProtocolCompat;
 import com.dreamingfish.gridinventory.target.neoforge1211.client.NeoForge1211ClientEvents;
+import com.dreamingfish.gridinventory.target.neoforge1211.event.NeoForge1211EquipmentStorageEvents;
+import com.dreamingfish.gridinventory.target.neoforge1211.event.NeoForge1211ManualPickupEvents;
 import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211Attachments;
 import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211DataComponents;
 import net.neoforged.api.distmarker.Dist;
@@ -52,8 +52,8 @@ public class DFGridInventoryMod {
         modContainer.registerConfig(ModConfig.Type.SERVER, GridInventoryConfig.SPEC);
 
         NeoForge.EVENT_BUS.register(this);
-        NeoForge.EVENT_BUS.register(ManualPickupEvents.class);
-        NeoForge.EVENT_BUS.register(EquipmentStorageEvents.class);
+        NeoForge.EVENT_BUS.register(NeoForge1211ManualPickupEvents.class);
+        NeoForge.EVENT_BUS.register(NeoForge1211EquipmentStorageEvents.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
