@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
@@ -13,13 +14,17 @@ import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMe
 import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotMessage;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.SyncBackpackFoldingRulesMessage;
 import com.dreamingfish.gridinventory.common.network.SyncEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.SyncGridInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.SyncItemSizeRulesMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
+import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
@@ -246,6 +251,34 @@ public final class Forge1201MessageCodecs {
                     buf.writeUUID(message.entryId());
                 },
                 buf -> new DropEquipmentStorageEntryMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID())
+        ));
+        register(GridMessages.DROP_GRID_ENTRY, codec(
+                (message, buf) -> buf.writeUUID(message.entryId()),
+                buf -> new DropGridEntryMessage(buf.readUUID())
+        ));
+        register(GridMessages.QUICK_EQUIP_GRID_ENTRY, codec(
+                (message, buf) -> buf.writeUUID(message.entryId()),
+                buf -> new QuickEquipGridEntryMessage(buf.readUUID())
+        ));
+        register(GridMessages.QUICK_EQUIP_PLAYER_SLOT, codec(
+                (message, buf) -> buf.writeVarInt(message.playerSlot()),
+                buf -> new QuickEquipPlayerSlotMessage(buf.readVarInt())
+        ));
+        register(GridMessages.TOGGLE_GRID_ENTRY_BACKPACK_FOLD, codec(
+                (message, buf) -> {
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                },
+                buf -> new ToggleGridEntryBackpackFoldMessage(buf.readUUID(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+        ));
+        register(GridMessages.MOVE_PLAYER_FREE_SLOT, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.sourcePlayerSlot());
+                    buf.writeVarInt(message.targetPlayerSlot());
+                },
+                buf -> new MovePlayerFreeSlotMessage(buf.readVarInt(), buf.readVarInt())
         ));
     }
 
