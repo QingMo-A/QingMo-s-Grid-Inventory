@@ -54,8 +54,6 @@ sourceSets {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${forge_1201_minecraft_version}-${forge_1201_version}"
-    compileOnly "top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}:api"
-    runtimeOnly "top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}"
 }
 
 tasks.named('processResources', ProcessResources).configure {
