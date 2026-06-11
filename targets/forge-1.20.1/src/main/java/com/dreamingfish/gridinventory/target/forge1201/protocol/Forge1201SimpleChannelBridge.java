@@ -24,11 +24,16 @@ public final class Forge1201SimpleChannelBridge {
     );
 
     private static int discriminator;
+    private static boolean registered;
 
     private Forge1201SimpleChannelBridge() {
     }
 
     public static void register() {
+        if (registered) {
+            return;
+        }
+        registered = true;
         for (GridMessageType<?> type : Forge1201MessageCodecs.registeredTypes()) {
             register(type);
         }

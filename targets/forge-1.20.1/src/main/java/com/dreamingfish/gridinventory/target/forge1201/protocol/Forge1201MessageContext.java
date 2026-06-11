@@ -1,7 +1,6 @@
 package com.dreamingfish.gridinventory.target.forge1201.protocol;
 
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -22,7 +21,7 @@ public final class Forge1201MessageContext implements GridMessageContext {
         if (sender != null) {
             return sender;
         }
-        return DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> Forge1201MessageContext::clientPlayer);
+        return DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> ClientOnly::player);
     }
 
     @Override
@@ -35,7 +34,9 @@ public final class Forge1201MessageContext implements GridMessageContext {
         context.get().setPacketHandled(true);
     }
 
-    private static Player clientPlayer() {
-        return Minecraft.getInstance().player;
+    private static final class ClientOnly {
+        private static Player player() {
+            return net.minecraft.client.Minecraft.getInstance().player;
+        }
     }
 }
