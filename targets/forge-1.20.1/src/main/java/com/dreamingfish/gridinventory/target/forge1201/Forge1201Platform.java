@@ -5,7 +5,6 @@ import com.dreamingfish.gridinventory.platform.GridInventoryItemStackDataBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryNetworkBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryPlatform;
 import com.dreamingfish.gridinventory.platform.GridInventoryPlayerDataBridge;
-import com.dreamingfish.gridinventory.platform.GridInventoryRegistryBridge;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
@@ -21,7 +20,7 @@ public final class Forge1201Platform implements GridInventoryPlatform {
     private final GridInventoryItemStackDataBridge itemStackData = new Forge1201ItemStackDataBridge();
     private final GridInventoryPlayerDataBridge playerData = new Forge1201PlayerDataBridge();
     private final GridInventoryAccessoryBridge accessories = new Forge1201AccessoryBridge();
-    private final GridInventoryRegistryBridge registry = new Forge1201RegistryBridge();
+    private final Forge1201RegistryBridge registry = new Forge1201RegistryBridge();
     private final GridInventoryMenuBridge menus = new Forge1201MenuBridge();
     private final GridInventoryConfigAccess config = new Forge1201ConfigAccess();
 
@@ -59,7 +58,7 @@ public final class Forge1201Platform implements GridInventoryPlatform {
     }
 
     @Override
-    public GridInventoryRegistryBridge registry() {
+    public Forge1201RegistryBridge registry() {
         return registry;
     }
 
