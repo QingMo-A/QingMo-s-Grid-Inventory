@@ -1,4 +1,4 @@
-package com.dreamingfish.gridinventory.client;
+package com.dreamingfish.gridinventory.target.neoforge1211.client;
 
 import com.dreamingfish.gridinventory.DFGridInventoryMod;
 import com.dreamingfish.gridinventory.client.GridInventoryClientLogic;
@@ -7,24 +7,24 @@ import com.dreamingfish.gridinventory.client.render.ItemEntityHighlightRenderer;
 import com.dreamingfish.gridinventory.client.render.PickupPromptHud;
 import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
-import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
-import net.minecraft.client.renderer.item.ItemProperties;
+import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 @EventBusSubscriber(modid = DFGridInventoryMod.MODID, value = Dist.CLIENT)
-public final class ClientEvents {
-    private ClientEvents() {
+public final class NeoForge1211ClientEvents {
+    private NeoForge1211ClientEvents() {
     }
 
     public static void registerScreens(RegisterMenuScreensEvent event) {

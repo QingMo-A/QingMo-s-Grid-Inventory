@@ -1,7 +1,6 @@
 package com.dreamingfish.gridinventory;
 
 import com.dreamingfish.gridinventory.DFGridInventoryCommon;
-import com.dreamingfish.gridinventory.client.ClientEvents;
 import com.dreamingfish.gridinventory.client.config.GridInventoryClientConfig;
 import com.dreamingfish.gridinventory.common.config.GridInventoryConfig;
 import com.dreamingfish.gridinventory.common.pickup.ManualPickupEvents;
@@ -15,6 +14,7 @@ import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionLoa
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.platform.neoforge.NeoForgeGridInventoryPlatform;
 import com.dreamingfish.gridinventory.target.neoforge1211.protocol.NeoForge1211ProtocolCompat;
+import com.dreamingfish.gridinventory.target.neoforge1211.client.NeoForge1211ClientEvents;
 import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211Attachments;
 import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211DataComponents;
 import net.neoforged.api.distmarker.Dist;
@@ -47,7 +47,7 @@ public class DFGridInventoryMod {
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(NeoForge1211ProtocolCompat::register);
-        modEventBus.addListener(ClientEvents::registerKeys);
+        modEventBus.addListener(NeoForge1211ClientEvents::registerKeys);
         modContainer.registerConfig(ModConfig.Type.CLIENT, GridInventoryClientConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.SERVER, GridInventoryConfig.SPEC);
 
@@ -87,12 +87,12 @@ public class DFGridInventoryMod {
 
         @SubscribeEvent
         public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
-            ClientEvents.registerScreens(event);
+            NeoForge1211ClientEvents.registerScreens(event);
         }
 
         @SubscribeEvent
         public static void clientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
-            event.enqueueWork(ClientEvents::registerItemProperties);
+            event.enqueueWork(NeoForge1211ClientEvents::registerItemProperties);
         }
     }
 }
