@@ -4,16 +4,25 @@ import com.dreamingfish.gridinventory.api.BackpackFoldingDefinition;
 import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.GridMessages;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.SyncBackpackFoldingRulesMessage;
 import com.dreamingfish.gridinventory.common.network.SyncEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.SyncGridInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.SyncItemSizeRulesMessage;
+import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
+import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
 import net.minecraft.network.FriendlyByteBuf;
@@ -132,6 +141,111 @@ public final class Forge1201MessageCodecs {
                     }
                     return new SyncBackpackFoldingRulesMessage(rules);
                 }
+        ));
+        register(GridMessages.INSERT_INTO_EQUIPMENT_STORAGE, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.playerSlot());
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new InsertIntoEquipmentStorageMessage(buf.readVarInt(), buf.readEnum(EquipmentSlot.class), buf.readUtf(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.MOVE_EQUIPMENT_STORAGE_ENTRY, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new MoveEquipmentStorageEntryMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.EXTRACT_EQUIPMENT_STORAGE_ENTRY, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.playerSlot());
+                    buf.writeVarInt(message.amount());
+                },
+                buf -> new ExtractEquipmentStorageEntryMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt())
+        ));
+        register(GridMessages.TRANSFER_GRID_ENTRY_INTO_EQUIPMENT_STORAGE, codec(
+                (message, buf) -> {
+                    buf.writeUUID(message.entryId());
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new TransferGridEntryIntoEquipmentStorageMessage(buf.readUUID(), buf.readEnum(EquipmentSlot.class), buf.readUtf(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_EQUIPMENT_STORAGE_ENTRY_INTO_GRID, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new TransferEquipmentStorageEntryIntoGridMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_EQUIPMENT_STORAGE_ENTRY, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.sourceSlot());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeEnum(message.targetSlot());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                },
+                buf -> new TransferEquipmentStorageEntryMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(),
+                        buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+        ));
+        register(GridMessages.TOGGLE_EQUIPMENT_STORAGE_ENTRY_BACKPACK_FOLD, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.slot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                },
+                buf -> new ToggleEquipmentStorageEntryBackpackFoldMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+        ));
+        register(GridMessages.QUICK_EQUIP_EQUIPMENT_STORAGE_ENTRY, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.sourceSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeUUID(message.entryId());
+                },
+                buf -> new QuickEquipEquipmentStorageEntryMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID())
+        ));
+        register(GridMessages.DROP_EQUIPMENT_STORAGE_ENTRY, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeUUID(message.entryId());
+                },
+                buf -> new DropEquipmentStorageEntryMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID())
         ));
     }
 
