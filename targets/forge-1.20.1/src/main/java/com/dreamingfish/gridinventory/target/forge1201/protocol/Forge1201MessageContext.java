@@ -1,7 +1,10 @@
 package com.dreamingfish.gridinventory.target.forge1201.protocol;
 
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -15,7 +18,11 @@ public final class Forge1201MessageContext implements GridMessageContext {
 
     @Override
     public Player player() {
-        return context.get().getSender();
+        Player sender = context.get().getSender();
+        if (sender != null) {
+            return sender;
+        }
+        return DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> Forge1201MessageContext::clientPlayer);
     }
 
     @Override
@@ -26,5 +33,9 @@ public final class Forge1201MessageContext implements GridMessageContext {
     @Override
     public void markHandled() {
         context.get().setPacketHandled(true);
+    }
+
+    private static Player clientPlayer() {
+        return Minecraft.getInstance().player;
     }
 }

@@ -16,5 +16,6 @@ public final class DFGridInventoryForge1201 {
         GridInventoryServices.init(platform);
         DFGridInventoryCommon.registerContent(platform.registry());
         platform.registry().register(modEventBus);
+        platform.network().registerMessages();
     }
 }

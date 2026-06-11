@@ -1,44 +1,184 @@
 package com.dreamingfish.gridinventory.target.forge1201.protocol;
 
+import com.dreamingfish.gridinventory.api.BackpackFoldingDefinition;
+import com.dreamingfish.gridinventory.api.GridItemSizeRule;
+import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
+import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.GridMessages;
+import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.SyncBackpackFoldingRulesMessage;
+import com.dreamingfish.gridinventory.common.network.SyncEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.SyncGridInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.SyncItemSizeRulesMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.entity.EquipmentSlot;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class Forge1201MessageCodecs {
+    private static final Map<GridMessageType<?>, Forge1201MessageCodec<?>> CODECS = new LinkedHashMap<>();
+    private static final List<GridMessageType<?>> REGISTERED_TYPES = new ArrayList<>();
+
+    static {
+        registerAll();
+    }
+
     private Forge1201MessageCodecs() {
     }
 
+    public static List<GridMessageType<?>> registeredTypes() {
+        return List.copyOf(REGISTERED_TYPES);
+    }
+
     public static void encode(GridMessage message, FriendlyByteBuf buf) {
-        try {
-            Method encode = message.getClass().getMethod("encode", FriendlyByteBuf.class);
-            encode.invoke(message, buf);
-        } catch (NoSuchMethodException ignored) {
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("Failed to encode grid message " + message.type().id(), exception);
-        }
+        encode(cast(message.type()), message, buf);
     }
 
     public static <T extends GridMessage> T decode(GridMessageType<T> type, FriendlyByteBuf buf) {
-        try {
-            Method decode = type.messageClass().getMethod("decode", FriendlyByteBuf.class);
-            return type.messageClass().cast(decode.invoke(null, buf));
-        } catch (NoSuchMethodException ignored) {
-            return constructUnit(type);
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("Failed to decode grid message " + type.id(), exception);
-        }
+        return type.messageClass().cast(codec(type).decode(buf));
     }
 
-    private static <T extends GridMessage> T constructUnit(GridMessageType<T> type) {
-        try {
-            Constructor<T> constructor = type.messageClass().getDeclaredConstructor();
-            constructor.setAccessible(true);
-            return constructor.newInstance();
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("Grid message has no decode(FriendlyByteBuf) or unit constructor: " + type.id(), exception);
+    private static void registerAll() {
+        register(GridMessages.OPEN_PLAYER_GRID_INVENTORY, codec(
+                (message, buf) -> {
+                },
+                buf -> OpenPlayerGridInventoryMessage.INSTANCE
+        ));
+        register(GridMessages.MOVE_GRID_ENTRY, codec(
+                (message, buf) -> {
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new MoveGridEntryMessage(buf.readUUID(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.INSERT_FROM_PLAYER_INVENTORY, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.playerSlot());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.quick());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new InsertFromPlayerInventoryMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                        buf.readBoolean(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.EXTRACT_TO_PLAYER_INVENTORY, codec(
+                (message, buf) -> {
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.amount());
+                },
+                buf -> new ExtractToPlayerInventoryMessage(buf.readUUID(), buf.readVarInt())
+        ));
+        register(GridMessages.EXTRACT_GRID_ENTRY_TO_PLAYER_SLOT, codec(
+                (message, buf) -> {
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.playerSlot());
+                    buf.writeVarInt(message.amount());
+                },
+                buf -> new ExtractGridEntryToPlayerSlotMessage(buf.readUUID(), buf.readVarInt(), buf.readVarInt())
+        ));
+        register(GridMessages.SYNC_GRID_INVENTORY, codec(
+                (message, buf) -> message.data().encode(buf),
+                buf -> new SyncGridInventoryMessage(GridInventoryData.decode(buf))
+        ));
+        register(GridMessages.SYNC_EQUIPMENT_STORAGE, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.slot());
+                    message.storage().encode(buf);
+                },
+                buf -> new SyncEquipmentStorageMessage(buf.readEnum(EquipmentSlot.class), EquipmentStorageData.decode(buf))
+        ));
+        register(GridMessages.SYNC_ITEM_SIZE_RULES, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.rules().size());
+                    for (GridItemSizeRule rule : message.rules()) {
+                        rule.encode(buf);
+                    }
+                },
+                buf -> {
+                    int count = buf.readVarInt();
+                    List<GridItemSizeRule> rules = new ArrayList<>(count);
+                    for (int i = 0; i < count; i++) {
+                        rules.add(GridItemSizeRule.decode(buf));
+                    }
+                    return new SyncItemSizeRulesMessage(rules);
+                }
+        ));
+        register(GridMessages.SYNC_BACKPACK_FOLDING_RULES, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.rules().size());
+                    for (BackpackFoldingDefinition rule : message.rules()) {
+                        rule.encode(buf);
+                    }
+                },
+                buf -> {
+                    int count = buf.readVarInt();
+                    List<BackpackFoldingDefinition> rules = new ArrayList<>(count);
+                    for (int i = 0; i < count; i++) {
+                        rules.add(BackpackFoldingDefinition.decode(buf));
+                    }
+                    return new SyncBackpackFoldingRulesMessage(rules);
+                }
+        ));
+    }
+
+    private static <T extends GridMessage> void register(GridMessageType<T> type, Forge1201MessageCodec<T> codec) {
+        CODECS.put(type, codec);
+        REGISTERED_TYPES.add(type);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T extends GridMessage> Forge1201MessageCodec<T> codec(GridMessageType<T> type) {
+        Forge1201MessageCodec<?> codec = CODECS.get(type);
+        if (codec == null) {
+            throw new IllegalStateException("Missing Forge 1.20.1 codec for " + type.id());
         }
+        return (Forge1201MessageCodec<T>) codec;
+    }
+
+    private static <T extends GridMessage> void encode(GridMessageType<T> type, GridMessage message, FriendlyByteBuf buf) {
+        codec(type).encode(type.messageClass().cast(message), buf);
+    }
+
+    private static <T extends GridMessage> Forge1201MessageCodec<T> codec(Encoder<T> encoder, Decoder<T> decoder) {
+        return new Forge1201MessageCodec<>() {
+            @Override
+            public void encode(T message, FriendlyByteBuf buf) {
+                encoder.encode(message, buf);
+            }
+
+            @Override
+            public T decode(FriendlyByteBuf buf) {
+                return decoder.decode(buf);
+            }
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends GridMessage> GridMessageType<T> cast(GridMessageType<?> type) {
+        return (GridMessageType<T>) type;
+    }
+
+    @FunctionalInterface
+    private interface Encoder<T extends GridMessage> {
+        void encode(T message, FriendlyByteBuf buf);
+    }
+
+    @FunctionalInterface
+    private interface Decoder<T extends GridMessage> {
+        T decode(FriendlyByteBuf buf);
     }
 }
