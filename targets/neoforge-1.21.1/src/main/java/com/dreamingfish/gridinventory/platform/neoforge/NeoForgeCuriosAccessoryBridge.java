@@ -1,8 +1,8 @@
 package com.dreamingfish.gridinventory.platform.neoforge;
 
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
+import com.dreamingfish.gridinventory.platform.AccessorySlotView;
 import com.dreamingfish.gridinventory.platform.GridInventoryAccessoryBridge;
 import com.dreamingfish.gridinventory.platform.neoforge.compat.NeoForgeCuriosIntegration;
 import net.minecraft.world.entity.player.Player;
@@ -44,7 +44,7 @@ public final class NeoForgeCuriosAccessoryBridge implements GridInventoryAccesso
     }
 
     @Override
-    public List<CuriosSlotView> collectSlots(Player player) {
+    public List<AccessorySlotView> collectSlots(Player player) {
         return NeoForgeCuriosIntegration.collectSlots(player);
     }
 
@@ -54,42 +54,42 @@ public final class NeoForgeCuriosAccessoryBridge implements GridInventoryAccesso
     }
 
     @Override
-    public boolean movePlayerSlotToCurio(Player player, int sourcePlayerSlot, String identifier, int index) {
+    public boolean movePlayerSlotToAccessory(Player player, int sourcePlayerSlot, String identifier, int index) {
         return NeoForgeCuriosIntegration.movePlayerSlotToCurio(player, sourcePlayerSlot, identifier, index);
     }
 
     @Override
-    public boolean moveGridEntryToCurio(Player player, GridInventoryData grid, UUID entryId, String identifier, int index) {
+    public boolean moveGridEntryToAccessory(Player player, GridInventoryData grid, UUID entryId, String identifier, int index) {
         return NeoForgeCuriosIntegration.moveGridEntryToCurio(player, grid, entryId, identifier, index);
     }
 
     @Override
-    public boolean moveEquipmentEntryToCurio(Player player, GridInventoryData inventory, UUID entryId, String identifier, int index) {
+    public boolean moveEquipmentEntryToAccessory(Player player, GridInventoryData inventory, UUID entryId, String identifier, int index) {
         return NeoForgeCuriosIntegration.moveEquipmentEntryToCurio(player, inventory, entryId, identifier, index);
     }
 
     @Override
-    public boolean moveCurioToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
+    public boolean moveAccessoryToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
         return NeoForgeCuriosIntegration.moveCurioToPlayerSlot(player, identifier, index, targetPlayerSlot);
     }
 
     @Override
-    public boolean moveCurioToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated) {
+    public boolean moveAccessoryToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated) {
         return NeoForgeCuriosIntegration.moveCurioToGrid(player, grid, identifier, index, targetX, targetY, rotated);
     }
 
     @Override
-    public boolean moveCurioToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated, boolean targetFolded) {
+    public boolean moveAccessoryToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated, boolean targetFolded) {
         return NeoForgeCuriosIntegration.moveCurioToGrid(player, grid, identifier, index, targetX, targetY, rotated, targetFolded);
     }
 
     @Override
-    public Optional<ItemStack> getCurioStack(Player player, String identifier, int index) {
+    public Optional<ItemStack> getAccessoryStack(Player player, String identifier, int index) {
         return NeoForgeCuriosIntegration.getCurioStack(player, identifier, index);
     }
 
     @Override
-    public void setCurioStack(Player player, String identifier, int index, ItemStack stack) {
+    public void setAccessoryStack(Player player, String identifier, int index, ItemStack stack) {
         NeoForgeCuriosIntegration.setCurioStack(player, identifier, index, stack);
     }
 

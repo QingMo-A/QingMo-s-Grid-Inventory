@@ -1,10 +1,10 @@
 package com.dreamingfish.gridinventory.platform.neoforge.compat;
 
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
+import com.dreamingfish.gridinventory.platform.AccessorySlotView;
 import com.dreamingfish.gridinventory.target.neoforge1211.registry.NeoForge1211DataComponents;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -30,13 +30,13 @@ public final class NeoForgeCuriosIntegration {
         return net.neoforged.fml.ModList.get().isLoaded("curios");
     }
 
-    public static List<CuriosSlotView> collectSlots(Player player) {
+    public static List<AccessorySlotView> collectSlots(Player player) {
         if (!isLoaded()) {
             return List.of();
         }
         return CuriosApi.getCuriosInventory(player)
                 .map(handler -> {
-                    List<CuriosSlotView> views = new ArrayList<>();
+                    List<AccessorySlotView> views = new ArrayList<>();
                     handler.getCurios().values().stream()
                             .filter(ICurioStacksHandler::isVisible)
                             .sorted(Comparator.comparing(ICurioStacksHandler::getIdentifier))
@@ -50,7 +50,7 @@ public final class NeoForgeCuriosIntegration {
                                     ResourceLocation icon = CuriosApi.getSlot(identifier, player.level())
                                             .map(slot -> slot.getIcon())
                                             .orElse(FALLBACK_ICON);
-                                    views.add(new CuriosSlotView(identifier, index, stacks.getStackInSlot(index).copy(), true, icon));
+                                    views.add(new AccessorySlotView(identifier, index, stacks.getStackInSlot(index).copy(), true, icon));
                                 }
                             });
                     return views;

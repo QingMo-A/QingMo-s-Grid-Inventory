@@ -39,7 +39,6 @@ import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMes
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
@@ -790,7 +789,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 return true;
             }
         }
-        return CuriosIntegration.canQuickEquip(minecraft.player, stack);
+        return GridInventoryServices.accessories().canQuickEquip(minecraft.player, stack);
     }
 
     private boolean inGrid(int mouseX, int mouseY) {

@@ -20,6 +20,7 @@ import net.minecraftforge.fml.ModList;
 public final class Forge1201Platform implements GridInventoryPlatform {
     private final GridInventoryItemStackDataBridge itemStackData = new Forge1201ItemStackDataBridge();
     private final GridInventoryPlayerDataBridge playerData = new Forge1201PlayerDataBridge();
+    private final GridInventoryAccessoryBridge accessories = new Forge1201AccessoryBridge();
     private final GridInventoryRegistryBridge registry = new Forge1201RegistryBridge();
     private final GridInventoryMenuBridge menus = new Forge1201MenuBridge();
     private final GridInventoryConfigAccess config = new Forge1201ConfigAccess();
@@ -49,7 +50,7 @@ public final class Forge1201Platform implements GridInventoryPlatform {
 
     @Override
     public GridInventoryAccessoryBridge accessories() {
-        throw unsupported("AccessoryBridge");
+        return accessories;
     }
 
     @Override

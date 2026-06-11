@@ -2,7 +2,7 @@ package com.dreamingfish.gridinventory.client.screen.widget;
 
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView;
+import com.dreamingfish.gridinventory.platform.AccessorySlotView;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public record CuriosSlotWidget(CuriosSlotView view, int x, int y, int size) {
+public record CuriosSlotWidget(AccessorySlotView view, int x, int y, int size) {
     public boolean contains(double mouseX, double mouseY) {
         return mouseX >= x && mouseY >= y && mouseX < x + size && mouseY < y + size;
     }

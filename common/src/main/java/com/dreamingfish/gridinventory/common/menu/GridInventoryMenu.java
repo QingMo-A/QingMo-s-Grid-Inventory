@@ -7,7 +7,6 @@ import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
@@ -217,9 +216,9 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             save();
             return true;
         }
-        if (CuriosIntegration.canQuickEquip(playerInventory.player, entry.get().stack())) {
+        if (GridInventoryServices.accessories().canQuickEquip(playerInventory.player, entry.get().stack())) {
             ItemStack equipped = gridData.extract(entryId, 1);
-            boolean equippedToCurio = CuriosIntegration.quickEquip(playerInventory.player, equipped);
+            boolean equippedToCurio = GridInventoryServices.accessories().quickEquip(playerInventory.player, equipped);
             if (equippedToCurio) {
                 save();
                 return true;
@@ -349,9 +348,9 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             playerInventory.setChanged();
             return true;
         }
-        if (CuriosIntegration.canQuickEquip(playerInventory.player, entry.get().stack())) {
+        if (GridInventoryServices.accessories().canQuickEquip(playerInventory.player, entry.get().stack())) {
             ItemStack equipped = source.get().inventory().extract(entryId, 1);
-            boolean equippedToCurio = CuriosIntegration.quickEquip(playerInventory.player, equipped);
+            boolean equippedToCurio = GridInventoryServices.accessories().quickEquip(playerInventory.player, equipped);
             if (equippedToCurio) {
                 saveEquipmentStorage(sourceSlot, source.get().storage());
                 return true;
@@ -458,7 +457,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (!playerGrid || (GridEquipmentSlots.isBack(equipmentSlot) && "back".equals(identifier) && index == 0)) {
             return false;
         }
-        Optional<ItemStack> source = CuriosIntegration.getCurioStack(playerInventory.player, identifier, index);
+        Optional<ItemStack> source = GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, identifier, index);
         Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
         if (source.isEmpty() || target.isEmpty()) {
             return false;
@@ -474,7 +473,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return false;
         }
         target.get().inventory().add(moved, targetX, targetY, rotated);
-        CuriosIntegration.setCurioStack(playerInventory.player, identifier, index, ItemStack.EMPTY);
+        GridInventoryServices.accessories().setAccessoryStack(playerInventory.player, identifier, index, ItemStack.EMPTY);
         saveEquipmentStorage(equipmentSlot, target.get().storage());
         return true;
     }
@@ -598,7 +597,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         }
         com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setEquipmentStorage(equipped, storage);
         if (GridEquipmentSlots.isBack(slot)) {
-            CuriosIntegration.setCurioStack(playerInventory.player, "back", 0, equipped);
+            GridInventoryServices.accessories().setAccessoryStack(playerInventory.player, "back", 0, equipped);
         }
         playerInventory.setChanged();
         ModNetworking.syncEquipmentStorage(playerInventory.player, slot, storage);
@@ -606,7 +605,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     private ItemStack equipmentStorageStack(EquipmentSlot slot) {
         if (GridEquipmentSlots.isBack(slot)) {
-            return CuriosIntegration.getCurioStack(playerInventory.player, "back", 0).orElse(ItemStack.EMPTY);
+            return GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, "back", 0).orElse(ItemStack.EMPTY);
         }
         return playerInventory.player.getItemBySlot(slot);
     }
@@ -715,14 +714,14 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (!playerGrid) {
             return false;
         }
-        return CuriosIntegration.movePlayerSlotToCurio(playerInventory.player, sourcePlayerSlot, identifier, index);
+        return GridInventoryServices.accessories().movePlayerSlotToAccessory(playerInventory.player, sourcePlayerSlot, identifier, index);
     }
 
     public boolean insertGridEntryIntoCurio(UUID entryId, String identifier, int index) {
         if (!playerGrid) {
             return false;
         }
-        boolean moved = CuriosIntegration.moveGridEntryToCurio(playerInventory.player, gridData, entryId, identifier, index);
+        boolean moved = GridInventoryServices.accessories().moveGridEntryToAccessory(playerInventory.player, gridData, entryId, identifier, index);
         if (moved) {
             save();
         }
@@ -737,7 +736,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (source.isEmpty()) {
             return false;
         }
-        boolean moved = CuriosIntegration.moveEquipmentEntryToCurio(playerInventory.player, source.get().inventory(), entryId, identifier, index);
+        boolean moved = GridInventoryServices.accessories().moveEquipmentEntryToAccessory(playerInventory.player, source.get().inventory(), entryId, identifier, index);
         if (moved) {
             saveEquipmentStorage(sourceSlot, source.get().storage());
         }
@@ -759,14 +758,14 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             playerInventory.setChanged();
             return true;
         }
-        return CuriosIntegration.quickEquip(playerInventory.player, source);
+        return GridInventoryServices.accessories().quickEquip(playerInventory.player, source);
     }
 
     public boolean extractCurioToPlayerSlot(String identifier, int index, int targetPlayerSlot) {
         if (!playerGrid || !isFreePlayerSlot(targetPlayerSlot)) {
             return false;
         }
-        return CuriosIntegration.moveCurioToPlayerSlot(playerInventory.player, identifier, index, targetPlayerSlot);
+        return GridInventoryServices.accessories().moveAccessoryToPlayerSlot(playerInventory.player, identifier, index, targetPlayerSlot);
     }
 
     public boolean extractCurioToGrid(String identifier, int index, int targetX, int targetY, boolean rotated) {
@@ -777,7 +776,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (!playerGrid) {
             return false;
         }
-        boolean moved = CuriosIntegration.moveCurioToGrid(playerInventory.player, gridData, identifier, index, targetX, targetY, rotated, targetFolded);
+        boolean moved = GridInventoryServices.accessories().moveAccessoryToGrid(playerInventory.player, gridData, identifier, index, targetX, targetY, rotated, targetFolded);
         if (moved) {
             save();
         }

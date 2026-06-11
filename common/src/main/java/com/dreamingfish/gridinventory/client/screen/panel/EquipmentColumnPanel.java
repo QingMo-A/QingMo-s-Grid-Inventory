@@ -1,10 +1,9 @@
 package com.dreamingfish.gridinventory.client.screen.panel;
 
-import com.dreamingfish.gridinventory.platform.GridInventoryServices;
-
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
+import com.dreamingfish.gridinventory.platform.AccessorySlotView;
+import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -68,7 +67,7 @@ public final class EquipmentColumnPanel {
     private void layoutCuriosSlots() {
         curiosSlots.clear();
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || !CuriosIntegration.isLoaded()) {
+        if (minecraft.player == null || !GridInventoryServices.accessories().isLoaded()) {
             return;
         }
         curiosToggleX = left + width - curiosToggleSize - 8;
@@ -79,7 +78,7 @@ public final class EquipmentColumnPanel {
         int slotSize = GridInventoryServices.clientConfig().gridCellSize();
         int startX = left + 8;
         int startY = top + 45;
-        List<com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView> views = CuriosIntegration.collectSlots(minecraft.player);
+        List<AccessorySlotView> views = GridInventoryServices.accessories().collectSlots(minecraft.player);
         curiosTotalSlots = views.size();
         int visibleSlots = Math.min(MAX_VISIBLE_CURIOS_SLOTS, curiosTotalSlots);
         curiosScroll = Math.max(0, Math.min(curiosScroll, Math.max(0, curiosTotalSlots - visibleSlots)));
@@ -140,7 +139,7 @@ public final class EquipmentColumnPanel {
         for (CuriosSlotWidget curioSlot : curiosSlots) {
             boolean hovered = curioSlot.contains(mouseX, mouseY);
             Boolean dropAllowed = !draggedStack.isEmpty()
-                    ? CuriosIntegration.canPlaceInCurio(minecraft.player, curioSlot.view().identifier(), curioSlot.view().index(),
+                    ? GridInventoryServices.accessories().canPlaceInCurio(minecraft.player, curioSlot.view().identifier(), curioSlot.view().index(),
                     draggedStack, curioSlot.view().stack().isEmpty()) : null;
             curioSlot.render(graphics, hovered, dropAllowed, false);
         }
@@ -202,7 +201,7 @@ public final class EquipmentColumnPanel {
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0 || !CuriosIntegration.isLoaded()) {
+        if (button != 0 || !GridInventoryServices.accessories().isLoaded()) {
             return false;
         }
         if (mouseX >= curiosToggleX && mouseY >= curiosToggleY
@@ -214,7 +213,7 @@ public final class EquipmentColumnPanel {
     }
 
     private void renderCuriosToggle(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (!CuriosIntegration.isLoaded()) {
+        if (!GridInventoryServices.accessories().isLoaded()) {
             return;
         }
         boolean hovered = mouseX >= curiosToggleX && mouseY >= curiosToggleY

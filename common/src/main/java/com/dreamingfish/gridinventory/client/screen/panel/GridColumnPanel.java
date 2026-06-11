@@ -7,7 +7,6 @@ import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosIntegration;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
@@ -60,7 +59,7 @@ public final class GridColumnPanel {
         if (minecraft.player != null) {
             y = renderEquipmentStorage(graphics, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST), Component.translatable("screen.df_grid_inventory.chest_storage"), y, draggedEquipmentEntry);
             y = renderEquipmentStorage(graphics, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS), Component.translatable("screen.df_grid_inventory.legs_storage"), y, draggedEquipmentEntry);
-            Optional<ItemStack> backpack = CuriosIntegration.getCurioStack(minecraft.player, "back", 0);
+            Optional<ItemStack> backpack = GridInventoryServices.accessories().getAccessoryStack(minecraft.player, "back", 0);
             if (backpack.isPresent()) {
                 y = renderEquipmentStorage(graphics, GridEquipmentSlots.back(), backpack.get(), Component.literal("Backpack"), y, draggedEquipmentEntry);
             }

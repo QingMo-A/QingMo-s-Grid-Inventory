@@ -1,9 +1,9 @@
 package com.dreamingfish.gridinventory.target.forge1201.platform;
 
-import com.dreamingfish.gridinventory.common.compat.curios.CuriosSlotView;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
+import com.dreamingfish.gridinventory.platform.AccessorySlotView;
 import com.dreamingfish.gridinventory.platform.GridInventoryAccessoryBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryItemStackDataBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryNetworkBridge;
@@ -151,7 +151,7 @@ public final class Forge1201Platform implements GridInventoryPlatform {
         }
 
         @Override
-        public List<CuriosSlotView> collectSlots(Player player) {
+        public List<AccessorySlotView> collectSlots(Player player) {
             return List.of();
         }
 
@@ -161,42 +161,42 @@ public final class Forge1201Platform implements GridInventoryPlatform {
         }
 
         @Override
-        public boolean movePlayerSlotToCurio(Player player, int sourcePlayerSlot, String identifier, int index) {
+        public boolean movePlayerSlotToAccessory(Player player, int sourcePlayerSlot, String identifier, int index) {
             return false;
         }
 
         @Override
-        public boolean moveGridEntryToCurio(Player player, GridInventoryData grid, UUID entryId, String identifier, int index) {
+        public boolean moveGridEntryToAccessory(Player player, GridInventoryData grid, UUID entryId, String identifier, int index) {
             return false;
         }
 
         @Override
-        public boolean moveEquipmentEntryToCurio(Player player, GridInventoryData inventory, UUID entryId, String identifier, int index) {
+        public boolean moveEquipmentEntryToAccessory(Player player, GridInventoryData inventory, UUID entryId, String identifier, int index) {
             return false;
         }
 
         @Override
-        public boolean moveCurioToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
+        public boolean moveAccessoryToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
             return false;
         }
 
         @Override
-        public boolean moveCurioToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated) {
+        public boolean moveAccessoryToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated) {
             return false;
         }
 
         @Override
-        public boolean moveCurioToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated, boolean targetFolded) {
+        public boolean moveAccessoryToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated, boolean targetFolded) {
             return false;
         }
 
         @Override
-        public Optional<ItemStack> getCurioStack(Player player, String identifier, int index) {
+        public Optional<ItemStack> getAccessoryStack(Player player, String identifier, int index) {
             return Optional.empty();
         }
 
         @Override
-        public void setCurioStack(Player player, String identifier, int index, ItemStack stack) {
+        public void setAccessoryStack(Player player, String identifier, int index, ItemStack stack) {
         }
     }
 
