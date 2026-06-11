@@ -1,4 +1,4 @@
-package com.dreamingfish.gridinventory.mixin.client;
+package com.dreamingfish.gridinventory.target.neoforge1211.mixin.client;
 
 import com.dreamingfish.gridinventory.client.access.SlotPositionAccessor;
 import net.minecraft.world.inventory.Slot;

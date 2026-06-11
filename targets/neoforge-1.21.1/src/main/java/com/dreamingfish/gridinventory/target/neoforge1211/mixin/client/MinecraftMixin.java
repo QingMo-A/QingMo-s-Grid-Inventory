@@ -1,4 +1,4 @@
-package com.dreamingfish.gridinventory.mixin.client;
+package com.dreamingfish.gridinventory.target.neoforge1211.mixin.client;
 
 import com.dreamingfish.gridinventory.client.pickup.ClientItemTargeting;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
