@@ -12,10 +12,13 @@ import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMes
 import com.dreamingfish.gridinventory.common.network.GridMessages;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.ManualPickupItemMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotMessage;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotMessage;
@@ -279,6 +282,31 @@ public final class Forge1201MessageCodecs {
                     buf.writeVarInt(message.targetPlayerSlot());
                 },
                 buf -> new MovePlayerFreeSlotMessage(buf.readVarInt(), buf.readVarInt())
+        ));
+        register(GridMessages.MANUAL_PICKUP_ITEM, codec(
+                (message, buf) -> buf.writeInt(message.entityId()),
+                buf -> new ManualPickupItemMessage(buf.readInt())
+        ));
+        register(GridMessages.PICKUP_GROUND_ITEM_INTO_GRID, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.entityId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                },
+                buf -> new PickupGroundItemIntoGridMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+        ));
+        register(GridMessages.PICKUP_GROUND_ITEM_INTO_EQUIPMENT_STORAGE, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.entityId());
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                },
+                buf -> new PickupGroundItemIntoEquipmentStorageMessage(buf.readVarInt(), buf.readEnum(EquipmentSlot.class),
+                        buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
         ));
     }
 
