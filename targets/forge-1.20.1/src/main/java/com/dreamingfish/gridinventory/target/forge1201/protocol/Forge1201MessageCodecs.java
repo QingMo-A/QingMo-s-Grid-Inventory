@@ -6,12 +6,18 @@ import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.GridMessages;
+import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.ManualPickupItemMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
@@ -307,6 +313,67 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new PickupGroundItemIntoEquipmentStorageMessage(buf.readVarInt(), buf.readEnum(EquipmentSlot.class),
                         buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+        ));
+        register(GridMessages.EXTRACT_CURIO_TO_EQUIPMENT_STORAGE, codec(
+                (message, buf) -> {
+                    buf.writeUtf(message.identifier());
+                    buf.writeVarInt(message.index());
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new ExtractCurioToEquipmentStorageMessage(buf.readUtf(), buf.readVarInt(), buf.readEnum(EquipmentSlot.class),
+                        buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.EXTRACT_CURIO_TO_GRID, codec(
+                (message, buf) -> {
+                    buf.writeUtf(message.identifier());
+                    buf.writeVarInt(message.index());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new ExtractCurioToGridMessage(buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                        buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.EXTRACT_CURIO_TO_PLAYER_SLOT, codec(
+                (message, buf) -> {
+                    buf.writeUtf(message.identifier());
+                    buf.writeVarInt(message.index());
+                    buf.writeVarInt(message.targetPlayerSlot());
+                },
+                buf -> new ExtractCurioToPlayerSlotMessage(buf.readUtf(), buf.readVarInt(), buf.readVarInt())
+        ));
+        register(GridMessages.INSERT_EQUIPMENT_STORAGE_ENTRY_INTO_CURIO, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.sourceSlot());
+                    buf.writeUtf(message.containerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeUtf(message.identifier());
+                    buf.writeVarInt(message.index());
+                },
+                buf -> new InsertEquipmentStorageEntryIntoCurioMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(),
+                        buf.readUUID(), buf.readUtf(), buf.readVarInt())
+        ));
+        register(GridMessages.INSERT_GRID_ENTRY_INTO_CURIO, codec(
+                (message, buf) -> {
+                    buf.writeUUID(message.entryId());
+                    buf.writeUtf(message.identifier());
+                    buf.writeVarInt(message.index());
+                },
+                buf -> new InsertGridEntryIntoCurioMessage(buf.readUUID(), buf.readUtf(), buf.readVarInt())
+        ));
+        register(GridMessages.INSERT_PLAYER_SLOT_INTO_CURIO, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.sourcePlayerSlot());
+                    buf.writeUtf(message.identifier());
+                    buf.writeVarInt(message.index());
+                },
+                buf -> new InsertPlayerSlotIntoCurioMessage(buf.readVarInt(), buf.readUtf(), buf.readVarInt())
         ));
     }
 
