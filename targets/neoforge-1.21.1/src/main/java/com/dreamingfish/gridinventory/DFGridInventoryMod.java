@@ -47,7 +47,6 @@ public class DFGridInventoryMod {
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(NeoForge1211ProtocolCompat::register);
-        modEventBus.addListener(NeoForge1211ClientEvents::registerKeys);
         modContainer.registerConfig(ModConfig.Type.CLIENT, GridInventoryClientConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.SERVER, GridInventoryConfig.SPEC);
 
@@ -83,6 +82,11 @@ public class DFGridInventoryMod {
     @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static final class ClientModEvents {
         private ClientModEvents() {
+        }
+
+        @SubscribeEvent
+        public static void registerKeys(net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) {
+            NeoForge1211ClientEvents.registerKeys(event);
         }
 
         @SubscribeEvent
