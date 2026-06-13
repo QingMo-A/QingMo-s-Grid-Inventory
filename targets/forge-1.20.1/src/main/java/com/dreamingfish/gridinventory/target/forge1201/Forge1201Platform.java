@@ -9,6 +9,7 @@ import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigA
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
 import com.dreamingfish.gridinventory.target.forge1201.config.Forge1201ClientConfigAccess;
+import com.dreamingfish.gridinventory.target.forge1201.config.Forge1201ServerConfigAccess;
 import com.dreamingfish.gridinventory.target.forge1201.platform.Forge1201RegistryBridge;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -24,7 +25,7 @@ public final class Forge1201Platform implements GridInventoryPlatform {
     private final GridInventoryNetworkBridge network = new Forge1201NetworkBridge();
     private final Forge1201RegistryBridge registry = new Forge1201RegistryBridge();
     private final GridInventoryMenuBridge menus = new Forge1201MenuBridge();
-    private final GridInventoryConfigAccess config = new Forge1201ConfigAccess();
+    private final GridInventoryConfigAccess config = new Forge1201ServerConfigAccess();
     private final GridInventoryClientConfigAccess clientConfig = new Forge1201ClientConfigAccess();
 
     @Override
@@ -80,36 +81,4 @@ public final class Forge1201Platform implements GridInventoryPlatform {
         return clientConfig;
     }
 
-    private static UnsupportedOperationException unsupported(String bridge) {
-        return new UnsupportedOperationException("Forge 1.20.1 " + bridge + " is not implemented yet");
-    }
-
-    private static final class Forge1201ConfigAccess implements GridInventoryConfigAccess {
-        @Override public boolean enableGridInventory() { return true; }
-        @Override public int defaultItemWidth() { return 1; }
-        @Override public int defaultItemHeight() { return 1; }
-        @Override public boolean defaultRotatable() { return true; }
-        @Override public boolean gridItemsStackable() { return true; }
-        @Override public int smallGridBagColumns() { return 5; }
-        @Override public int smallGridBagRows() { return 4; }
-        @Override public boolean replaceSurvivalInventory() { return true; }
-        @Override public int playerGridColumns() { return 9; }
-        @Override public int playerGridRows() { return 4; }
-        @Override public boolean pocketEnabled() { return true; }
-        @Override public int pocketColumns() { return 9; }
-        @Override public int pocketRows() { return 4; }
-        @Override public boolean equipmentStorageEnabled() { return true; }
-        @Override public int foldedBackpackWidth() { return 2; }
-        @Override public int foldedBackpackHeight() { return 2; }
-        @Override public boolean allowChestStorage() { return true; }
-        @Override public boolean allowLegsStorage() { return true; }
-        @Override public boolean customHotbarSlotsEnabled() { return false; }
-        @Override public int hotbarSlots() { return 9; }
-        @Override public boolean disableVanillaAutoPickup() { return false; }
-        @Override public boolean manualPickupEnabled() { return true; }
-        @Override public double pickupRange() { return 4.5D; }
-        @Override public double nearbyItemsRange() { return 6.0D; }
-        @Override public boolean allowPickupThroughWalls() { return false; }
-        @Override public boolean serverValidateNearbyRange() { return true; }
-    }
 }
