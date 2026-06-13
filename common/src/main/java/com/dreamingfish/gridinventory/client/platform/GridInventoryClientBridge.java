@@ -1,4 +1,4 @@
-package com.dreamingfish.gridinventory.platform.client;
+package com.dreamingfish.gridinventory.client.platform;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.entity.LivingEntity;

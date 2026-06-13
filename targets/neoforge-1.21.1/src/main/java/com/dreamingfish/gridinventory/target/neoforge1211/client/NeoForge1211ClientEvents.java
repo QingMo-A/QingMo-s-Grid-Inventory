@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.target.neoforge1211.client;
 import com.dreamingfish.gridinventory.DFGridInventoryMod;
 import com.dreamingfish.gridinventory.client.GridInventoryClientLogic;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
+import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
 import com.dreamingfish.gridinventory.client.render.ItemEntityHighlightRenderer;
 import com.dreamingfish.gridinventory.client.render.PickupPromptHud;
 import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
@@ -39,6 +40,7 @@ public final class NeoForge1211ClientEvents {
     }
 
     public static void registerItemProperties() {
+        GridInventoryClientServices.init(new NeoForge1211ClientBridge());
         ResourceLocation folded = ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded");
         ResourceLocation foldedRoll = ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded_roll");
         ItemProperties.register(ModItems.GRAY_FIELD_BACKPACK.get(), folded,

@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.client.screen.panel;
 
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
+import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
 import com.dreamingfish.gridinventory.platform.AccessorySlotView;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
@@ -117,7 +118,7 @@ public final class EquipmentColumnPanel {
         int modelHeight = Math.max(1, modelBottom - modelTop);
         int scale = Math.min(52, Math.max(30, modelHeight / 2 + 8));
         graphics.enableScissor(modelLeft, modelTop, modelRight, modelBottom);
-        GridInventoryServices.client().renderEntityInInventoryFollowsMouse(
+        GridInventoryClientServices.bridge().renderEntityInInventoryFollowsMouse(
                 graphics, modelLeft, modelTop, modelRight, modelBottom, scale, mouseX, mouseY, minecraft.player);
         graphics.disableScissor();
 

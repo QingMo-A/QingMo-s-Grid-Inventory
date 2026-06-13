@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.target.forge1201.client;
 import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.client.GridInventoryClientLogic;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
+import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
 import com.dreamingfish.gridinventory.client.render.PickupPromptHud;
 import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
@@ -14,7 +15,7 @@ import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -41,6 +42,7 @@ public final class Forge1201ClientEvents {
         @SubscribeEvent
         public static void clientSetup(FMLClientSetupEvent event) {
             event.enqueueWork(() -> {
+                GridInventoryClientServices.init(new Forge1201ClientBridge());
                 MenuScreens.register(ModMenus.GRID_INVENTORY.get(), GridInventoryScreen::new);
                 Forge1201ClientEvents.registerItemProperties();
             });
@@ -60,7 +62,7 @@ public final class Forge1201ClientEvents {
         }
 
         @SubscribeEvent
-        public static void onRenderGui(RenderGuiOverlayEvent.Post event) {
+        public static void onRenderGui(RenderGuiEvent.Post event) {
             PickupPromptHud.render(event.getGuiGraphics());
         }
 

@@ -2,7 +2,6 @@ package com.dreamingfish.gridinventory.platform;
 
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
-import com.dreamingfish.gridinventory.platform.client.GridInventoryClientBridge;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
 
 public final class GridInventoryServices {
@@ -55,9 +54,5 @@ public final class GridInventoryServices {
 
     public static GridInventoryClientConfigAccess clientConfig() {
         return platform().clientConfig();
-    }
-
-    public static GridInventoryClientBridge client() {
-        return platform().client();
     }
 }

@@ -1,6 +1,6 @@
 package com.dreamingfish.gridinventory.target.neoforge1211.client;
 
-import com.dreamingfish.gridinventory.platform.client.GridInventoryClientBridge;
+import com.dreamingfish.gridinventory.client.platform.GridInventoryClientBridge;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.LivingEntity;
