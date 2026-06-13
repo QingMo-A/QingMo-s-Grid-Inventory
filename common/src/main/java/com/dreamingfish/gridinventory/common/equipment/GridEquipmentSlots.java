@@ -10,7 +10,7 @@ public final class GridEquipmentSlots {
         try {
             return EquipmentSlot.byName("body");
         } catch (IllegalArgumentException ignored) {
-            return EquipmentSlot.CHEST;
+            return EquipmentSlot.OFFHAND;
         }
     }
 
