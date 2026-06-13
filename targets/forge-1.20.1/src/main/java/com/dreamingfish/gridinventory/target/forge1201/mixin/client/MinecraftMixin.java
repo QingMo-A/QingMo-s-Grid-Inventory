@@ -25,8 +25,7 @@ public abstract class MinecraftMixin {
 
     @Inject(
             method = "handleKeybinds",
-            at = @At("HEAD"),
-            cancellable = true
+            at = @At(value = "FIELD", target = "Lnet/minecraft/client/Options;keyInventory:Lnet/minecraft/client/KeyMapping;", ordinal = 0)
     )
     private void df_grid_inventory$openGridInventoryInstead(CallbackInfo ci) {
         if (player == null || gameMode == null) {
@@ -41,14 +40,8 @@ public abstract class MinecraftMixin {
             return;
         }
 
-        boolean consumed = false;
         while (options.keyInventory.consumeClick()) {
-            consumed = true;
             GridInventoryServices.network().sendToServer(OpenPlayerGridInventoryMessage.INSTANCE);
-        }
-
-        if (consumed) {
-            ci.cancel();
         }
     }
 }
