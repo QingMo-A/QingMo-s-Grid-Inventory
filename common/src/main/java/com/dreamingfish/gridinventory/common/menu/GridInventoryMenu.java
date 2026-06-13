@@ -508,26 +508,39 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     public boolean transferEquipmentEntryBetweenStorages(EquipmentSlot sourceSlot, String sourceContainerId, UUID entryId,
                                                            EquipmentSlot targetSlot, String targetContainerId,
                                                            int targetX, int targetY, boolean rotated) {
+        return transferEquipmentEntryBetweenStorages(sourceSlot, sourceContainerId, entryId, targetSlot, targetContainerId,
+                targetX, targetY, rotated, false);
+    }
+
+    public boolean transferEquipmentEntryBetweenStorages(EquipmentSlot sourceSlot, String sourceContainerId, UUID entryId,
+                                                           EquipmentSlot targetSlot, String targetContainerId,
+                                                           int targetX, int targetY, boolean rotated, boolean targetFolded) {
         if (!playerGrid) {
             return false;
         }
         if (sourceSlot == targetSlot && sourceContainerId.equals(targetContainerId)) {
-            return moveEquipmentEntry(sourceSlot, sourceContainerId, entryId, targetX, targetY, rotated);
+            return moveEquipmentEntry(sourceSlot, sourceContainerId, entryId, targetX, targetY, rotated, targetFolded);
         }
         Optional<EquipmentStorageEdit> source = editableEquipmentInventory(sourceSlot, sourceContainerId);
         Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = source.flatMap(edit -> edit.inventory().getEntry(entryId));
         if (source.isEmpty() || entry.isEmpty()) {
             return false;
         }
+        ItemStack moved = entry.get().stack().copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            com.dreamingfish.gridinventory.platform.GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
+        }
         if (sourceSlot == targetSlot) {
             Optional<NamedGridInventoryData> targetContainer = source.get().storage().containers().stream()
                     .filter(container -> container.id().equals(targetContainerId))
                     .findFirst();
             if (targetContainer.isEmpty()
-                    || !GridPlacementValidator.canPlace(targetContainer.get().inventory(), entry.get().stack(), targetX, targetY, rotated, null)) {
+                    || !GridPlacementValidator.canPlace(targetContainer.get().inventory(), moved, targetX, targetY, rotated, null)) {
                 return false;
             }
-            ItemStack moved = entry.get().stack().copy();
             targetContainer.get().inventory().add(moved, targetX, targetY, rotated);
             source.get().inventory().extract(entryId, moved.getCount());
             saveEquipmentStorage(sourceSlot, source.get().storage());
@@ -535,10 +548,9 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         }
         Optional<EquipmentStorageEdit> target = editableEquipmentInventory(targetSlot, targetContainerId);
         if (target.isEmpty()
-                || !GridPlacementValidator.canPlace(target.get().inventory(), entry.get().stack(), targetX, targetY, rotated, null)) {
+                || !GridPlacementValidator.canPlace(target.get().inventory(), moved, targetX, targetY, rotated, null)) {
             return false;
         }
-        ItemStack moved = entry.get().stack().copy();
         target.get().inventory().add(moved, targetX, targetY, rotated);
         source.get().inventory().extract(entryId, moved.getCount());
         saveEquipmentStorage(sourceSlot, source.get().storage());

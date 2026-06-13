@@ -229,9 +229,10 @@ public final class Forge1201MessageCodecs {
                     buf.writeVarInt(message.targetX());
                     buf.writeVarInt(message.targetY());
                     buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
                 },
                 buf -> new TransferEquipmentStorageEntryMessage(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID(),
-                        buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+                        buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
         ));
         register(GridMessages.TOGGLE_EQUIPMENT_STORAGE_ENTRY_BACKPACK_FOLD, codec(
                 (message, buf) -> {

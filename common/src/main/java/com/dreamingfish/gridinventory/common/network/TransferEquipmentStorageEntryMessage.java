@@ -11,12 +11,13 @@ import java.util.UUID;
 
 public record TransferEquipmentStorageEntryMessage(EquipmentSlot sourceSlot, String sourceContainerId, UUID entryId,
                                                   EquipmentSlot targetSlot, String targetContainerId,
-                                                  int targetX, int targetY, boolean rotated) implements GridMessage {
+                                                  int targetX, int targetY, boolean rotated,
+                                                  boolean targetFolded) implements GridMessage {
 
     public static void handle(TransferEquipmentStorageEntryMessage packet, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
             menu.transferEquipmentEntryBetweenStorages(packet.sourceSlot(), packet.sourceContainerId(), packet.entryId(),
-                    packet.targetSlot(), packet.targetContainerId(), packet.targetX(), packet.targetY(), packet.rotated());
+                    packet.targetSlot(), packet.targetContainerId(), packet.targetX(), packet.targetY(), packet.rotated(), packet.targetFolded());
             menu.broadcastChanges();
         }
     }

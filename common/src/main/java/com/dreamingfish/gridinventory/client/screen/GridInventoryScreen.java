@@ -392,6 +392,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 1 && nearbyItemsPanel.isDraggingGroundItem()) {
+            rotateDraggedPreview();
+            return true;
+        }
         if (nearbyItemsPanel.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
@@ -594,7 +598,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             target.slot(), target.containerId(),
                             targetRegionX(target, draggedStack(), (int) mouseX),
-                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview));
+                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
                 }
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryIntoGridMessage(

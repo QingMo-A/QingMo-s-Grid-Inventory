@@ -84,10 +84,6 @@ public class NearbyItemsPanel {
         }
         graphics.disableScissor();
 
-        if (dragging && draggedView != null) {
-            renderDraggedView(graphics, font, mouseX, mouseY);
-        }
-
         if (!dragging) {
             hovered(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(
                 entry.view.stack().getHoverName(),
@@ -148,14 +144,6 @@ public class NearbyItemsPanel {
         int max = Math.max(0, totalRows - visibleRows);
         scrollRows = Math.max(0, Math.min(max, scrollRows - (int) Math.signum(deltaY)));
         return true;
-    }
-
-    private void renderDraggedView(GuiGraphics graphics, Font font, int mouseX, int mouseY) {
-        int width = draggedView.gridWidth() * CELL;
-        int height = draggedView.gridHeight() * CELL;
-        int x = mouseX - 8;
-        int y = mouseY - 8;
-        GridItemRenderer.renderStackInArea(graphics, draggedView.stack(), x, y, width, height, 0.85F);
     }
 
     private Optional<Entry> hovered(int mouseX, int mouseY) {

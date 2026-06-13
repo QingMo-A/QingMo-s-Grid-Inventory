@@ -246,8 +246,8 @@ public final class NeoForge1211MessageCodecs {
                 b -> new TransferEquipmentStorageEntryIntoGridMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
         register(GridMessages.TRANSFER_EQUIPMENT_STORAGE_ENTRY, codec(
-                (m, b) -> { b.writeEnum(m.sourceSlot()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); b.writeEnum(m.targetSlot()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); },
-                b -> new TransferEquipmentStorageEntryMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean())
+                (m, b) -> { b.writeEnum(m.sourceSlot()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); b.writeEnum(m.targetSlot()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new TransferEquipmentStorageEntryMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
         register(GridMessages.TRANSFER_GRID_ENTRY_INTO_EQUIPMENT_STORAGE, codec(
                 (m, b) -> { b.writeUUID(m.entryId()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
