@@ -20,11 +20,8 @@ public final class GridItemRenderer {
     public static void renderEntry(GuiGraphics graphics, GridEntry entry, int gridLeft, int gridTop, int cell, float alpha) {
         int x = gridLeft + entry.x() * cell;
         int y = gridTop + entry.y() * cell;
-        int bodyAlpha = Math.round(0xAA * alpha);
-        int accentAlpha = Math.round(0xFF * alpha);
-        graphics.fill(x + 1, y + 1, x + entry.width() * cell, y + entry.height() * cell, (bodyAlpha << 24) | 0x2D2D2D);
-        graphics.fill(x + 1, y + 1, x + entry.width() * cell, y + 2, (accentAlpha << 24) | 0xB8A15B);
-        renderStackInArea(graphics, entry.stack(), x, y, entry.width() * cell, entry.height() * cell, alpha, entry.rotated());
+        renderEntryArea(graphics, entry.stack(), x, y, entry.width() * cell, entry.height() * cell,
+                1, 1, 1, 1, alpha, entry.rotated());
     }
 
     public static void renderEntry(GuiGraphics graphics, GridEntry entry, GridInventoryData inventory, int gridLeft, int gridTop, int cell, float alpha) {
@@ -32,11 +29,34 @@ public final class GridItemRenderer {
         int y = gridTop + GridLayoutMetrics.cellTop(inventory, entry.x(), entry.y(), cell);
         int width = GridLayoutMetrics.areaWidth(inventory, entry.x(), entry.y(), entry.width(), cell);
         int height = GridLayoutMetrics.areaHeight(inventory, entry.x(), entry.y(), entry.height(), cell);
+        int leftInset = needsLeftInset(inventory, entry) ? 1 : 0;
+        int topInset = needsTopInset(inventory, entry) ? 1 : 0;
+        renderEntryArea(graphics, entry.stack(), x, y, width, height, leftInset, topInset, 1, 1, alpha, entry.rotated());
+    }
+
+    private static void renderEntryArea(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height,
+                                        int leftInset, int topInset, int rightInset, int bottomInset,
+                                        float alpha, boolean rotated) {
         int bodyAlpha = Math.round(0xAA * alpha);
-        int accentAlpha = Math.round(0xFF * alpha);
-        graphics.fill(x + 1, y + 1, x + width, y + height, (bodyAlpha << 24) | 0x2D2D2D);
-        graphics.fill(x + 1, y + 1, x + width, y + 2, (accentAlpha << 24) | 0xB8A15B);
-        renderStackInArea(graphics, entry.stack(), x, y, width, height, alpha, entry.rotated());
+        graphics.fill(x + leftInset, y + topInset, x + width - rightInset, y + height - bottomInset, (bodyAlpha << 24) | 0x2D2D2D);
+        renderStackInArea(graphics, stack, x + leftInset, y + topInset,
+                width - leftInset - rightInset, height - topInset - bottomInset, alpha, rotated);
+    }
+
+    private static boolean needsLeftInset(GridInventoryData inventory, GridEntry entry) {
+        if (!inventory.hasCustomSections()) {
+            return true;
+        }
+        String section = inventory.sectionAt(entry.x(), entry.y());
+        return section == null || entry.x() <= 0 || !section.equals(inventory.sectionAt(entry.x() - 1, entry.y()));
+    }
+
+    private static boolean needsTopInset(GridInventoryData inventory, GridEntry entry) {
+        if (!inventory.hasCustomSections()) {
+            return true;
+        }
+        String section = inventory.sectionAt(entry.x(), entry.y());
+        return section == null || entry.y() <= 0 || !section.equals(inventory.sectionAt(entry.x(), entry.y() - 1));
     }
 
     public static void renderStack(GuiGraphics graphics, ItemStack stack, int x, int y, float alpha) {
