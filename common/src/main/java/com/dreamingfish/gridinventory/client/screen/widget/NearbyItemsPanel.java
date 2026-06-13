@@ -20,7 +20,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class NearbyItemsPanel {
-    private static final int CELL = 18;
+    public static final int CELL = 27;
+    public static final int CHROME_WIDTH = 12;
     private final List<Entry> entries = new ArrayList<>();
     private int left;
     private int top;
@@ -49,7 +50,7 @@ public class NearbyItemsPanel {
     }
 
     public int width() {
-        return columns * CELL + 12;
+        return columns * CELL + CHROME_WIDTH;
     }
 
     public int height() {

@@ -78,7 +78,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private final NearbyItemsPanel nearbyItemsPanel = new NearbyItemsPanel();
     private final EquipmentColumnPanel equipmentColumnPanel = new EquipmentColumnPanel();
     private final GridColumnPanel gridColumnPanel = new GridColumnPanel();
-    private int workspaceMargin;
+    private int workspaceMarginX;
+    private int workspaceMarginY;
+    private int workspacePaddingX;
+    private int workspacePaddingY;
     private int columnGap;
     private int equipmentWidth;
     private int gridColumnWidth;
@@ -95,25 +98,30 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     @Override
     protected void init() {
         if (menu.isPlayerGrid()) {
-            workspaceMargin = Math.max(6, Math.min(16, Math.min(width, height) / 20));
+            workspaceMarginX = Math.max(12, Math.min(24, width / 34));
+            workspaceMarginY = Math.max(8, Math.min(18, height / 32));
+            workspacePaddingX = Math.max(14, Math.min(24, width / 48));
+            workspacePaddingY = Math.max(10, Math.min(18, height / 54));
             columnGap = GridInventoryServices.clientConfig().columnGap();
-            imageWidth = Math.max(360, width - workspaceMargin * 2);
-            imageHeight = Math.max(222, height - workspaceMargin * 2);
+            imageWidth = Math.max(360, width - workspaceMarginX * 2);
+            imageHeight = Math.max(222, height - workspaceMarginY * 2);
         }
         super.init();
         if (menu.isPlayerGrid()) {
-            workspaceTop = topPos;
-            columnHeight = imageHeight - 38;
+            int contentLeft = leftPos + workspacePaddingX;
+            workspaceTop = topPos + workspacePaddingY;
+            columnHeight = Math.max(184, imageHeight - workspacePaddingY * 2);
+            int contentWidth = Math.max(320, imageWidth - workspacePaddingX * 2);
             int nearbyColumns = Math.max(2, Math.min(
                     GridInventoryServices.clientConfig().nearbyPanelColumns(),
-                    (imageWidth - 204 - 88 - columnGap * 2 - 12) / CELL
+                    (contentWidth - 204 - 88 - columnGap * 2 - NearbyItemsPanel.CHROME_WIDTH) / NearbyItemsPanel.CELL
             ));
-            int nearbyWidth = nearbyColumns * CELL + 12;
-            equipmentWidth = Math.max(204, Math.min(232, imageWidth - nearbyWidth - columnGap * 2 - 88));
-            gridColumnWidth = imageWidth - equipmentWidth - nearbyWidth - columnGap * 2;
-            int gridColumnLeft = leftPos + equipmentWidth + columnGap;
+            int nearbyWidth = nearbyColumns * NearbyItemsPanel.CELL + NearbyItemsPanel.CHROME_WIDTH;
+            equipmentWidth = Math.max(204, Math.min(232, contentWidth - nearbyWidth - columnGap * 2 - 88));
+            gridColumnWidth = contentWidth - equipmentWidth - nearbyWidth - columnGap * 2;
+            int gridColumnLeft = contentLeft + equipmentWidth + columnGap;
             int nearbyLeft = gridColumnLeft + gridColumnWidth + columnGap;
-            equipmentColumnPanel.setBounds(leftPos, workspaceTop, equipmentWidth, columnHeight);
+            equipmentColumnPanel.setBounds(contentLeft, workspaceTop, equipmentWidth, columnHeight);
             gridColumnPanel.setBounds(gridColumnLeft, workspaceTop, gridColumnWidth, columnHeight);
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
@@ -130,7 +138,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (menu.isPlayerGrid()) {
-            graphics.fill(leftPos - 4, topPos - 4, leftPos + imageWidth + 4, topPos + imageHeight + 4, 0x2E101010);
+            graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0x2E101010);
             equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot,
                     draggedStack(), !draggedStack().isEmpty());
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(), draggingEquipmentEntry);
@@ -170,7 +178,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private int hotbarTop() {
-        return topPos + columnHeight - 24;
+        return workspaceTop + columnHeight - 24;
     }
 
     private void setSlotPosition(int menuIndex, int absoluteX, int absoluteY) {
