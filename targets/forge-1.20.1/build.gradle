@@ -16,6 +16,8 @@ minecraft {
         client {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
             args '--mixin.config=df_grid_inventory.forge1201.mixins.json'
             mods {
                 "${mod_id}" {
@@ -27,6 +29,8 @@ minecraft {
         server {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
             args '--nogui'
             mods {
                 "${mod_id}" {
@@ -54,6 +58,12 @@ sourceSets {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${forge_1201_minecraft_version}-${forge_1201_version}"
+    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}:api")
+
+    def enableCuriosRuntime = (findProperty("forge_1201_curios_runtime") ?: "true").toBoolean()
+    if (enableCuriosRuntime) {
+        runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}")
+    }
 }
 
 tasks.named('processResources', ProcessResources).configure {
