@@ -16,6 +16,7 @@ minecraft {
         client {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
+            args '--mixin.config=df_grid_inventory.forge1201.mixins.json'
             mods {
                 "${mod_id}" {
                     source sourceSets.main
@@ -69,5 +70,13 @@ tasks.named('processResources', ProcessResources).configure {
     inputs.properties replaceProperties
     filesMatching('META-INF/mods.toml') {
         expand replaceProperties
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'MixinConfigs': 'df_grid_inventory.forge1201.mixins.json'
+        ])
     }
 }

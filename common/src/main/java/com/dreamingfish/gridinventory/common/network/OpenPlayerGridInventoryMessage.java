@@ -13,7 +13,11 @@ public record OpenPlayerGridInventoryMessage() implements GridMessage {
     public static final OpenPlayerGridInventoryMessage INSTANCE = new OpenPlayerGridInventoryMessage();
         
     public static void handle(OpenPlayerGridInventoryMessage packet, GridMessageContext context) {
-        if (GridInventoryServices.config().replaceSurvivalInventory() && context.player() instanceof ServerPlayer player && !player.isCreative()) {
+        if (GridInventoryServices.config().enableGridInventory()
+                && GridInventoryServices.config().replaceSurvivalInventory()
+                && context.player() instanceof ServerPlayer player
+                && !player.isCreative()
+                && !player.isSpectator()) {
             PlayerGridInventoryOpener.open(player);
         }
     }

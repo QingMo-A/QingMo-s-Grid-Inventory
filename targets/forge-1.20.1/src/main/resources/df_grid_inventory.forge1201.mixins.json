@@ -5,7 +5,8 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [],
   "client": [
-    "client.SlotAccessor"
+    "client.SlotAccessor",
+    "client.MinecraftMixin"
   ],
   "injectors": {
     "defaultRequire": 1
