@@ -45,8 +45,7 @@ sourceSets {
             if (!filePath.startsWith(commonSource)) {
                 return false
             }
-            return details.path.startsWith("com/dreamingfish/gridinventory/client/")
-                    || details.path == "com/dreamingfish/gridinventory/common/item/SmallGridBagItem.java"
+            return details.path == "com/dreamingfish/gridinventory/common/item/SmallGridBagItem.java"
         }
         resources.srcDir rootProject.project(":common").file("src/main/resources")
     }

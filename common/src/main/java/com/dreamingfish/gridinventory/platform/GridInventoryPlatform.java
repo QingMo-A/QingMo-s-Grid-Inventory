@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.platform;
 
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
+import com.dreamingfish.gridinventory.platform.client.GridInventoryClientBridge;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -34,4 +35,8 @@ public interface GridInventoryPlatform {
     GridInventoryConfigAccess config();
 
     GridInventoryClientConfigAccess clientConfig();
+
+    default GridInventoryClientBridge client() {
+        return GridInventoryClientBridge.NOOP;
+    }
 }

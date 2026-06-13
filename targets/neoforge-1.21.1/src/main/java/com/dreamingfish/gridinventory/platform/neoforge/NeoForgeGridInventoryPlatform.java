@@ -8,7 +8,9 @@ import com.dreamingfish.gridinventory.platform.GridInventoryPlayerDataBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryRegistryBridge;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
+import com.dreamingfish.gridinventory.platform.client.GridInventoryClientBridge;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.target.neoforge1211.client.NeoForge1211ClientBridge;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -23,6 +25,7 @@ public final class NeoForgeGridInventoryPlatform implements GridInventoryPlatfor
     private final GridInventoryMenuBridge menus = new NeoForgeGridInventoryMenuBridge();
     private final GridInventoryConfigAccess config = new NeoForgeGridInventoryConfigAccess();
     private final GridInventoryClientConfigAccess clientConfig = new NeoForgeGridInventoryClientConfigAccess();
+    private final GridInventoryClientBridge client = new NeoForge1211ClientBridge();
 
     @Override
     public boolean isModLoaded(String modId) {
@@ -72,5 +75,10 @@ public final class NeoForgeGridInventoryPlatform implements GridInventoryPlatfor
     @Override
     public GridInventoryClientConfigAccess clientConfig() {
         return clientConfig;
+    }
+
+    @Override
+    public GridInventoryClientBridge client() {
+        return client;
     }
 }

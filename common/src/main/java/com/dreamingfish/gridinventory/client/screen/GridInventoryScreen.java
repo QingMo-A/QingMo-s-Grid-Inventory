@@ -163,13 +163,6 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
     }
 
-    @Override
-    protected void renderSlot(GuiGraphics graphics, Slot slot) {
-        if (!menu.isPlayerGrid()) {
-            super.renderSlot(graphics, slot);
-        }
-    }
-
     private void hideVanillaSlots() {
         for (int menuIndex = 0; menuIndex < menu.slots.size(); menuIndex++) {
             setSlotPosition(menuIndex, leftPos - 1000 - menuIndex * CELL, topPos - 1000);
@@ -703,8 +696,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
-    @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        return handleMouseScrolled(mouseX, mouseY, scrollY);
+    }
+
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
+        return handleMouseScrolled(mouseX, mouseY, scrollY);
+    }
+
+    private boolean handleMouseScrolled(double mouseX, double mouseY, double scrollY) {
         if (menu.isPlayerGrid() && equipmentColumnPanel.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
@@ -716,7 +716,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nearbyItemsPanel.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return false;
     }
 
     private Optional<GridEntry> entryAt(int mouseX, int mouseY) {

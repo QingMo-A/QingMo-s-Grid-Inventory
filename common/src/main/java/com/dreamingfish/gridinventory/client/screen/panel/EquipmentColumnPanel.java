@@ -7,7 +7,6 @@ import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -118,10 +117,8 @@ public final class EquipmentColumnPanel {
         int modelHeight = Math.max(1, modelBottom - modelTop);
         int scale = Math.min(52, Math.max(30, modelHeight / 2 + 8));
         graphics.enableScissor(modelLeft, modelTop, modelRight, modelBottom);
-        InventoryScreen.renderEntityInInventoryFollowsMouse(
-                graphics, modelLeft, modelTop, modelRight, modelBottom, scale,
-                0.0625F, mouseX, mouseY, minecraft.player
-        );
+        GridInventoryServices.client().renderEntityInInventoryFollowsMouse(
+                graphics, modelLeft, modelTop, modelRight, modelBottom, scale, mouseX, mouseY, minecraft.player);
         graphics.disableScissor();
 
         FreeSlotWidget offhand = freeSlots.get(4);

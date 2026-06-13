@@ -7,7 +7,10 @@ import com.dreamingfish.gridinventory.platform.GridInventoryPlatform;
 import com.dreamingfish.gridinventory.platform.GridInventoryPlayerDataBridge;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
+import com.dreamingfish.gridinventory.platform.client.GridInventoryClientBridge;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.target.forge1201.client.Forge1201ClientBridge;
+import com.dreamingfish.gridinventory.target.forge1201.config.Forge1201ClientConfigAccess;
 import com.dreamingfish.gridinventory.target.forge1201.platform.Forge1201RegistryBridge;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -24,6 +27,8 @@ public final class Forge1201Platform implements GridInventoryPlatform {
     private final Forge1201RegistryBridge registry = new Forge1201RegistryBridge();
     private final GridInventoryMenuBridge menus = new Forge1201MenuBridge();
     private final GridInventoryConfigAccess config = new Forge1201ConfigAccess();
+    private final GridInventoryClientConfigAccess clientConfig = new Forge1201ClientConfigAccess();
+    private final GridInventoryClientBridge client = new Forge1201ClientBridge();
 
     @Override
     public boolean isModLoaded(String modId) {
@@ -75,7 +80,12 @@ public final class Forge1201Platform implements GridInventoryPlatform {
 
     @Override
     public GridInventoryClientConfigAccess clientConfig() {
-        throw unsupported("ClientConfigAccess");
+        return clientConfig;
+    }
+
+    @Override
+    public GridInventoryClientBridge client() {
+        return client;
     }
 
     private static UnsupportedOperationException unsupported(String bridge) {
