@@ -12,6 +12,13 @@ allprojects {
         mavenLocal()
         mavenCentral()
         maven {
+            name = "CurseMaven"
+            url = uri("https://cursemaven.com")
+            content {
+                includeGroup("curse.maven")
+            }
+        }
+        maven {
             name = "NeoForge"
             url = uri("https://maven.neoforged.net/releases")
         }

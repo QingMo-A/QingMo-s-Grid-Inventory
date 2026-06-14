@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.target.forge1201.client;
 
 import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.client.GridInventoryClientLogic;
+import com.dreamingfish.gridinventory.client.compat.rarity.GridItemRarityServices;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
 import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
 import com.dreamingfish.gridinventory.client.render.PickupPromptHud;
@@ -9,6 +10,7 @@ import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
+import com.dreamingfish.gridinventory.target.forge1201.client.compat.rarity.Forge1201RarityCoreCompat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.item.ItemProperties;
@@ -43,6 +45,7 @@ public final class Forge1201ClientEvents {
         public static void clientSetup(FMLClientSetupEvent event) {
             event.enqueueWork(() -> {
                 GridInventoryClientServices.init(new Forge1201ClientBridge());
+                GridItemRarityServices.init(new Forge1201RarityCoreCompat());
                 MenuScreens.register(ModMenus.GRID_INVENTORY.get(), GridInventoryScreen::new);
                 Forge1201ClientEvents.registerItemProperties();
             });

@@ -56,13 +56,24 @@ sourceSets {
     }
 }
 
+def rarityCoreForge1201 =
+        "curse.maven:raritycore-1441762:${raritycore_forge_1201_file_id}"
+
+def enableRarityCoreRuntime =
+        (findProperty("raritycore_runtime") ?: "false").toBoolean()
+
 dependencies {
     minecraft "net.minecraftforge:forge:${forge_1201_minecraft_version}-${forge_1201_version}"
-    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}:api")
+    compileOnly "top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}:api"
 
     def enableCuriosRuntime = (findProperty("forge_1201_curios_runtime") ?: "true").toBoolean()
     if (enableCuriosRuntime) {
         runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}")
+    }
+
+    // 只用于开发环境 runClient / runServer。
+    if (enableRarityCoreRuntime) {
+        runtimeOnly fg.deobf(rarityCoreForge1201)
     }
 }
 

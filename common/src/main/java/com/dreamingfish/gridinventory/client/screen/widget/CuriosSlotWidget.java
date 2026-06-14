@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.client.screen.widget;
 
+import com.dreamingfish.gridinventory.client.compat.rarity.GridItemRarityServices;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.platform.AccessorySlotView;
@@ -25,11 +26,12 @@ public record CuriosSlotWidget(AccessorySlotView view, int x, int y, int size) {
         } else if (hovered) {
             outline = 0xFFE3E8EE;
         }
-        graphics.renderOutline(x, y, size, size, outline);
         if (view.stack().isEmpty()) {
+            graphics.renderOutline(x, y, size, size, outline);
             return;
         }
         renderItem(graphics, view.stack(), dragged ? 0.36F : 1.0F);
+        graphics.renderOutline(x, y, size, size, outline);
     }
 
     public List<Component> tooltip() {
@@ -40,6 +42,7 @@ public record CuriosSlotWidget(AccessorySlotView view, int x, int y, int size) {
     }
 
     private void renderItem(GuiGraphics graphics, ItemStack stack, float alpha) {
+        GridItemRarityServices.compat().renderBackground(graphics, stack, x + 1, y + 1, size - 2, size - 2, alpha);
         int padding = GridInventoryServices.clientConfig().freeSlotItemPadding();
         int iconSize = Math.max(8, size - padding * 2);
         float scale = iconSize / 16.0F;
@@ -53,7 +56,7 @@ public record CuriosSlotWidget(AccessorySlotView view, int x, int y, int size) {
         graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
         graphics.pose().popPose();
         graphics.setColor(1.0F, 1.0F, 1.0F, alpha);
-        graphics.renderItemDecorations(Minecraft.getInstance().font, stack, x + size - 17, y + size - 17);
+        GridItemRarityServices.compat().renderItemDecorations(graphics, Minecraft.getInstance().font, stack, x + size - 17, y + size - 17);
         graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 }

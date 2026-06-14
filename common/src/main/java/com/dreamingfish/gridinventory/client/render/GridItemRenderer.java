@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.client.render;
 
+import com.dreamingfish.gridinventory.client.compat.rarity.GridItemRarityServices;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.common.data.GridEntry;
@@ -38,9 +39,14 @@ public final class GridItemRenderer {
                                         int leftInset, int topInset, int rightInset, int bottomInset,
                                         float alpha, boolean rotated) {
         int bodyAlpha = Math.round(0xAA * alpha);
-        graphics.fill(x + leftInset, y + topInset, x + width - rightInset, y + height - bottomInset, (bodyAlpha << 24) | 0x2D2D2D);
+        boolean rarityBackground = GridItemRarityServices.compat().renderBackground(graphics, stack,
+                x + leftInset, y + topInset,
+                width - leftInset - rightInset, height - topInset - bottomInset, alpha);
+        if (!rarityBackground) {
+            graphics.fill(x + leftInset, y + topInset, x + width - rightInset, y + height - bottomInset, (bodyAlpha << 24) | 0x2D2D2D);
+        }
         renderStackInArea(graphics, stack, x + leftInset, y + topInset,
-                width - leftInset - rightInset, height - topInset - bottomInset, alpha, rotated);
+                width - leftInset - rightInset, height - topInset - bottomInset, alpha, rotated, false);
     }
 
     private static boolean needsLeftInset(GridInventoryData inventory, GridEntry entry) {
@@ -62,7 +68,7 @@ public final class GridItemRenderer {
     public static void renderStack(GuiGraphics graphics, ItemStack stack, int x, int y, float alpha) {
         graphics.setColor(1.0F, 1.0F, 1.0F, alpha);
         graphics.renderItem(stack, x, y);
-        graphics.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);
+        GridItemRarityServices.compat().renderItemDecorations(graphics, Minecraft.getInstance().font, stack, x, y);
         graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
@@ -71,12 +77,21 @@ public final class GridItemRenderer {
     }
 
     public static void renderStackInArea(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height, float alpha, boolean rotated) {
+        renderStackInArea(graphics, stack, x, y, width, height, alpha, rotated, true);
+    }
+
+    private static void renderStackInArea(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height, float alpha, boolean rotated, boolean renderRarityBackground) {
         int padding = GridInventoryServices.clientConfig().gridItemInnerPadding();
         int iconSize = Math.max(8, Math.min(width, height) - padding * 2);
         float scale = iconSize / 16.0F;
         // Grid lines consume the top and left pixels, so center icons in the visible inner area.
         float iconCenterX = x + width / 2.0F + 0.5F;
         float iconCenterY = y + height / 2.0F + 0.5F;
+
+        if (renderRarityBackground) {
+            GridItemRarityServices.compat().renderBackground(graphics, stack, x + 1, y + 1,
+                    Math.max(0, width - 2), Math.max(0, height - 2), alpha);
+        }
 
         graphics.pose().pushPose();
         graphics.pose().translate(iconCenterX, iconCenterY, 0.0F);
@@ -90,7 +105,7 @@ public final class GridItemRenderer {
         graphics.pose().popPose();
 
         graphics.setColor(1.0F, 1.0F, 1.0F, alpha);
-        graphics.renderItemDecorations(Minecraft.getInstance().font, stack, x + width - 17, y + height - 17);
+        GridItemRarityServices.compat().renderItemDecorations(graphics, Minecraft.getInstance().font, stack, x + width - 17, y + height - 17);
         graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 }

@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.target.neoforge1211.client;
 
 import com.dreamingfish.gridinventory.DFGridInventoryMod;
 import com.dreamingfish.gridinventory.client.GridInventoryClientLogic;
+import com.dreamingfish.gridinventory.client.compat.rarity.GridItemRarityServices;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
 import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
 import com.dreamingfish.gridinventory.client.render.ItemEntityHighlightRenderer;
@@ -10,6 +11,7 @@ import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
+import com.dreamingfish.gridinventory.target.neoforge1211.client.compat.rarity.NeoForge1211RarityCoreCompat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
@@ -41,6 +43,7 @@ public final class NeoForge1211ClientEvents {
 
     public static void registerItemProperties() {
         GridInventoryClientServices.init(new NeoForge1211ClientBridge());
+        GridItemRarityServices.init(new NeoForge1211RarityCoreCompat());
         ResourceLocation folded = ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded");
         ResourceLocation foldedRoll = ResourceLocation.fromNamespaceAndPath(DFGridInventoryMod.MODID, "folded_roll");
         ItemProperties.register(ModItems.GRAY_FIELD_BACKPACK.get(), folded,

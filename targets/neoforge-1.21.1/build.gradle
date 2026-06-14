@@ -61,9 +61,24 @@ sourceSets {
     }
 }
 
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+def rarityCoreNeoForge1211 =
+        "curse.maven:raritycore-1441762:${raritycore_neoforge_1211_file_id}"
+
+def enableRarityCoreRuntime =
+        (findProperty("raritycore_runtime") ?: "false").toBoolean()
+
 dependencies {
     runtimeOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1"
     compileOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1:api"
+    // 仅开发运行时加载
+    if (enableRarityCoreRuntime) {
+        localRuntime rarityCoreNeoForge1211
+    }
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
