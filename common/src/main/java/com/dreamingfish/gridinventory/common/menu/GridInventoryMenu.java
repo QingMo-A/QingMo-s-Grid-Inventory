@@ -411,6 +411,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         ItemStack inserted = groundStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? groundStack.getCount() : 1);
         inventory.add(inserted, targetX, targetY, rotated);
         groundStack.shrink(inserted.getCount());
+        playerInventory.player.take(itemEntity, inserted.getCount());
         if (groundStack.isEmpty()) {
             itemEntity.discard();
         }

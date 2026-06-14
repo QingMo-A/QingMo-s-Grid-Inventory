@@ -15,6 +15,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -52,8 +53,10 @@ public final class ManualPickupHandler {
         }
 
         if (inserted >= originalCount) {
+            player.take(itemEntity, inserted);
             itemEntity.discard();
         } else {
+            player.take(itemEntity, inserted);
             groundStack.shrink(inserted);
         }
         player.inventoryMenu.broadcastChanges();
@@ -104,7 +107,7 @@ public final class ManualPickupHandler {
             return Optional.empty();
         }
         double range = GridInventoryServices.config().pickupRange();
-        if (player.distanceToSqr(itemEntity) > range * range) {
+        if (distanceToItemBoundsSqr(player, itemEntity) > range * range) {
             return Optional.empty();
         }
         if (!GridInventoryServices.config().allowPickupThroughWalls() && !hasLineOfSight(player, itemEntity)) {
@@ -130,8 +133,30 @@ public final class ManualPickupHandler {
 
     private static boolean hasLineOfSight(ServerPlayer player, ItemEntity itemEntity) {
         Vec3 eye = player.getEyePosition();
-        Vec3 target = itemEntity.position().add(0.0, itemEntity.getBbHeight() * 0.5, 0.0);
+        AABB bounds = itemEntity.getBoundingBox().inflate(0.12);
+        Vec3 center = bounds.getCenter();
+        Vec3 top = new Vec3(center.x, bounds.maxY + 0.18, center.z);
+        Vec3 playerSide = center.add(eye.subtract(center).normalize().scale(Math.min(0.25, bounds.getXsize() + 0.12)));
+        return canSeePoint(player, eye, bounds, center)
+                || canSeePoint(player, eye, bounds, top)
+                || canSeePoint(player, eye, bounds, playerSide);
+    }
+
+    private static boolean canSeePoint(ServerPlayer player, Vec3 eye, AABB targetBounds, Vec3 target) {
         HitResult hit = player.level().clip(new ClipContext(eye, target, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        return hit.getType() == HitResult.Type.MISS || hit.getLocation().distanceToSqr(target) < 0.25;
+        return hit.getType() == HitResult.Type.MISS || targetBounds.contains(hit.getLocation());
+    }
+
+    private static double distanceToItemBoundsSqr(ServerPlayer player, ItemEntity itemEntity) {
+        Vec3 eye = player.getEyePosition();
+        AABB bounds = itemEntity.getBoundingBox().inflate(0.3);
+        double x = clamp(eye.x, bounds.minX, bounds.maxX);
+        double y = clamp(eye.y, bounds.minY, bounds.maxY);
+        double z = clamp(eye.z, bounds.minZ, bounds.maxZ);
+        return eye.distanceToSqr(x, y, z);
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }
