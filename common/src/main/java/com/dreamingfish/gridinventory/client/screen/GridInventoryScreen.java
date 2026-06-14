@@ -48,6 +48,7 @@ import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
 import com.dreamingfish.gridinventory.client.access.SlotPositionAccessor;
+import com.dreamingfish.gridinventory.client.sound.GridInventoryUiSounds;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -325,6 +326,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (!size.rotatable()) {
             rotatedPreview = false;
         }
+        GridInventoryUiSounds.foldBackpack();
         return true;
     }
 
@@ -444,6 +446,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 if (button == 1) {
                     GridInventoryServices.network().sendToServer(new QuickEquipEquipmentStorageEntryMessage(
                             equipmentHit.get().slot(), equipmentHit.get().containerId(), equipmentHit.get().entry().entryId()));
+                    GridInventoryUiSounds.equip();
                     return true;
                 }
                 if (button == 0) {
@@ -462,8 +465,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (hit.isPresent()) {
                 if (button == 1 && menu.isPlayerGrid()) {
                     GridInventoryServices.network().sendToServer(new QuickEquipGridEntryMessage(hit.get().entryId()));
+                    GridInventoryUiSounds.equip();
                 } else if (hasShiftDown() && button == 0) {
                     GridInventoryServices.network().sendToServer(new ExtractToPlayerInventoryMessage(hit.get().entryId(), hit.get().stack().getCount()));
+                    GridInventoryUiSounds.unequip();
                 } else if (button == 0) {
                     GridEntry entry = hit.get();
                     beginPendingGridDrag(entry, (int) mouseX, (int) mouseY,
@@ -484,6 +489,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             }
             if (button == 1 && hovered.hasItem() && menu.isPlayerGrid()) {
                 GridInventoryServices.network().sendToServer(new QuickEquipPlayerSlotMessage(lastPlayerSlot));
+                GridInventoryUiSounds.equip();
                 return true;
             }
             if (button == 0 && hovered.hasItem()) {
@@ -571,6 +577,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (button == 0 && draggingCurioSlot != null) {
+            boolean released = false;
+            boolean unequipped = true;
             Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region region = equipmentRegion.get();
@@ -578,27 +586,35 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), region.slot(), region.containerId(),
                         targetRegionX(region, draggedStack(), (int) mouseX),
                         targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 GridInventoryServices.network().sendToServer(new ExtractCurioToGridMessage(
                         draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(),
                         targetGridX(draggedStack(), (int) mouseX),
                         targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new ExtractCurioToPlayerSlotMessage(
                             draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), hovered.getSlotIndex()));
+                    released = true;
                 }
             }
+            playReleaseSound(released, false, unequipped);
             clearDragState();
             return true;
         }
         if (button == 0 && draggingEquipmentEntry != null) {
+            boolean released = false;
+            boolean equipped = false;
+            boolean unequipped = false;
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
                 GridInventoryServices.network().sendToServer(new InsertEquipmentStorageEntryIntoCurioMessage(
                         draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                         curioTarget.get().view().identifier(), curioTarget.get().view().index()));
+                GridInventoryUiSounds.equip();
                 clearDragState();
                 return true;
             }
@@ -611,34 +627,44 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             targetRegionX(target, draggedStack(), (int) mouseX),
                             targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                    released = true;
                 } else {
                     GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryMessage(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             target.slot(), target.containerId(),
                             targetRegionX(target, draggedStack(), (int) mouseX),
                             targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                    released = true;
                 }
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryIntoGridMessage(
                         draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                         targetGridX(draggedStack(), (int) mouseX),
                         targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
+                unequipped = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new ExtractEquipmentStorageEntryMessage(
                             draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
                             hovered.getSlotIndex(), draggingEquipmentEntry.entry().stack().getCount()));
+                    released = true;
+                    unequipped = true;
                 }
             }
+            playReleaseSound(released, equipped, unequipped);
             clearDragState();
             return true;
         }
         if (button == 0 && draggingEntry != null) {
+            boolean released = false;
+            boolean equipped = false;
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
                 GridInventoryServices.network().sendToServer(new InsertGridEntryIntoCurioMessage(
                         draggingEntry.entryId(), curioTarget.get().view().identifier(), curioTarget.get().view().index()));
+                GridInventoryUiSounds.equip();
                 clearDragState();
                 return true;
             }
@@ -649,23 +675,31 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         draggingEntry.entryId(), target.slot(), target.containerId(),
                         targetRegionX(target, draggedStack(), (int) mouseX),
                         targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
+                equipped = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 GridInventoryServices.network().sendToServer(new MoveGridEntryMessage(draggingEntry.entryId(),
                         targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotMessage(draggingEntry.entryId(), hovered.getSlotIndex(), draggingEntry.stack().getCount()));
+                    released = true;
                 }
             }
+            playReleaseSound(released, equipped, false);
             clearDragState();
             return true;
         }
         if (button == 0 && !selectedPlayerStack.isEmpty() && lastPlayerSlot >= 0) {
+            boolean released = false;
+            boolean equipped = false;
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
                 GridInventoryServices.network().sendToServer(new InsertPlayerSlotIntoCurioMessage(
                         lastPlayerSlot, curioTarget.get().view().identifier(), curioTarget.get().view().index()));
+                GridInventoryUiSounds.equip();
                 clearDragState();
                 return true;
             }
@@ -675,15 +709,20 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 GridInventoryServices.network().sendToServer(new InsertIntoEquipmentStorageMessage(lastPlayerSlot, region.slot(), region.containerId(),
                         targetRegionX(region, draggedStack(), (int) mouseX),
                         targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
+                equipped = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryMessage(lastPlayerSlot,
                         targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, false, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null && hovered.getSlotIndex() != lastPlayerSlot) {
                     GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotMessage(lastPlayerSlot, hovered.getSlotIndex()));
+                    released = true;
                 }
             }
+            playReleaseSound(released, equipped, false);
             clearDragState();
             return true;
         }
@@ -948,12 +987,26 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             rotatedPreview = false;
             setSlotDragAnchor(pendingMouseX, pendingMouseY, pendingSlotDrag);
         }
+        GridInventoryUiSounds.dragStart();
         clearPendingDrag();
         return true;
     }
 
     private boolean hasPendingDrag() {
         return pendingGridDrag != null || pendingEquipmentDrag != null || pendingCurioDrag != null || pendingSlotDrag != null;
+    }
+
+    private void playReleaseSound(boolean released, boolean equipped, boolean unequipped) {
+        if (!released) {
+            return;
+        }
+        if (equipped) {
+            GridInventoryUiSounds.equip();
+        } else if (unequipped) {
+            GridInventoryUiSounds.unequip();
+        } else {
+            GridInventoryUiSounds.dragRelease();
+        }
     }
 
     private void clearPendingDrag() {
