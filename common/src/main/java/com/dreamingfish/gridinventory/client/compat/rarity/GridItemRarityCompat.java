@@ -38,10 +38,26 @@ public abstract class GridItemRarityCompat {
         if (visual == null) {
             return false;
         }
-        int rgb = visual.rgb() & 0xFFFFFF;
-        int fillAlpha = Math.max(0, Math.min(255, Math.round(0x48 * alpha)));
+        int rgb = softenColor(visual.rgb() & 0xFFFFFF);
+        int fillAlpha = Math.max(0, Math.min(255, Math.round(0x34 * alpha)));
         graphics.fill(x, y, x + width, y + height, (fillAlpha << 24) | rgb);
         return true;
+    }
+
+    private static int softenColor(int rgb) {
+        int red = (rgb >> 16) & 0xFF;
+        int green = (rgb >> 8) & 0xFF;
+        int blue = rgb & 0xFF;
+        int gray = Math.round(red * 0.299F + green * 0.587F + blue * 0.114F);
+        red = softenChannel(red, gray);
+        green = softenChannel(green, gray);
+        blue = softenChannel(blue, gray);
+        return (red << 16) | (green << 8) | blue;
+    }
+
+    private static int softenChannel(int channel, int gray) {
+        int desaturated = Math.round(gray + (channel - gray) * 0.62F);
+        return Math.max(0, Math.min(255, Math.round(desaturated * 0.78F)));
     }
 
     public final void renderItemDecorations(GuiGraphics graphics, Font font, ItemStack stack, int x, int y) {
