@@ -31,7 +31,7 @@ public abstract class GridItemRarityCompat {
     }
 
     public final boolean renderBackground(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height, float alpha) {
-        if (stack.isEmpty() || width <= 0 || height <= 0 || alpha <= 0.0F) {
+        if (stack.isEmpty() || width <= 0 || height <= 0 || alpha < 1.0F) {
             return false;
         }
         RarityVisual visual = queryVisual(stack);
