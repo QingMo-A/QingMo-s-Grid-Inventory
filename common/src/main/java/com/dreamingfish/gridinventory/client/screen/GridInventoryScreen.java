@@ -62,11 +62,23 @@ import java.util.Optional;
 
 public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMenu> {
     private static final int CELL = 27;
+    private static final int DRAG_START_DISTANCE = 6;
     private int gridLeft;
     private int gridTop;
     private GridEntry draggingEntry;
     private GridColumnPanel.EquipmentEntryHit draggingEquipmentEntry;
     private CuriosSlotWidget draggingCurioSlot;
+    private GridEntry pendingGridDrag;
+    private GridColumnPanel.EquipmentEntryHit pendingEquipmentDrag;
+    private CuriosSlotWidget pendingCurioDrag;
+    private Slot pendingSlotDrag;
+    private int pendingSlotIndex = -1;
+    private int pendingMouseX;
+    private int pendingMouseY;
+    private int pendingItemLeft;
+    private int pendingItemTop;
+    private int pendingItemWidth = 1;
+    private int pendingItemHeight = 1;
     private ItemStack dragPreviewStack = ItemStack.EMPTY;
     private boolean rotatedPreview;
     private int lastPlayerSlot = -1;
@@ -422,14 +434,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<CuriosSlotWidget> curioHit = equipmentColumnPanel.curioSlotAt(mouseX, mouseY);
             if (curioHit.isPresent()) {
                 if (button == 0 && !curioHit.get().view().stack().isEmpty()) {
-                    draggingCurioSlot = curioHit.get();
-                    selectedPlayerStack = ItemStack.EMPTY;
-                    lastPlayerSlot = -1;
-                    rotatedPreview = false;
-                    dragAnchorCellX = 0;
-                    dragAnchorCellY = 0;
-                    dragAnchorPixelX = CELL / 2;
-                    dragAnchorPixelY = CELL / 2;
+                    beginPendingCurioDrag(curioHit.get(), (int) mouseX, (int) mouseY);
                     return true;
                 }
                 return button == 0;
@@ -442,13 +447,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     return true;
                 }
                 if (button == 0) {
-                    draggingEquipmentEntry = equipmentHit.get();
-                    dragPreviewStack = draggingEquipmentEntry.entry().stack().copy();
-                    rotatedPreview = equipmentHit.get().entry().rotated();
-                    setGridDragAnchor((int) mouseX, (int) mouseY,
-                            draggingEquipmentEntry.region().drawX(draggingEquipmentEntry.entry().x(), draggingEquipmentEntry.entry().y()),
-                            draggingEquipmentEntry.region().drawY(draggingEquipmentEntry.entry().x(), draggingEquipmentEntry.entry().y()),
-                            draggingEquipmentEntry.entry().width(), draggingEquipmentEntry.entry().height());
+                    GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
+                    beginPendingEquipmentDrag(hit, (int) mouseX, (int) mouseY,
+                            hit.region().drawX(hit.entry().x(), hit.entry().y()),
+                            hit.region().drawY(hit.entry().x(), hit.entry().y()));
                     return true;
                 }
             }
@@ -463,12 +465,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 } else if (hasShiftDown() && button == 0) {
                     GridInventoryServices.network().sendToServer(new ExtractToPlayerInventoryMessage(hit.get().entryId(), hit.get().stack().getCount()));
                 } else if (button == 0) {
-                    draggingEntry = hit.get();
-                    dragPreviewStack = draggingEntry.stack().copy();
-                    rotatedPreview = hit.get().rotated();
-                    setGridDragAnchor((int) mouseX, (int) mouseY,
-                            gridLeft + draggingEntry.x() * CELL, gridTop + draggingEntry.y() * CELL,
-                            draggingEntry.width(), draggingEntry.height());
+                    GridEntry entry = hit.get();
+                    beginPendingGridDrag(entry, (int) mouseX, (int) mouseY,
+                            gridLeft + entry.x() * CELL, gridTop + entry.y() * CELL);
                 } else {
                     return false;
                 }
@@ -488,9 +487,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 return true;
             }
             if (button == 0 && hovered.hasItem()) {
-                selectedPlayerStack = hovered.getItem().copy();
-                rotatedPreview = false;
-                setSlotDragAnchor((int) mouseX, (int) mouseY, hovered);
+                beginPendingSlotDrag(hovered, (int) mouseX, (int) mouseY);
                 return true;
             }
         }
@@ -559,6 +556,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (button == 0 && nearbyItemsPanel.isDraggingGroundItem()) {
             handleGroundItemRelease((int) mouseX, (int) mouseY);
             nearbyItemsPanel.clearDrag();
+            return true;
+        }
+        if (button == 0 && hasPendingDrag()) {
+            clearPendingDrag();
             return true;
         }
         if (menu.isPlayerGrid()) {
@@ -712,6 +713,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (nearbyItemsPanel.mouseDragged(mouseX, mouseY, button)) {
+            return true;
+        }
+        if (button == 0 && activatePendingDragIfMoved((int) mouseX, (int) mouseY)) {
             return true;
         }
         if (menu.isPlayerGrid()) {
@@ -873,6 +877,93 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         dragAnchorPixelY = relativeY % CELL;
     }
 
+    private void beginPendingGridDrag(GridEntry entry, int mouseX, int mouseY, int itemLeft, int itemTop) {
+        clearPendingDrag();
+        pendingGridDrag = entry;
+        pendingMouseX = mouseX;
+        pendingMouseY = mouseY;
+        pendingItemLeft = itemLeft;
+        pendingItemTop = itemTop;
+        pendingItemWidth = entry.width();
+        pendingItemHeight = entry.height();
+    }
+
+    private void beginPendingEquipmentDrag(GridColumnPanel.EquipmentEntryHit hit, int mouseX, int mouseY, int itemLeft, int itemTop) {
+        clearPendingDrag();
+        pendingEquipmentDrag = hit;
+        pendingMouseX = mouseX;
+        pendingMouseY = mouseY;
+        pendingItemLeft = itemLeft;
+        pendingItemTop = itemTop;
+        pendingItemWidth = hit.entry().width();
+        pendingItemHeight = hit.entry().height();
+    }
+
+    private void beginPendingCurioDrag(CuriosSlotWidget slot, int mouseX, int mouseY) {
+        clearPendingDrag();
+        pendingCurioDrag = slot;
+        pendingMouseX = mouseX;
+        pendingMouseY = mouseY;
+    }
+
+    private void beginPendingSlotDrag(Slot slot, int mouseX, int mouseY) {
+        clearPendingDrag();
+        pendingSlotDrag = slot;
+        pendingSlotIndex = slot.getSlotIndex();
+        pendingMouseX = mouseX;
+        pendingMouseY = mouseY;
+    }
+
+    private boolean activatePendingDragIfMoved(int mouseX, int mouseY) {
+        if (!hasPendingDrag()) {
+            return false;
+        }
+        int dx = mouseX - pendingMouseX;
+        int dy = mouseY - pendingMouseY;
+        if (dx * dx + dy * dy < DRAG_START_DISTANCE * DRAG_START_DISTANCE) {
+            return true;
+        }
+        if (pendingGridDrag != null) {
+            draggingEntry = pendingGridDrag;
+            dragPreviewStack = draggingEntry.stack().copy();
+            rotatedPreview = draggingEntry.rotated();
+            setGridDragAnchor(pendingMouseX, pendingMouseY, pendingItemLeft, pendingItemTop, pendingItemWidth, pendingItemHeight);
+        } else if (pendingEquipmentDrag != null) {
+            draggingEquipmentEntry = pendingEquipmentDrag;
+            dragPreviewStack = draggingEquipmentEntry.entry().stack().copy();
+            rotatedPreview = draggingEquipmentEntry.entry().rotated();
+            setGridDragAnchor(pendingMouseX, pendingMouseY, pendingItemLeft, pendingItemTop, pendingItemWidth, pendingItemHeight);
+        } else if (pendingCurioDrag != null) {
+            draggingCurioSlot = pendingCurioDrag;
+            selectedPlayerStack = ItemStack.EMPTY;
+            lastPlayerSlot = -1;
+            rotatedPreview = false;
+            dragAnchorCellX = 0;
+            dragAnchorCellY = 0;
+            dragAnchorPixelX = CELL / 2;
+            dragAnchorPixelY = CELL / 2;
+        } else if (pendingSlotDrag != null) {
+            selectedPlayerStack = pendingSlotDrag.getItem().copy();
+            lastPlayerSlot = pendingSlotIndex;
+            rotatedPreview = false;
+            setSlotDragAnchor(pendingMouseX, pendingMouseY, pendingSlotDrag);
+        }
+        clearPendingDrag();
+        return true;
+    }
+
+    private boolean hasPendingDrag() {
+        return pendingGridDrag != null || pendingEquipmentDrag != null || pendingCurioDrag != null || pendingSlotDrag != null;
+    }
+
+    private void clearPendingDrag() {
+        pendingGridDrag = null;
+        pendingEquipmentDrag = null;
+        pendingCurioDrag = null;
+        pendingSlotDrag = null;
+        pendingSlotIndex = -1;
+    }
+
     private void setSlotDragAnchor(int mouseX, int mouseY, Slot slot) {
         dragAnchorCellX = 0;
         dragAnchorCellY = 0;
@@ -904,6 +995,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void clearDragState() {
+        clearPendingDrag();
         draggingEntry = null;
         draggingEquipmentEntry = null;
         draggingCurioSlot = null;
