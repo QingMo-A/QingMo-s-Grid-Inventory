@@ -57,11 +57,11 @@ public final class GridColumnPanel {
         int y = top + 22 - scroll;
         y = renderGrid(graphics, Component.translatable("screen.df_grid_inventory.pocket"), pocket, y, draggedPocketEntryId);
         if (minecraft.player != null) {
-            y = renderEquipmentStorage(graphics, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST), Component.translatable("screen.df_grid_inventory.chest_storage"), y, draggedEquipmentEntry);
-            y = renderEquipmentStorage(graphics, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS), Component.translatable("screen.df_grid_inventory.legs_storage"), y, draggedEquipmentEntry);
+            y = renderEquipmentStorage(graphics, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST), y, draggedEquipmentEntry);
+            y = renderEquipmentStorage(graphics, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS), y, draggedEquipmentEntry);
             Optional<ItemStack> backpack = GridInventoryServices.accessories().getAccessoryStack(minecraft.player, "back", 0);
             if (backpack.isPresent()) {
-                y = renderEquipmentStorage(graphics, GridEquipmentSlots.back(), backpack.get(), Component.literal("Backpack"), y, draggedEquipmentEntry);
+                y = renderEquipmentStorage(graphics, GridEquipmentSlots.back(), backpack.get(), y, draggedEquipmentEntry);
             }
         }
         graphics.disableScissor();
@@ -91,23 +91,24 @@ public final class GridColumnPanel {
         return equipmentRegions.stream().filter(region -> region.contains(mouseX, mouseY)).findFirst();
     }
 
-    private int renderEquipmentStorage(GuiGraphics graphics, EquipmentSlot slot, ItemStack equipped, Component emptyTitle, int y,
+    private int renderEquipmentStorage(GuiGraphics graphics, EquipmentSlot slot, ItemStack equipped, int y,
                                        @Nullable EquipmentEntryHit draggedEquipmentEntry) {
+        if (equipped.isEmpty()) {
+            return y;
+        }
         EquipmentStorageData storage = GridInventoryServices.itemStackData().getEquipmentStorage(equipped);
-        if (!equipped.isEmpty()) {
-            storage = EquipmentStorageManager.initializeStorage(equipped, slot);
-        }
+        storage = EquipmentStorageManager.initializeStorage(equipped, slot);
         if (storage == null || storage.containers().isEmpty()) {
-            graphics.drawString(Minecraft.getInstance().font, emptyTitle, left + 8, y + 4, 0x787878, false);
-            return y + 19;
+            return y;
         }
+        Component title = equipped.getHoverName();
         for (NamedGridInventoryData container : storage.containers()) {
             equipmentRegions.add(new Region(slot, container.id(), container.inventory(), left + 8, y + 13));
             UUID draggedEntryId = draggedEquipmentEntry != null
                     && draggedEquipmentEntry.slot() == slot
                     && draggedEquipmentEntry.containerId().equals(container.id())
                     ? draggedEquipmentEntry.entry().entryId() : null;
-            y = renderGrid(graphics, Component.literal(container.title()), container.inventory(), y, draggedEntryId);
+            y = renderGrid(graphics, title, container.inventory(), y, draggedEntryId);
         }
         return y;
     }
