@@ -39,7 +39,7 @@ public abstract class GridItemRarityCompat {
             return false;
         }
         int rgb = softenColor(visual.rgb() & 0xFFFFFF);
-        int fillAlpha = Math.max(0, Math.min(255, Math.round(0x34 * alpha)));
+        int fillAlpha = Math.max(0, Math.min(255, Math.round(0x48 * alpha)));
         graphics.fill(x, y, x + width, y + height, (fillAlpha << 24) | rgb);
         return true;
     }
