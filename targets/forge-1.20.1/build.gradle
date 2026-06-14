@@ -9,6 +9,20 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+repositories {
+    maven {
+        name = "Curios"
+        url = uri("https://maven.theillusivec4.top/")
+    }
+    maven {
+        name = "CurseMaven"
+        url = uri("https://cursemaven.com")
+        content {
+            includeGroup("curse.maven")
+        }
+    }
+}
+
 minecraft {
     mappings channel: 'official', version: project.forge_1201_minecraft_version
 
@@ -43,16 +57,16 @@ minecraft {
 
 sourceSets {
     main {
-        java.setSrcDirs([file("src/main/java"), rootProject.project(":common").file("src/main/java")])
+        java.setSrcDirs([file("src/main/java"), rootProject.file("common/src/main/java")])
         java.exclude { details ->
-            def commonSource = rootProject.project(":common").file("src/main/java").toPath()
+            def commonSource = rootProject.file("common/src/main/java").toPath()
             def filePath = details.file.toPath()
             if (!filePath.startsWith(commonSource)) {
                 return false
             }
             return details.path == "com/dreamingfish/gridinventory/common/item/SmallGridBagItem.java"
         }
-        resources.srcDir rootProject.project(":common").file("src/main/resources")
+        resources.srcDir rootProject.file("common/src/main/resources")
     }
 }
 

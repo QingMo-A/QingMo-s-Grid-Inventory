@@ -129,7 +129,6 @@ root
 `settings.gradle` 改为：
 
 ```gradle
-include("common")
 include("targets:forge-1.20.1")
 include("targets:neoforge-1.21.1")
 ```
@@ -218,8 +217,8 @@ include("targets:neoforge_1_21_1")
 目标：
 
 ```gradle
-sourceSets.main.java.srcDir rootProject.project(":common").file("src/main/java")
-sourceSets.main.resources.srcDir rootProject.project(":common").file("src/main/resources")
+sourceSets.main.java.srcDir rootProject.file("common/src/main/java")
+sourceSets.main.resources.srcDir rootProject.file("common/src/main/resources")
 ```
 
 两个 target 都应该使用自己的 Minecraft / loader 依赖重新编译 common 源码。

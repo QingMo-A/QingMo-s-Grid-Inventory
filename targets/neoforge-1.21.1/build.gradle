@@ -10,6 +10,20 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+repositories {
+    maven {
+        name = "Curios"
+        url = uri("https://maven.theillusivec4.top/")
+    }
+    maven {
+        name = "CurseMaven"
+        url = uri("https://cursemaven.com")
+        content {
+            includeGroup("curse.maven")
+        }
+    }
+}
+
 neoForge {
     version = project.neo_version
 
@@ -55,8 +69,8 @@ neoForge {
 
 sourceSets {
     main {
-        java.srcDir rootProject.project(":common").file("src/main/java")
-        resources.srcDir rootProject.project(":common").file("src/main/resources")
+        java.srcDir rootProject.file("common/src/main/java")
+        resources.srcDir rootProject.file("common/src/main/resources")
         resources.srcDir "src/generated/resources"
     }
 }
