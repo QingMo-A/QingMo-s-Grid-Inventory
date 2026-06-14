@@ -31,6 +31,8 @@ public final class EquipmentColumnPanel {
     private int curiosViewportY;
     private int curiosViewportWidth;
     private int curiosViewportHeight;
+    private int curiosContentHeight;
+    private final PanelScrollbar curiosScrollbar = new PanelScrollbar();
     private static final int MAX_VISIBLE_CURIOS_SLOTS = 5;
     private final List<FreeSlotWidget> freeSlots = new ArrayList<>();
     private final List<CuriosSlotWidget> curiosSlots = new ArrayList<>();
@@ -81,14 +83,19 @@ public final class EquipmentColumnPanel {
         List<AccessorySlotView> views = GridInventoryServices.accessories().collectSlots(minecraft.player);
         curiosTotalSlots = views.size();
         int visibleSlots = Math.min(MAX_VISIBLE_CURIOS_SLOTS, curiosTotalSlots);
-        curiosScroll = Math.max(0, Math.min(curiosScroll, Math.max(0, curiosTotalSlots - visibleSlots)));
         curiosViewportX = startX;
         curiosViewportY = startY;
         curiosViewportWidth = slotSize + 10;
         curiosViewportHeight = visibleSlots == 0 ? 0 : visibleSlots * slotSize + Math.max(0, visibleSlots - 1) * 4;
-        for (int i = 0; i < visibleSlots; i++) {
-            int viewIndex = curiosScroll + i;
-            curiosSlots.add(new CuriosSlotWidget(views.get(viewIndex), startX, startY + i * (slotSize + 4), slotSize));
+        curiosContentHeight = curiosTotalSlots == 0 ? 0 : curiosTotalSlots * slotSize + Math.max(0, curiosTotalSlots - 1) * 4;
+        curiosScrollbar.update(curiosViewportX, curiosViewportY, curiosViewportWidth, curiosViewportHeight, curiosContentHeight);
+        curiosScroll = curiosScrollbar.scroll();
+        for (int i = 0; i < curiosTotalSlots; i++) {
+            int slotY = startY + i * (slotSize + 4) - curiosScroll;
+            if (slotY + slotSize <= curiosViewportY || slotY >= curiosViewportY + curiosViewportHeight) {
+                continue;
+            }
+            curiosSlots.add(new CuriosSlotWidget(views.get(i), startX, slotY, slotSize));
         }
     }
 
@@ -134,14 +141,19 @@ public final class EquipmentColumnPanel {
             freeSlot.render(graphics, slot, hovered,
                     draggedPlayerSlot >= 0 && slot.getSlotIndex() == draggedPlayerSlot, dropAllowed);
         }
-        for (CuriosSlotWidget curioSlot : curiosSlots) {
-            boolean hovered = curioSlot.contains(mouseX, mouseY);
-            Boolean dropAllowed = !draggedStack.isEmpty()
-                    ? GridInventoryServices.accessories().canPlaceInCurio(minecraft.player, curioSlot.view().identifier(), curioSlot.view().index(),
-                    draggedStack, curioSlot.view().stack().isEmpty()) : null;
-            curioSlot.render(graphics, hovered, dropAllowed, false);
+        if (curiosExpanded && curiosViewportHeight > 0) {
+            graphics.enableScissor(curiosViewportX, curiosViewportY, curiosViewportX + curiosViewportWidth - 8,
+                    curiosViewportY + curiosViewportHeight);
+            for (CuriosSlotWidget curioSlot : curiosSlots) {
+                boolean hovered = curioSlot.contains(mouseX, mouseY);
+                Boolean dropAllowed = !draggedStack.isEmpty()
+                        ? GridInventoryServices.accessories().canPlaceInCurio(minecraft.player, curioSlot.view().identifier(), curioSlot.view().index(),
+                        draggedStack, curioSlot.view().stack().isEmpty()) : null;
+                curioSlot.render(graphics, hovered, dropAllowed, false);
+            }
+            graphics.disableScissor();
         }
-        renderCuriosScrollbar(graphics);
+        renderCuriosScrollbar(graphics, mouseX, mouseY);
     }
 
     private boolean canReceive(Slot slot, ItemStack draggedStack, List<Slot> slots, int draggedPlayerSlot, net.minecraft.world.entity.player.Player player) {
@@ -189,13 +201,19 @@ public final class EquipmentColumnPanel {
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
-        if (!curiosExpanded || curiosTotalSlots <= MAX_VISIBLE_CURIOS_SLOTS || !inCuriosViewport(mouseX, mouseY)) {
+        if (!curiosExpanded) {
             return false;
         }
-        int maxScroll = Math.max(0, curiosTotalSlots - MAX_VISIBLE_CURIOS_SLOTS);
-        int next = curiosScroll + (scrollY < 0.0D ? 1 : -1);
-        curiosScroll = Math.max(0, Math.min(next, maxScroll));
-        return true;
+        return curiosScrollbar.mouseScrolled(mouseX, mouseY, scrollY,
+                GridInventoryServices.clientConfig().gridCellSize() + 4);
+    }
+
+    public boolean mouseDragged(double mouseX, double mouseY, int button) {
+        return curiosScrollbar.mouseDragged(mouseX, mouseY, button);
+    }
+
+    public boolean mouseReleased(int button) {
+        return curiosScrollbar.mouseReleased(button);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -207,7 +225,7 @@ public final class EquipmentColumnPanel {
             curiosExpanded = !curiosExpanded;
             return true;
         }
-        return false;
+        return curiosExpanded && curiosScrollbar.mouseClicked(mouseX, mouseY, button);
     }
 
     private void renderCuriosToggle(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -230,18 +248,11 @@ public final class EquipmentColumnPanel {
                 && mouseY < curiosViewportY + curiosViewportHeight;
     }
 
-    private void renderCuriosScrollbar(GuiGraphics graphics) {
-        if (!curiosExpanded || curiosTotalSlots <= MAX_VISIBLE_CURIOS_SLOTS || curiosViewportHeight <= 0) {
+    private void renderCuriosScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+        if (!curiosExpanded || curiosViewportHeight <= 0) {
             return;
         }
-        int barX = curiosViewportX + curiosViewportWidth - 4;
-        int barY = curiosViewportY;
-        int barHeight = curiosViewportHeight;
-        graphics.fill(barX, barY, barX + 2, barY + barHeight, 0x44202020);
-        int thumbHeight = Math.max(10, barHeight * MAX_VISIBLE_CURIOS_SLOTS / curiosTotalSlots);
-        int maxScroll = Math.max(1, curiosTotalSlots - MAX_VISIBLE_CURIOS_SLOTS);
-        int travel = Math.max(0, barHeight - thumbHeight);
-        int thumbY = barY + travel * curiosScroll / maxScroll;
-        graphics.fill(barX - 1, thumbY, barX + 3, thumbY + thumbHeight, 0xCCBFA8FF);
+        curiosScrollbar.update(curiosViewportX, curiosViewportY, curiosViewportWidth, curiosViewportHeight, curiosContentHeight);
+        curiosScrollbar.render(graphics, mouseX, mouseY);
     }
 }

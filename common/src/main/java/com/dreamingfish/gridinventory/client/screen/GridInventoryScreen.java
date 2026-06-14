@@ -141,7 +141,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0x2E101010);
             equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot,
                     draggedStack(), !draggedStack().isEmpty());
-            gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(), draggingEquipmentEntry);
+            gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(),
+                    draggingEquipmentEntry, mouseX, mouseY);
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
             renderHover(graphics, mouseX, mouseY);
@@ -407,6 +408,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nearbyItemsPanel.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
+        if (menu.isPlayerGrid() && gridColumnPanel.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
         if (button == 1 && (draggingEntry != null || draggingEquipmentEntry != null || draggingCurioSlot != null || !selectedPlayerStack.isEmpty())) {
             rotateDraggedPreview();
             return true;
@@ -557,6 +561,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             nearbyItemsPanel.clearDrag();
             return true;
         }
+        if (menu.isPlayerGrid()) {
+            if (gridColumnPanel.mouseReleased(button) || equipmentColumnPanel.mouseReleased(button)) {
+                return true;
+            }
+        }
         if (nearbyItemsPanel.mouseReleased(mouseX, mouseY, button)) {
             return true;
         }
@@ -705,6 +714,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nearbyItemsPanel.mouseDragged(mouseX, mouseY, button)) {
             return true;
         }
+        if (menu.isPlayerGrid()) {
+            if (gridColumnPanel.mouseDragged(mouseX, mouseY, button) || equipmentColumnPanel.mouseDragged(mouseX, mouseY, button)) {
+                return true;
+            }
+        }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
@@ -777,10 +791,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private List<Component> gridEntryTooltip(GridEntry entry) {
-        List<Component> tooltip = new java.util.ArrayList<>();
-        tooltip.add(entry.stack().getHoverName());
-        tooltip.add(Component.literal("Size: " + entry.width() + " x " + entry.height()).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Rotatable: " + (GridItemSizeManager.getSize(entry.stack()).rotatable() ? "Yes" : "No")).withStyle(ChatFormatting.GRAY));
+        List<Component> tooltip = new java.util.ArrayList<>(getTooltipFromItem(minecraft, entry.stack()));
         Component hint = quickEquipTooltip(entry.stack());
         if (hint != null) {
             tooltip.add(hint);

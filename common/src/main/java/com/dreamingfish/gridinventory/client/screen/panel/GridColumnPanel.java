@@ -30,6 +30,7 @@ public final class GridColumnPanel {
     private int height;
     private int scroll;
     private int contentHeight;
+    private final PanelScrollbar scrollbar = new PanelScrollbar();
     private final List<Region> equipmentRegions = new ArrayList<>();
 
     public void setBounds(int left, int top, int width, int height) {
@@ -48,10 +49,12 @@ public final class GridColumnPanel {
     }
 
     public void render(GuiGraphics graphics, GridInventoryData pocket, @Nullable UUID draggedPocketEntryId,
-                       @Nullable EquipmentEntryHit draggedEquipmentEntry) {
+                       @Nullable EquipmentEntryHit draggedEquipmentEntry, int mouseX, int mouseY) {
         Minecraft minecraft = Minecraft.getInstance();
         graphics.fill(left, top, left + width, top + height, 0x2E1A1A1A);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.storage"), left + 8, top + 6, 0xFFFFFF, false);
+        scrollbar.update(left, top + 18, width - 6, height - 22, contentHeight);
+        scroll = scrollbar.scroll();
         graphics.enableScissor(left, top + 18, left + width - 6, top + height - 4);
         equipmentRegions.clear();
         int y = top + 22 - scroll;
@@ -66,16 +69,24 @@ public final class GridColumnPanel {
         }
         graphics.disableScissor();
         contentHeight = Math.max(height, y - top + scroll + 6);
-        renderScrollbar(graphics);
+        scrollbar.update(left, top + 18, width - 6, height - 22, contentHeight);
+        renderScrollbar(graphics, mouseX, mouseY);
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaY) {
-        if (mouseX < left || mouseX >= left + width || mouseY < top || mouseY >= top + height || contentHeight <= height) {
-            return false;
-        }
-        int max = Math.max(0, contentHeight - height);
-        scroll = Math.max(0, Math.min(max, scroll - (int) Math.signum(deltaY) * CELL));
-        return true;
+        return scrollbar.mouseScrolled(mouseX, mouseY, deltaY, CELL);
+    }
+
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return scrollbar.mouseClicked(mouseX, mouseY, button);
+    }
+
+    public boolean mouseDragged(double mouseX, double mouseY, int button) {
+        return scrollbar.mouseDragged(mouseX, mouseY, button);
+    }
+
+    public boolean mouseReleased(int button) {
+        return scrollbar.mouseReleased(button);
     }
 
     public Optional<EquipmentEntryHit> equipmentEntryAt(int mouseX, int mouseY) {
@@ -124,17 +135,8 @@ public final class GridColumnPanel {
         return gridTop + GridLayoutMetrics.height(inventory, CELL) + 10;
     }
 
-    private void renderScrollbar(GuiGraphics graphics) {
-        if (contentHeight <= height) {
-            return;
-        }
-        int trackTop = top + 20;
-        int trackHeight = height - 26;
-        int thumbHeight = Math.max(18, trackHeight * height / contentHeight);
-        int maxScroll = contentHeight - height;
-        int thumbY = trackTop + (trackHeight - thumbHeight) * scroll / maxScroll;
-        graphics.fill(left + width - 5, trackTop, left + width - 2, trackTop + trackHeight, 0xFF303030);
-        graphics.fill(left + width - 5, thumbY, left + width - 2, thumbY + thumbHeight, 0xFF969696);
+    private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
+        scrollbar.render(graphics, mouseX, mouseY);
     }
 
     public record EquipmentEntryHit(EquipmentSlot slot, String containerId, GridInventoryData inventory, GridEntry entry, Region region) {
