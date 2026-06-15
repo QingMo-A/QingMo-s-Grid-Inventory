@@ -2,6 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.dreamingfish.gridinventory.target.neoforge1211.mixin",
+  "refmap": "df_grid_inventory.neoforge.refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [

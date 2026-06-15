@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'net.minecraftforge.gradle'
+    id 'org.spongepowered.mixin'
 }
 
 base {
@@ -10,6 +11,11 @@ base {
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 repositories {
+    mavenCentral()
+    maven {
+        name = "Sponge"
+        url = uri("https://repo.spongepowered.org/repository/maven-public/")
+    }
     maven {
         name = "Curios"
         url = uri("https://maven.theillusivec4.top/")
@@ -78,6 +84,7 @@ def enableRarityCoreRuntime =
 
 dependencies {
     minecraft "net.minecraftforge:forge:${forge_1201_minecraft_version}-${forge_1201_version}"
+    annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
     compileOnly "top.theillusivec4.curios:curios-forge:${forge_1201_curios_version}:api"
 
     def enableCuriosRuntime = (findProperty("forge_1201_curios_runtime") ?: "true").toBoolean()
@@ -89,6 +96,11 @@ dependencies {
     if (enableRarityCoreRuntime) {
         runtimeOnly fg.deobf(rarityCoreForge1201)
     }
+}
+
+mixin {
+    add sourceSets.main, "df_grid_inventory.forge1201.refmap.json"
+    config "df_grid_inventory.forge1201.mixins.json"
 }
 
 tasks.named('processResources', ProcessResources).configure {

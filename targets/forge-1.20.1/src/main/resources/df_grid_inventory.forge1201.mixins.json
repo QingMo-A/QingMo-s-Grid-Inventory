@@ -2,6 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.dreamingfish.gridinventory.target.forge1201.mixin",
+  "refmap": "df_grid_inventory.forge1201.refmap.json",
   "compatibilityLevel": "JAVA_17",
   "mixins": [],
   "client": [

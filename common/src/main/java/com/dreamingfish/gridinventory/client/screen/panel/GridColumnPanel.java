@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.screen.card.StorageAccordionCard;
 import com.dreamingfish.gridinventory.client.screen.card.StorageAccordionState;
 import com.dreamingfish.gridinventory.client.screen.card.StorageCardData;
+import com.dreamingfish.gridinventory.client.screen.card.StorageCardHeaderRenderer;
 import com.dreamingfish.gridinventory.client.screen.card.StorageCardKey;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
@@ -53,7 +54,7 @@ public final class GridColumnPanel {
     }
 
     public int pocketTop() {
-        return top + 76 - scroll;
+        return top + 22 + StorageCardHeaderRenderer.HEIGHT + 8 - scroll;
     }
 
     public void render(GuiGraphics graphics, GridInventoryData pocket, @Nullable UUID draggedPocketEntryId,
