@@ -1,8 +1,11 @@
 package com.dreamingfish.gridinventory.client.ui.animation;
 
 public final class HoverAnimation {
-    private static final long ENTER_DURATION_NANOS = 90_000_000L;
-    private static final long EXIT_DURATION_NANOS = 140_000_000L;
+    private static final long DEFAULT_ENTER_DURATION_NANOS = 90_000_000L;
+    private static final long DEFAULT_EXIT_DURATION_NANOS = 140_000_000L;
+
+    private final long enterDurationNanos;
+    private final long exitDurationNanos;
 
     private float startValue;
     private float targetValue;
@@ -10,6 +13,15 @@ public final class HoverAnimation {
     private long transitionStartNanos;
     private long transitionDurationNanos;
     private boolean initialized;
+
+    public HoverAnimation() {
+        this(DEFAULT_ENTER_DURATION_NANOS, DEFAULT_EXIT_DURATION_NANOS);
+    }
+
+    public HoverAnimation(long enterDurationNanos, long exitDurationNanos) {
+        this.enterDurationNanos = enterDurationNanos;
+        this.exitDurationNanos = exitDurationNanos;
+    }
 
     public float update(boolean hovered) {
         long now = System.nanoTime();
@@ -19,7 +31,7 @@ public final class HoverAnimation {
             targetValue = 0.0F;
             currentValue = 0.0F;
             transitionStartNanos = now;
-            transitionDurationNanos = ENTER_DURATION_NANOS;
+            transitionDurationNanos = enterDurationNanos;
         }
 
         float displayedValue = valueAt(now);
@@ -28,7 +40,7 @@ public final class HoverAnimation {
             startValue = displayedValue;
             targetValue = nextTarget;
             transitionStartNanos = now;
-            transitionDurationNanos = hovered ? ENTER_DURATION_NANOS : EXIT_DURATION_NANOS;
+            transitionDurationNanos = hovered ? enterDurationNanos : exitDurationNanos;
         }
 
         currentValue = valueAt(now);
@@ -40,7 +52,7 @@ public final class HoverAnimation {
         targetValue = 0.0F;
         currentValue = 0.0F;
         transitionStartNanos = 0L;
-        transitionDurationNanos = ENTER_DURATION_NANOS;
+        transitionDurationNanos = enterDurationNanos;
         initialized = false;
     }
 

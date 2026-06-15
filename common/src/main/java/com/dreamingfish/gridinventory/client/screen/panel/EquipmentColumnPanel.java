@@ -3,6 +3,9 @@ package com.dreamingfish.gridinventory.client.screen.panel;
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
+import com.dreamingfish.gridinventory.client.ui.GridUiMotion;
+import com.dreamingfish.gridinventory.client.ui.animation.AccordionAnimation;
+import com.dreamingfish.gridinventory.client.ui.animation.AnimatedButtonState;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import com.dreamingfish.gridinventory.platform.AccessorySlotView;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
@@ -24,8 +27,9 @@ public final class EquipmentColumnPanel {
     private int height;
     private int curiosToggleX;
     private int curiosToggleY;
-    private int curiosToggleSize = 14;
+    private int curiosToggleSize = 18;
     private boolean curiosExpanded;
+    private float curiosExpansionProgress;
     private int curiosScroll;
     private int curiosTotalSlots;
     private int curiosViewportX;
@@ -35,6 +39,9 @@ public final class EquipmentColumnPanel {
     private int curiosContentHeight;
     private final PanelScrollbar curiosScrollbar = new PanelScrollbar();
     private final HoverAnimationTracker<String> slotHoverAnimations = new HoverAnimationTracker<>();
+    private final AnimatedButtonState curiosButtonState = new AnimatedButtonState();
+    private final AccordionAnimation curiosAccordion = new AccordionAnimation();
+    private AnimatedButtonState.ButtonFrame curiosButtonFrame = new AnimatedButtonState.ButtonFrame(0.0F, 0.0F, 0.0F);
     private static final int MAX_VISIBLE_CURIOS_SLOTS = 5;
     private final List<FreeSlotWidget> freeSlots = new ArrayList<>();
     private final List<CuriosSlotWidget> curiosSlots = new ArrayList<>();
@@ -76,19 +83,21 @@ public final class EquipmentColumnPanel {
         }
         curiosToggleX = left + width - curiosToggleSize - 8;
         curiosToggleY = top + 6;
-        if (!curiosExpanded) {
+        curiosExpansionProgress = curiosAccordion.update(curiosExpanded);
+        List<AccessorySlotView> views = GridInventoryServices.accessories().collectSlots(minecraft.player);
+        curiosTotalSlots = views.size();
+        if (curiosExpansionProgress <= 0.02F) {
             return;
         }
         int slotSize = GridInventoryServices.clientConfig().gridCellSize();
         int startX = left + 8;
         int startY = top + 45;
-        List<AccessorySlotView> views = GridInventoryServices.accessories().collectSlots(minecraft.player);
-        curiosTotalSlots = views.size();
         int visibleSlots = Math.min(MAX_VISIBLE_CURIOS_SLOTS, curiosTotalSlots);
         curiosViewportX = startX;
         curiosViewportY = startY;
         curiosViewportWidth = slotSize + 10;
-        curiosViewportHeight = visibleSlots == 0 ? 0 : visibleSlots * slotSize + Math.max(0, visibleSlots - 1) * 4;
+        int fullViewportHeight = visibleSlots == 0 ? 0 : visibleSlots * slotSize + Math.max(0, visibleSlots - 1) * 4;
+        curiosViewportHeight = Math.round(fullViewportHeight * curiosExpansionProgress);
         curiosContentHeight = curiosTotalSlots == 0 ? 0 : curiosTotalSlots * slotSize + Math.max(0, curiosTotalSlots - 1) * 4;
         curiosScrollbar.update(curiosViewportX, curiosViewportY, curiosViewportWidth, curiosViewportHeight, curiosContentHeight);
         curiosScroll = curiosScrollbar.scroll();
@@ -110,15 +119,12 @@ public final class EquipmentColumnPanel {
         layoutSlots(hotbarTop);
         graphics.fill(left, top, left + width, top + height, 0x2E1A1A1A);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.equipment"), left + 8, top + 7, 0xFFFFFF, false);
-        renderCuriosToggle(graphics, mouseX, mouseY);
 
         FreeSlotWidget helmet = freeSlots.get(0);
         FreeSlotWidget legs = freeSlots.get(2);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.armor_upper"), helmet.x(), helmet.y() - 12, 0x8F8F8F, false);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.armor_lower"), legs.x(), legs.y() - 12, 0x8F8F8F, false);
-        if (curiosExpanded && !curiosSlots.isEmpty()) {
-            graphics.drawString(minecraft.font, Component.literal("Curios"), left + 8, top + 32, 0xBFA8FF, false);
-        }
+        renderCuriosToggle(graphics, mouseX, mouseY);
 
         int modelLeft = left + 7;
         int modelRight = left + width - 7;
@@ -145,17 +151,18 @@ public final class EquipmentColumnPanel {
                     hovered && draggedStack.isEmpty() && !dragged);
             freeSlot.render(graphics, slot, hovered, dragged, dropAllowed, hoverProgress);
         }
-        if (curiosExpanded && curiosViewportHeight > 0) {
+        if (curiosExpansionProgress > 0.02F && curiosViewportHeight > 0) {
             graphics.enableScissor(curiosViewportX, curiosViewportY, curiosViewportX + curiosViewportWidth - 8,
                     curiosViewportY + curiosViewportHeight);
             for (CuriosSlotWidget curioSlot : curiosSlots) {
-                boolean hovered = curioSlot.contains(mouseX, mouseY);
+                boolean interactable = curiosExpansionProgress >= 0.95F && curioSlot.y() + curioSlot.size() <= curiosViewportY + curiosViewportHeight;
+                boolean hovered = interactable && curioSlot.contains(mouseX, mouseY);
                 Boolean dropAllowed = !draggedStack.isEmpty()
                         ? GridInventoryServices.accessories().canPlaceInCurio(minecraft.player, curioSlot.view().identifier(), curioSlot.view().index(),
                         draggedStack, curioSlot.view().stack().isEmpty()) : null;
                 float hoverProgress = slotHoverAnimations.update(
                         "curio:" + curioSlot.view().identifier() + ":" + curioSlot.view().index(),
-                        hovered && draggedStack.isEmpty());
+                        hovered && draggedStack.isEmpty() && interactable);
                 curioSlot.render(graphics, hovered, dropAllowed, false, hoverProgress);
             }
             graphics.disableScissor();
@@ -202,14 +209,18 @@ public final class EquipmentColumnPanel {
     }
 
     public Optional<CuriosSlotWidget> curioSlotAt(double mouseX, double mouseY) {
-        if (!curiosExpanded) {
+        if (!curiosExpanded && curiosExpansionProgress <= 0.02F) {
             return Optional.empty();
         }
-        return curiosSlots.stream().filter(slot -> slot.contains(mouseX, mouseY)).findFirst();
+        if (curiosExpansionProgress < 0.95F) {
+            return Optional.empty();
+        }
+        return curiosSlots.stream().filter(slot -> slot.y() + slot.size() <= curiosViewportY + curiosViewportHeight)
+                .filter(slot -> slot.contains(mouseX, mouseY)).findFirst();
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
-        if (!curiosExpanded) {
+        if (!curiosExpanded && curiosExpansionProgress <= 0.02F) {
             return false;
         }
         return curiosScrollbar.mouseScrolled(mouseX, mouseY, scrollY,
@@ -242,12 +253,29 @@ public final class EquipmentColumnPanel {
         }
         boolean hovered = mouseX >= curiosToggleX && mouseY >= curiosToggleY
                 && mouseX < curiosToggleX + curiosToggleSize && mouseY < curiosToggleY + curiosToggleSize;
-        graphics.fill(curiosToggleX, curiosToggleY, curiosToggleX + curiosToggleSize, curiosToggleY + curiosToggleSize,
-                hovered ? 0x88413B56 : 0x55302A42);
+        curiosButtonFrame = curiosButtonState.update(hovered, false, curiosExpanded);
+        float hover = curiosButtonFrame.hoverProgress();
+        float active = curiosButtonFrame.activeProgress();
+        GridUiMotion.renderShadow(graphics, curiosToggleX, curiosToggleY, curiosToggleSize, curiosToggleSize, Math.max(hover, active));
+        int bg = GridUiMotion.lerpArgb(0xFF1A1F27, 0xFF222A35, hover);
+        bg = GridUiMotion.lerpArgb(bg, 0xFF202733, active);
+        graphics.fill(curiosToggleX + 2, curiosToggleY, curiosToggleX + curiosToggleSize - 2, curiosToggleY + curiosToggleSize, bg);
+        graphics.fill(curiosToggleX, curiosToggleY + 2, curiosToggleX + curiosToggleSize, curiosToggleY + curiosToggleSize - 2, bg);
         graphics.renderOutline(curiosToggleX, curiosToggleY, curiosToggleSize, curiosToggleSize,
-                curiosExpanded ? 0xFFBFA8FF : hovered ? 0xFFE3E8EE : 0xAA7A69A8);
-        graphics.drawCenteredString(Minecraft.getInstance().font, curiosExpanded ? "-" : "+",
-                curiosToggleX + curiosToggleSize / 2, curiosToggleY + 3, 0xFFEBDDFF);
+                GridUiMotion.lerpArgb(0x2AFFFFFF, 0x7ABFA8FF, Math.max(hover, active)));
+        if (active > 0.0F) {
+            graphics.fill(curiosToggleX, curiosToggleY + curiosToggleSize - 2,
+                    curiosToggleX + Math.round(curiosToggleSize * active), curiosToggleY + curiosToggleSize, 0xFFBFA8FF);
+        }
+        int chevronX = curiosToggleX + curiosToggleSize / 2;
+        int chevronY = curiosToggleY + curiosToggleSize / 2;
+        if (active < 0.5F) {
+            graphics.fill(chevronX - 4, chevronY - 1, chevronX, chevronY + 1, 0xFFD8E2F0);
+            graphics.fill(chevronX, chevronY + 1, chevronX + 4, chevronY + 3, 0xFFD8E2F0);
+        } else {
+            graphics.fill(chevronX - 4, chevronY + 1, chevronX, chevronY + 3, 0xFFD8E2F0);
+            graphics.fill(chevronX, chevronY - 1, chevronX + 4, chevronY + 1, 0xFFD8E2F0);
+        }
     }
 
     private boolean inCuriosViewport(double mouseX, double mouseY) {
@@ -257,7 +285,7 @@ public final class EquipmentColumnPanel {
     }
 
     private void renderCuriosScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (!curiosExpanded || curiosViewportHeight <= 0) {
+        if (curiosExpansionProgress <= 0.65F || curiosViewportHeight <= 0) {
             return;
         }
         curiosScrollbar.update(curiosViewportX, curiosViewportY, curiosViewportWidth, curiosViewportHeight, curiosContentHeight);

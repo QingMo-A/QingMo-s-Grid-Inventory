@@ -1,8 +1,11 @@
 package com.dreamingfish.gridinventory.client.screen.panel;
 
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
-import com.dreamingfish.gridinventory.client.render.GridRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
+import com.dreamingfish.gridinventory.client.screen.card.StorageAccordionCard;
+import com.dreamingfish.gridinventory.client.screen.card.StorageAccordionState;
+import com.dreamingfish.gridinventory.client.screen.card.StorageCardData;
+import com.dreamingfish.gridinventory.client.screen.card.StorageCardKey;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
@@ -20,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +36,9 @@ public final class GridColumnPanel {
     private int scroll;
     private int contentHeight;
     private final PanelScrollbar scrollbar = new PanelScrollbar();
-    private final HoverAnimationTracker<EquipmentHoverKey> equipmentHoverAnimations = new HoverAnimationTracker<>();
+    private final HoverAnimationTracker<String> equipmentHoverAnimations = new HoverAnimationTracker<>();
+    private final EnumMap<StorageCardKey, StorageAccordionState> cardStates = new EnumMap<>(StorageCardKey.class);
+    private final List<CardLayout> cardLayouts = new ArrayList<>();
     private final List<Region> equipmentRegions = new ArrayList<>();
 
     public void setBounds(int left, int top, int width, int height) {
@@ -43,11 +49,11 @@ public final class GridColumnPanel {
     }
 
     public int pocketLeft() {
-        return left + 8;
+        return left + 18;
     }
 
     public int pocketTop() {
-        return top + 35 - scroll;
+        return top + 76 - scroll;
     }
 
     public void render(GuiGraphics graphics, GridInventoryData pocket, @Nullable UUID draggedPocketEntryId,
@@ -60,19 +66,16 @@ public final class GridColumnPanel {
         scroll = scrollbar.scroll();
         graphics.enableScissor(left, top + 18, left + width - 6, top + height - 4);
         equipmentRegions.clear();
+        cardLayouts.clear();
+        List<StorageCardData> cards = collectCards(pocket);
         int y = top + 22 - scroll;
-        y = renderPocketGrid(graphics, Component.translatable("screen.df_grid_inventory.pocket"), pocket, y,
-                draggedPocketEntryId, mouseX, mouseY, pocketHoverAnimations, hoverEnabled);
-        if (minecraft.player != null) {
-            y = renderEquipmentStorage(graphics, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST), y,
-                    draggedEquipmentEntry, mouseX, mouseY, hoverEnabled);
-            y = renderEquipmentStorage(graphics, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS), y,
-                    draggedEquipmentEntry, mouseX, mouseY, hoverEnabled);
-            Optional<ItemStack> backpack = GridInventoryServices.accessories().getAccessoryStack(minecraft.player, "back", 0);
-            if (backpack.isPresent()) {
-                y = renderEquipmentStorage(graphics, GridEquipmentSlots.back(), backpack.get(), y,
-                        draggedEquipmentEntry, mouseX, mouseY, hoverEnabled);
-            }
+        int cardWidth = Math.max(80, width - 28);
+        for (StorageCardData cardData : cards) {
+            StorageAccordionCard card = card(cardData.key());
+            cardLayouts.add(new CardLayout(cardData, left + 8, y, cardWidth));
+            y += card.render(graphics, cardData, left + 8, y, cardWidth, mouseX, mouseY,
+                    draggedPocketEntryId, draggedEquipmentEntry, pocketHoverAnimations, equipmentHoverAnimations,
+                    hoverEnabled, equipmentRegions);
         }
         graphics.disableScissor();
         contentHeight = Math.max(height, y - top + scroll + 6);
@@ -86,6 +89,11 @@ public final class GridColumnPanel {
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        for (CardLayout layout : cardLayouts) {
+            if (card(layout.data().key()).mouseClicked(layout.data(), layout.x(), layout.y(), layout.width(), mouseX, mouseY, button)) {
+                return true;
+            }
+        }
         return scrollbar.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -110,65 +118,51 @@ public final class GridColumnPanel {
         return equipmentRegions.stream().filter(region -> region.contains(mouseX, mouseY)).findFirst();
     }
 
-    private int renderEquipmentStorage(GuiGraphics graphics, EquipmentSlot slot, ItemStack equipped, int y,
-                                       @Nullable EquipmentEntryHit draggedEquipmentEntry, int mouseX, int mouseY,
-                                       boolean hoverEnabled) {
-        if (equipped.isEmpty()) {
-            return y;
+    private List<StorageCardData> collectCards(GridInventoryData pocket) {
+        List<StorageCardData> cards = new ArrayList<>();
+        cards.add(new StorageCardData(StorageCardKey.POCKET,
+                Component.translatable("screen.df_grid_inventory.pocket"),
+                storageSubtitle(List.of(new NamedGridInventoryData("pocket", "pocket", pocket))),
+                ItemStack.EMPTY, true, null, List.of(new NamedGridInventoryData("pocket", "pocket", pocket))));
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null) {
+            return cards;
         }
-        EquipmentStorageData storage = GridInventoryServices.itemStackData().getEquipmentStorage(equipped);
-        storage = EquipmentStorageManager.initializeStorage(equipped, slot);
-        if (storage == null || storage.containers().isEmpty()) {
-            return y;
+        cards.add(equipmentCard(StorageCardKey.CHEST, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST)));
+        cards.add(equipmentCard(StorageCardKey.LEGS, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS)));
+        if (GridInventoryServices.accessories().isLoaded()) {
+            Optional<ItemStack> backpack = GridInventoryServices.accessories().getAccessoryStack(minecraft.player, "back", 0);
+            cards.add(equipmentCard(StorageCardKey.BACKPACK, GridEquipmentSlots.back(), backpack.orElse(ItemStack.EMPTY)));
         }
-        Component title = equipped.getHoverName();
-        for (NamedGridInventoryData container : storage.containers()) {
-            equipmentRegions.add(new Region(slot, container.id(), container.inventory(), left + 8, y + 13));
-            UUID draggedEntryId = draggedEquipmentEntry != null
-                    && draggedEquipmentEntry.slot() == slot
-                    && draggedEquipmentEntry.containerId().equals(container.id())
-                    ? draggedEquipmentEntry.entry().entryId() : null;
-            y = renderEquipmentGrid(graphics, title, slot, container.id(), container.inventory(), y, draggedEntryId,
-                    mouseX, mouseY, hoverEnabled);
-        }
-        return y;
+        return cards;
     }
 
-    private int renderPocketGrid(GuiGraphics graphics, Component title, GridInventoryData inventory, int y,
-                                 @Nullable UUID draggedEntryId, int mouseX, int mouseY,
-                                 HoverAnimationTracker<UUID> hoverAnimations, boolean hoverEnabled) {
-        graphics.drawString(Minecraft.getInstance().font, title, left + 8, y, 0xBFBFBF, false);
-        int gridTop = y + 13;
-        GridRenderer.renderGrid(graphics, left + 8, gridTop, inventory, CELL);
-        for (GridEntry entry : inventory.getEntries()) {
-            boolean dragged = draggedEntryId != null && draggedEntryId.equals(entry.entryId());
-            boolean hovered = hoverEnabled && !dragged
-                    && entry.contains(GridLayoutMetrics.cellXAt(inventory, mouseX - (left + 8), mouseY - gridTop, CELL),
-                    GridLayoutMetrics.cellYAt(inventory, mouseX - (left + 8), mouseY - gridTop, CELL));
-            float hoverProgress = hoverAnimations.update(entry.entryId(), hovered);
-            GridItemRenderer.renderEntry(graphics, entry, inventory, left + 8, gridTop, CELL,
-                    dragged ? 0.35F : 1.0F, dragged ? 0.0F : hoverProgress);
+    private StorageCardData equipmentCard(StorageCardKey key, EquipmentSlot slot, ItemStack stack) {
+        if (stack.isEmpty()) {
+            return new StorageCardData(key, Component.translatable("screen.df_grid_inventory.not_equipped"),
+                    Component.translatable("screen.df_grid_inventory.not_equipped"), ItemStack.EMPTY, false, slot, List.of());
         }
-        return gridTop + GridLayoutMetrics.height(inventory, CELL) + 10;
+        EquipmentStorageData storage = EquipmentStorageManager.initializeStorage(stack, slot);
+        List<NamedGridInventoryData> containers = storage == null ? List.of() : storage.containers();
+        return new StorageCardData(key, stack.getHoverName(),
+                containers.isEmpty() ? Component.translatable("screen.df_grid_inventory.no_storage_space")
+                        : storageSubtitle(containers),
+                stack, !containers.isEmpty(), slot, containers);
     }
 
-    private int renderEquipmentGrid(GuiGraphics graphics, Component title, EquipmentSlot slot, String containerId,
-                                    GridInventoryData inventory, int y, @Nullable UUID draggedEntryId,
-                                    int mouseX, int mouseY, boolean hoverEnabled) {
-        graphics.drawString(Minecraft.getInstance().font, title, left + 8, y, 0xBFBFBF, false);
-        int gridTop = y + 13;
-        GridRenderer.renderGrid(graphics, left + 8, gridTop, inventory, CELL);
-        for (GridEntry entry : inventory.getEntries()) {
-            boolean dragged = draggedEntryId != null && draggedEntryId.equals(entry.entryId());
-            boolean hovered = hoverEnabled && !dragged
-                    && entry.contains(GridLayoutMetrics.cellXAt(inventory, mouseX - (left + 8), mouseY - gridTop, CELL),
-                    GridLayoutMetrics.cellYAt(inventory, mouseX - (left + 8), mouseY - gridTop, CELL));
-            float hoverProgress = equipmentHoverAnimations.update(
-                    new EquipmentHoverKey(slot, containerId, entry.entryId()), hovered);
-            GridItemRenderer.renderEntry(graphics, entry, inventory, left + 8, gridTop, CELL,
-                    dragged ? 0.35F : 1.0F, dragged ? 0.0F : hoverProgress);
+    private Component storageSubtitle(List<NamedGridInventoryData> containers) {
+        if (containers.size() > 1) {
+            return Component.translatable("screen.df_grid_inventory.storage_regions", containers.size());
         }
-        return gridTop + GridLayoutMetrics.height(inventory, CELL) + 10;
+        if (containers.isEmpty()) {
+            return Component.translatable("screen.df_grid_inventory.no_storage_space");
+        }
+        GridInventoryData inventory = containers.get(0).inventory();
+        return Component.translatable("screen.df_grid_inventory.storage_size", inventory.getColumns(), inventory.getRows());
+    }
+
+    private StorageAccordionCard card(StorageCardKey key) {
+        return new StorageAccordionCard(cardStates.computeIfAbsent(key, ignored -> new StorageAccordionState()));
     }
 
     private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -178,7 +172,7 @@ public final class GridColumnPanel {
     public record EquipmentEntryHit(EquipmentSlot slot, String containerId, GridInventoryData inventory, GridEntry entry, Region region) {
     }
 
-    private record EquipmentHoverKey(EquipmentSlot slot, String containerId, UUID entryId) {
+    private record CardLayout(StorageCardData data, int x, int y, int width) {
     }
 
     public record Region(EquipmentSlot slot, String containerId, GridInventoryData inventory, int left, int top) {
