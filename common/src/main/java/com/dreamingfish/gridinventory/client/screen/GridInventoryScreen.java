@@ -49,6 +49,7 @@ import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
 import com.dreamingfish.gridinventory.client.access.SlotPositionAccessor;
 import com.dreamingfish.gridinventory.client.sound.GridInventoryUiSounds;
+import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -60,6 +61,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMenu> {
     private static final int CELL = 27;
@@ -91,6 +93,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private final NearbyItemsPanel nearbyItemsPanel = new NearbyItemsPanel();
     private final EquipmentColumnPanel equipmentColumnPanel = new EquipmentColumnPanel();
     private final GridColumnPanel gridColumnPanel = new GridColumnPanel();
+    private final HoverAnimationTracker<UUID> gridHoverAnimations = new HoverAnimationTracker<>();
     private int workspaceMarginX;
     private int workspaceMarginY;
     private int workspacePaddingX;
@@ -155,13 +158,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot,
                     draggedStack(), !draggedStack().isEmpty());
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(),
-                    draggingEquipmentEntry, mouseX, mouseY);
+                    draggingEquipmentEntry, mouseX, mouseY, gridHoverAnimations, hoverAnimationsEnabled());
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
             renderHover(graphics, mouseX, mouseY);
             renderPreview(graphics, mouseX, mouseY);
             renderEquipmentPreview(graphics, mouseX, mouseY);
             renderDraggedStackGhost(graphics, mouseX, mouseY);
+            gridHoverAnimations.markFrameEnd();
             return;
         }
         graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0x00202020);
@@ -170,12 +174,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (draggingEntry != null && draggingEntry.entryId().equals(entry.entryId())) {
                 continue;
             }
-            GridItemRenderer.renderEntry(graphics, entry, gridLeft, gridTop, CELL);
+            boolean hovered = hoverAnimationsEnabled() && entry.contains(cellX(mouseX, mouseY), cellY(mouseX, mouseY));
+            float hoverProgress = gridHoverAnimations.update(entry.entryId(), hovered);
+            GridItemRenderer.renderEntry(graphics, entry, gridLeft, gridTop, CELL, 1.0F, hoverProgress);
         }
         renderDraggedOriginShadow(graphics);
         renderHover(graphics, mouseX, mouseY);
         renderPreview(graphics, mouseX, mouseY);
         renderDraggedStackGhost(graphics, mouseX, mouseY);
+        gridHoverAnimations.markFrameEnd();
     }
 
     @Override
@@ -202,23 +209,16 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void renderHover(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (draggingEntry != null || draggingEquipmentEntry != null || draggingCurioSlot != null || !selectedPlayerStack.isEmpty()) {
-            return;
-        }
-        if (menu.isPlayerGrid()) {
-            Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt(mouseX, mouseY);
-            if (equipmentHit.isPresent()) {
-                GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
-                GridEntry entry = hit.entry();
-                renderGridAreaHighlight(graphics, hit.region().inventory(), hit.region().left(), hit.region().top(),
-                        entry.x(), entry.y(), entry.width(), entry.height(), 0x22FFFFFF, 0xFFFFFFFF);
-                return;
-            }
-        }
-        entryAt(mouseX, mouseY).ifPresent(entry -> {
-            renderGridAreaHighlight(graphics, menu.getGridData(), gridLeft, gridTop,
-                    entry.x(), entry.y(), entry.width(), entry.height(), 0x22FFFFFF, 0xFFFFFFFF);
-        });
+        // Hover feedback is now animated at the item renderer level. Placement previews keep their own colors.
+    }
+
+    private boolean hoverAnimationsEnabled() {
+        return draggingEntry == null
+                && draggingEquipmentEntry == null
+                && draggingCurioSlot == null
+                && !nearbyItemsPanel.isDraggingGroundItem()
+                && !hasPendingDrag()
+                && selectedPlayerStack.isEmpty();
     }
 
     @Override

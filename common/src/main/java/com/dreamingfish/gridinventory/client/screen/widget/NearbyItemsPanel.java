@@ -4,6 +4,8 @@ import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.client.pickup.ClientPickupController;
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
+import com.dreamingfish.gridinventory.client.ui.GridUiMotion;
+import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -32,6 +34,7 @@ public class NearbyItemsPanel {
     private int totalRows;
     private NearbyGroundItemView draggedView;
     private boolean dragging;
+    private final HoverAnimationTracker<Integer> hoverAnimations = new HoverAnimationTracker<>();
 
     public void setBounds(int left, int top) {
         setBounds(left, top, GridInventoryServices.clientConfig().nearbyPanelVisibleRows() * CELL + 26);
@@ -76,14 +79,30 @@ public class NearbyItemsPanel {
                 continue;
             }
             int drawX = gridLeft + entry.x * CELL;
-            int color = isInside(mouseX, mouseY, drawX, drawY, entry.view.gridWidth() * CELL, entry.view.gridHeight() * CELL) ? 0x994D6EA8 : 0x77333333;
             int areaWidth = entry.view.gridWidth() * CELL;
             int areaHeight = entry.view.gridHeight() * CELL;
             boolean draggedOrigin = dragging && draggedView != null && draggedView.entityId() == entry.view.entityId();
-            graphics.fill(drawX, drawY, drawX + areaWidth, drawY + areaHeight, draggedOrigin ? 0x44333333 : color);
-            GridItemRenderer.renderStackInArea(graphics, entry.view.stack(), drawX, drawY, areaWidth, areaHeight, draggedOrigin ? 0.35F : 1.0F);
+            boolean hovered = isInside(mouseX, mouseY, drawX, drawY, areaWidth, areaHeight);
+            float hoverProgress = hoverAnimations.update(entry.view.entityId(), hovered && !dragging && !draggedOrigin);
+            if (draggedOrigin) {
+                hoverProgress = 0.0F;
+            }
+            GridUiMotion.renderShadow(graphics, drawX, drawY, areaWidth, areaHeight, hoverProgress);
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0F, -GridUiMotion.lift(hoverProgress), hoverProgress > 0.0F ? 8.0F : 0.0F);
+            int color = draggedOrigin ? 0x44333333
+                    : GridUiMotion.lerpArgb(0x77333333, 0x994D6EA8, hoverProgress);
+            graphics.fill(drawX, drawY, drawX + areaWidth, drawY + areaHeight, color);
+            GridItemRenderer.renderStackInArea(graphics, entry.view.stack(), drawX, drawY, areaWidth, areaHeight,
+                    draggedOrigin ? 0.35F : 1.0F, hoverProgress);
+            if (hoverProgress > 0.0F) {
+                graphics.renderOutline(drawX, drawY, areaWidth, areaHeight,
+                        GridUiMotion.lerpArgb(0x004D6EA8, 0xAA9CB8EA, hoverProgress));
+            }
+            graphics.pose().popPose();
         }
         graphics.disableScissor();
+        hoverAnimations.markFrameEnd();
 
         if (!dragging) {
             hovered(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(

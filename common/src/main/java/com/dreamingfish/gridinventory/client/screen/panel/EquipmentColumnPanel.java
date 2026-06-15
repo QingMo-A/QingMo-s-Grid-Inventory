@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.client.screen.panel;
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
+import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import com.dreamingfish.gridinventory.platform.AccessorySlotView;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
@@ -33,6 +34,7 @@ public final class EquipmentColumnPanel {
     private int curiosViewportHeight;
     private int curiosContentHeight;
     private final PanelScrollbar curiosScrollbar = new PanelScrollbar();
+    private final HoverAnimationTracker<String> slotHoverAnimations = new HoverAnimationTracker<>();
     private static final int MAX_VISIBLE_CURIOS_SLOTS = 5;
     private final List<FreeSlotWidget> freeSlots = new ArrayList<>();
     private final List<CuriosSlotWidget> curiosSlots = new ArrayList<>();
@@ -136,10 +138,12 @@ public final class EquipmentColumnPanel {
         for (FreeSlotWidget freeSlot : freeSlots) {
             Slot slot = slots.get(freeSlot.menuIndex());
             boolean hovered = freeSlot.contains(mouseX, mouseY);
+            boolean dragged = draggedPlayerSlot >= 0 && slot.getSlotIndex() == draggedPlayerSlot;
             Boolean dropAllowed = !draggedStack.isEmpty()
                     ? supportsDropToFreeSlot && canReceive(slot, draggedStack, slots, draggedPlayerSlot, minecraft.player) : null;
-            freeSlot.render(graphics, slot, hovered,
-                    draggedPlayerSlot >= 0 && slot.getSlotIndex() == draggedPlayerSlot, dropAllowed);
+            float hoverProgress = slotHoverAnimations.update("free:" + freeSlot.menuIndex(),
+                    hovered && draggedStack.isEmpty() && !dragged);
+            freeSlot.render(graphics, slot, hovered, dragged, dropAllowed, hoverProgress);
         }
         if (curiosExpanded && curiosViewportHeight > 0) {
             graphics.enableScissor(curiosViewportX, curiosViewportY, curiosViewportX + curiosViewportWidth - 8,
@@ -149,11 +153,15 @@ public final class EquipmentColumnPanel {
                 Boolean dropAllowed = !draggedStack.isEmpty()
                         ? GridInventoryServices.accessories().canPlaceInCurio(minecraft.player, curioSlot.view().identifier(), curioSlot.view().index(),
                         draggedStack, curioSlot.view().stack().isEmpty()) : null;
-                curioSlot.render(graphics, hovered, dropAllowed, false);
+                float hoverProgress = slotHoverAnimations.update(
+                        "curio:" + curioSlot.view().identifier() + ":" + curioSlot.view().index(),
+                        hovered && draggedStack.isEmpty());
+                curioSlot.render(graphics, hovered, dropAllowed, false, hoverProgress);
             }
             graphics.disableScissor();
         }
         renderCuriosScrollbar(graphics, mouseX, mouseY);
+        slotHoverAnimations.markFrameEnd();
     }
 
     private boolean canReceive(Slot slot, ItemStack draggedStack, List<Slot> slots, int draggedPlayerSlot, net.minecraft.world.entity.player.Player player) {
