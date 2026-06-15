@@ -21,17 +21,17 @@ public final class StorageCardHeaderRenderer {
         GridUiMotion.renderShadow(graphics, x, y, width, HEIGHT, Math.max(hover, active * 0.65F));
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, -lift, 6.0F);
-        int bg = GridUiMotion.lerpArgb(0xFF1A1F27, 0xFF222A35, hover);
-        bg = GridUiMotion.lerpArgb(bg, 0xFF202733, active);
-        bg = GridUiMotion.lerpArgb(bg, 0xFF171C23, pressed);
+        int bg = GridUiMotion.lerpArgb(0x661A1F27, 0x8A222A35, hover);
+        bg = GridUiMotion.lerpArgb(bg, 0x99202733, active);
+        bg = GridUiMotion.lerpArgb(bg, 0x70171C23, pressed);
         fillSoftPanel(graphics, x, y, width, HEIGHT, bg);
-        int border = GridUiMotion.lerpArgb(0x2AFFFFFF, 0x5DAABEDC, Math.max(hover, active));
+        int border = GridUiMotion.lerpArgb(0x22FFFFFF, 0x55AABEDC, Math.max(hover, active));
         graphics.renderOutline(x, y, width, HEIGHT, border);
         if (pressed > 0.0F) {
             graphics.fill(x + 2, y + 2, x + width - 2, y + HEIGHT - 2, (Math.round(0x22 * pressed) << 24));
         }
         if (active > 0.0F) {
-            graphics.fill(x, y + HEIGHT - 2, x + Math.round(width * active), y + HEIGHT, 0xFF7AA2F7);
+            graphics.fill(x, y + HEIGHT - 2, x + Math.round(width * active), y + HEIGHT, 0xAA7AA2F7);
         }
 
         Font font = Minecraft.getInstance().font;

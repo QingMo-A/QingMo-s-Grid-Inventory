@@ -48,8 +48,8 @@ public final class StorageCardBodyRenderer {
         if (visibleHeight <= 0 || data.containers().isEmpty()) {
             return;
         }
-        graphics.fill(x, y, x + width, y + visibleHeight, 0xFF12171E);
-        graphics.renderOutline(x, y, width, visibleHeight, 0x1FFFFFFF);
+        graphics.fill(x, y, x + width, y + visibleHeight, 0x4012171E);
+        graphics.renderOutline(x, y, width, visibleHeight, 0x18FFFFFF);
         graphics.enableScissor(x, y, x + width, y + visibleHeight);
         int cursorY = y + 8 - Math.round((1.0F - expansionProgress) * 4.0F);
         boolean showSectionTitles = data.containers().size() > 1;
