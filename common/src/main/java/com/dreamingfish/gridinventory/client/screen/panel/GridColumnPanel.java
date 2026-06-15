@@ -157,8 +157,7 @@ public final class GridColumnPanel {
         if (containers.isEmpty()) {
             return Component.translatable("screen.df_grid_inventory.no_storage_space");
         }
-        GridInventoryData inventory = containers.get(0).inventory();
-        return Component.translatable("screen.df_grid_inventory.storage_size", inventory.getColumns(), inventory.getRows());
+        return Component.empty();
     }
 
     private StorageAccordionCard card(StorageCardKey key) {

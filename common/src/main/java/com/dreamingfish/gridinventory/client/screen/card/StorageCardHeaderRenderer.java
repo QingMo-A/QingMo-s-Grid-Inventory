@@ -7,7 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class StorageCardHeaderRenderer {
-    public static final int HEIGHT = 46;
+    public static final int HEIGHT = 34;
 
     private StorageCardHeaderRenderer() {
     }
@@ -54,13 +54,11 @@ public final class StorageCardHeaderRenderer {
         int titleX = x + 34;
         int titleWidth = Math.max(20, width - 44 - rightReserve);
         graphics.drawString(font, font.plainSubstrByWidth(data.title().getString(), titleWidth),
-                titleX, y + 9, data.available() ? 0xF1F5F9 : 0x8792A0, false);
-        graphics.drawString(font, font.plainSubstrByWidth(data.subtitle().getString(), titleWidth),
-                titleX, y + 25, 0x94A3B8, false);
+                titleX, y + (HEIGHT - font.lineHeight) / 2, data.available() ? 0xF1F5F9 : 0x8792A0, false);
         if (!capacity.isEmpty()) {
             graphics.drawString(font, capacity, x + width - rightReserve, y + (HEIGHT - font.lineHeight) / 2, 0xB8C4D3, false);
         }
-        drawChevron(graphics, x + width - 14, y + 22, active);
+        drawChevron(graphics, x + width - 14, y + HEIGHT / 2, active);
         graphics.pose().popPose();
     }
 
