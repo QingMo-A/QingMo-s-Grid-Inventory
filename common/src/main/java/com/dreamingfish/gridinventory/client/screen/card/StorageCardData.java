@@ -10,6 +10,7 @@ import java.util.List;
 
 public record StorageCardData(
         StorageCardKey key,
+        String stateKey,
         Component title,
         Component subtitle,
         ItemStack icon,

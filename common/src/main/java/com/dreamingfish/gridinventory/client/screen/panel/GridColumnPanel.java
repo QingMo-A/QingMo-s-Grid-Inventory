@@ -24,8 +24,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public final class GridColumnPanel {
@@ -38,7 +39,7 @@ public final class GridColumnPanel {
     private int contentHeight;
     private final PanelScrollbar scrollbar = new PanelScrollbar();
     private final HoverAnimationTracker<String> equipmentHoverAnimations = new HoverAnimationTracker<>();
-    private final EnumMap<StorageCardKey, StorageAccordionState> cardStates = new EnumMap<>(StorageCardKey.class);
+    private final Map<String, StorageAccordionState> cardStates = new HashMap<>();
     private final List<CardLayout> cardLayouts = new ArrayList<>();
     private final List<Region> equipmentRegions = new ArrayList<>();
 
@@ -72,7 +73,7 @@ public final class GridColumnPanel {
         int y = top + 22 - scroll;
         int cardWidth = Math.max(80, width - 28);
         for (StorageCardData cardData : cards) {
-            StorageAccordionCard card = card(cardData.key());
+            StorageAccordionCard card = card(cardData.stateKey());
             cardLayouts.add(new CardLayout(cardData, left + 8, y, cardWidth));
             y += card.render(graphics, cardData, left + 8, y, cardWidth, mouseX, mouseY,
                     draggedPocketEntryId, draggedEquipmentEntry, pocketHoverAnimations, equipmentHoverAnimations,
@@ -91,7 +92,7 @@ public final class GridColumnPanel {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         for (CardLayout layout : cardLayouts) {
-            if (card(layout.data().key()).mouseClicked(layout.data(), layout.x(), layout.y(), layout.width(), mouseX, mouseY, button)) {
+            if (card(layout.data().stateKey()).mouseClicked(layout.data(), layout.x(), layout.y(), layout.width(), mouseX, mouseY, button)) {
                 return true;
             }
         }
@@ -122,6 +123,7 @@ public final class GridColumnPanel {
     private List<StorageCardData> collectCards(GridInventoryData pocket) {
         List<StorageCardData> cards = new ArrayList<>();
         cards.add(new StorageCardData(StorageCardKey.POCKET,
+                "pocket",
                 Component.translatable("screen.df_grid_inventory.pocket"),
                 storageSubtitle(List.of(new NamedGridInventoryData("pocket", "pocket", pocket))),
                 ItemStack.EMPTY, true, null, List.of(new NamedGridInventoryData("pocket", "pocket", pocket))));
@@ -129,26 +131,31 @@ public final class GridColumnPanel {
         if (minecraft.player == null) {
             return cards;
         }
-        cards.add(equipmentCard(StorageCardKey.CHEST, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST)));
-        cards.add(equipmentCard(StorageCardKey.LEGS, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS)));
+        addEquipmentCard(cards, "chest", StorageCardKey.CHEST, EquipmentSlot.CHEST, minecraft.player.getItemBySlot(EquipmentSlot.CHEST));
+        addEquipmentCard(cards, "legs", StorageCardKey.LEGS, EquipmentSlot.LEGS, minecraft.player.getItemBySlot(EquipmentSlot.LEGS));
         if (GridInventoryServices.accessories().isLoaded()) {
-            Optional<ItemStack> backpack = GridInventoryServices.accessories().getAccessoryStack(minecraft.player, "back", 0);
-            cards.add(equipmentCard(StorageCardKey.BACKPACK, GridEquipmentSlots.back(), backpack.orElse(ItemStack.EMPTY)));
+            GridInventoryServices.accessories().collectSlots(minecraft.player).stream()
+                    .filter(slot -> "back".equals(slot.identifier()))
+                    .filter(slot -> !slot.stack().isEmpty())
+                    .forEach(slot -> addEquipmentCard(cards, "backpack:" + slot.identifier() + ":" + slot.index(),
+                            StorageCardKey.BACKPACK, GridEquipmentSlots.back(), slot.stack()));
         }
         return cards;
     }
 
-    private StorageCardData equipmentCard(StorageCardKey key, EquipmentSlot slot, ItemStack stack) {
+    private void addEquipmentCard(List<StorageCardData> cards, String stateKey, StorageCardKey key, EquipmentSlot slot, ItemStack stack) {
         if (stack.isEmpty()) {
-            return new StorageCardData(key, Component.translatable("screen.df_grid_inventory.not_equipped"),
-                    Component.translatable("screen.df_grid_inventory.not_equipped"), ItemStack.EMPTY, false, slot, List.of());
+            return;
         }
         EquipmentStorageData storage = EquipmentStorageManager.initializeStorage(stack, slot);
         List<NamedGridInventoryData> containers = storage == null ? List.of() : storage.containers();
-        return new StorageCardData(key, stack.getHoverName(),
+        if (containers.isEmpty()) {
+            return;
+        }
+        cards.add(new StorageCardData(key, stateKey, stack.getHoverName(),
                 containers.isEmpty() ? Component.translatable("screen.df_grid_inventory.no_storage_space")
                         : storageSubtitle(containers),
-                stack, !containers.isEmpty(), slot, containers);
+                stack, true, slot, containers));
     }
 
     private Component storageSubtitle(List<NamedGridInventoryData> containers) {
@@ -161,7 +168,7 @@ public final class GridColumnPanel {
         return Component.empty();
     }
 
-    private StorageAccordionCard card(StorageCardKey key) {
+    private StorageAccordionCard card(String key) {
         return new StorageAccordionCard(cardStates.computeIfAbsent(key, ignored -> new StorageAccordionState()));
     }
 
