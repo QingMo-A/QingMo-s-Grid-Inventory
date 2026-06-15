@@ -45,3 +45,54 @@ tasks.register("buildAllTargets") {
             ":targets:neoforge-1.21.1:build"
     )
 }
+
+def targetTaskAliases = [
+        [
+                name       : "Forge1201",
+                path       : ":targets:forge-1.20.1",
+                description: "Forge 1.20.1"
+        ],
+        [
+                name       : "NeoForge1211",
+                path       : ":targets:neoforge-1.21.1",
+                description: "NeoForge 1.21.1"
+        ]
+]
+
+targetTaskAliases.each { target ->
+    tasks.register("compile${target.name}") {
+        group = "df grid inventory"
+        description = "Compile ${target.description} target."
+        dependsOn("${target.path}:compileJava")
+    }
+
+    tasks.register("process${target.name}Resources") {
+        group = "df grid inventory"
+        description = "Process resources for ${target.description} target."
+        dependsOn("${target.path}:processResources")
+    }
+
+    tasks.register("jar${target.name}") {
+        group = "df grid inventory"
+        description = "Create the development jar for ${target.description} target."
+        dependsOn("${target.path}:jar")
+    }
+
+    tasks.register("build${target.name}") {
+        group = "df grid inventory"
+        description = "Build ${target.description} target."
+        dependsOn("${target.path}:build")
+    }
+
+    tasks.register("run${target.name}Client") {
+        group = "df grid inventory"
+        description = "Run the ${target.description} client."
+        dependsOn("${target.path}:runClient")
+    }
+
+    tasks.register("run${target.name}Server") {
+        group = "df grid inventory"
+        description = "Run the ${target.description} dedicated server."
+        dependsOn("${target.path}:runServer")
+    }
+}
