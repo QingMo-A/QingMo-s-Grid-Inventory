@@ -164,7 +164,6 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             renderHover(graphics, mouseX, mouseY);
             renderPreview(graphics, mouseX, mouseY);
             renderEquipmentPreview(graphics, mouseX, mouseY);
-            renderDraggedStackGhost(graphics, mouseX, mouseY);
             gridHoverAnimations.markFrameEnd();
             return;
         }
@@ -181,7 +180,6 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         renderDraggedOriginShadow(graphics);
         renderHover(graphics, mouseX, mouseY);
         renderPreview(graphics, mouseX, mouseY);
-        renderDraggedStackGhost(graphics, mouseX, mouseY);
         gridHoverAnimations.markFrameEnd();
     }
 
@@ -225,8 +223,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0x1A000000);
         super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
-        nearbyItemsPanel.render(graphics, mouseX, mouseY);
+        if (draggedStack().isEmpty()) {
+            renderTooltip(graphics, mouseX, mouseY);
+        }
+        boolean draggingAnyItem = !draggedStack().isEmpty();
+        nearbyItemsPanel.render(graphics, mouseX, mouseY, draggingAnyItem);
+        if (draggingAnyItem) {
+            renderDraggedStackGhost(graphics, mouseX, mouseY);
+            return;
+        }
         hoveredGridEntry(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
         if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()) {
             equipmentColumnPanel.slotAt(mouseX, mouseY)
@@ -240,6 +245,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             hoveredStack(mouseX, mouseY).ifPresent(stack ->
                     EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
         }
+        renderDraggedStackGhost(graphics, mouseX, mouseY);
     }
 
     private void renderPreview(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -277,7 +283,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int h = size.placedHeight(rotatedPreview);
         int left = mouseX - anchorCellX(stack) * CELL - dragAnchorPixelX;
         int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, 900.0F);
         GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F, rotatedPreview);
+        graphics.pose().popPose();
     }
 
     private void renderEquipmentPreview(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -789,6 +798,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private Optional<GridEntry> entryAt(int mouseX, int mouseY) {
+        if (menu.isPlayerGrid() && !gridColumnPanel.pocketBodyContains(mouseX, mouseY)) {
+            return Optional.empty();
+        }
         if (!inGrid(mouseX, mouseY)) {
             return Optional.empty();
         }

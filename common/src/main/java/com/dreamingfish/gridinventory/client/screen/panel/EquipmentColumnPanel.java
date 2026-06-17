@@ -128,10 +128,13 @@ public final class EquipmentColumnPanel {
 
         int modelLeft = left + 7;
         int modelRight = left + width - 7;
-        int modelTop = helmet.y() + helmet.size() + 3;
-        int modelBottom = legs.y() - 3;
+        int availableTop = top + 28;
+        int availableBottom = hotbarTop - 18;
+        int modelHeightTarget = Math.max(52, Math.min(availableBottom - availableTop, height - 84));
+        int modelTop = availableTop + Math.max(0, availableBottom - availableTop - modelHeightTarget) / 2;
+        int modelBottom = modelTop + modelHeightTarget;
         int modelHeight = Math.max(1, modelBottom - modelTop);
-        int scale = Math.min(52, Math.max(30, modelHeight / 2 + 8));
+        int scale = Math.min(68, Math.max(39, Math.round((modelHeight / 2.0F + 8.0F) * 1.3F)));
         graphics.enableScissor(modelLeft, modelTop, modelRight, modelBottom);
         GridInventoryClientServices.bridge().renderEntityInInventoryFollowsMouse(
                 graphics, modelLeft, modelTop, modelRight, modelBottom, scale, mouseX, mouseY, minecraft.player);

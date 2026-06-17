@@ -11,6 +11,15 @@ public final class StorageAccordionState {
     private float expansionProgress = 1.0F;
     private AnimatedButtonState.ButtonFrame buttonFrame = new AnimatedButtonState.ButtonFrame(0.0F, 0.0F, 1.0F);
 
+    public StorageAccordionState() {
+    }
+
+    public StorageAccordionState(boolean expanded) {
+        this.expanded = expanded;
+        this.expansionProgress = expanded ? 1.0F : 0.0F;
+        this.buttonFrame = new AnimatedButtonState.ButtonFrame(0.0F, 0.0F, expanded ? 1.0F : 0.0F);
+    }
+
     public void update(boolean hovered, boolean available) {
         if (!available) {
             expanded = false;
@@ -20,11 +29,13 @@ public final class StorageAccordionState {
         pressed = false;
     }
 
-    public void toggle(boolean available) {
+    public boolean toggle(boolean available) {
         if (available) {
             expanded = !expanded;
             pressed = true;
+            return true;
         }
+        return false;
     }
 
     public float expansionProgress() {

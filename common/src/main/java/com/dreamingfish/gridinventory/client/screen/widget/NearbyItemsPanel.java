@@ -61,6 +61,10 @@ public class NearbyItemsPanel {
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY) {
+        render(graphics, mouseX, mouseY, false);
+    }
+
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, boolean suppressTooltip) {
         if (!GridInventoryServices.clientConfig().showNearbyItemsPanel()) {
             return;
         }
@@ -104,7 +108,7 @@ public class NearbyItemsPanel {
         graphics.disableScissor();
         hoverAnimations.markFrameEnd();
 
-        if (!dragging) {
+        if (!dragging && !suppressTooltip) {
             hovered(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, List.of(
                 entry.view.stack().getHoverName(),
                 Component.literal("Count: " + entry.view.stack().getCount()).withStyle(ChatFormatting.GRAY),

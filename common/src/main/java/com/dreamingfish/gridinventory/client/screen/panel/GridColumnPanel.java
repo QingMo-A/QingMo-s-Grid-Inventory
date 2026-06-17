@@ -4,9 +4,11 @@ import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.screen.card.StorageAccordionCard;
 import com.dreamingfish.gridinventory.client.screen.card.StorageAccordionState;
+import com.dreamingfish.gridinventory.client.screen.card.StorageCardBodyRenderer;
 import com.dreamingfish.gridinventory.client.screen.card.StorageCardData;
 import com.dreamingfish.gridinventory.client.screen.card.StorageCardHeaderRenderer;
 import com.dreamingfish.gridinventory.client.screen.card.StorageCardKey;
+import com.dreamingfish.gridinventory.client.screen.card.StorageAccordionPreferences;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
@@ -58,6 +60,25 @@ public final class GridColumnPanel {
         return top + 22 + StorageCardHeaderRenderer.HEIGHT + 8 - scroll;
     }
 
+    public boolean pocketBodyContains(int mouseX, int mouseY) {
+        for (CardLayout layout : cardLayouts) {
+            if (layout.data().key() != StorageCardKey.POCKET) {
+                continue;
+            }
+            StorageAccordionState state = cardStates.get(layout.data().stateKey());
+            if (state == null || state.expansionProgress() < 0.95F) {
+                return false;
+            }
+            int bodyTop = layout.y() + StorageCardHeaderRenderer.HEIGHT;
+            int bodyHeight = StorageCardBodyRenderer.fullHeight(layout.data());
+            return mouseX >= layout.x()
+                    && mouseX < layout.x() + layout.width()
+                    && mouseY >= bodyTop
+                    && mouseY < bodyTop + bodyHeight;
+        }
+        return false;
+    }
+
     public void render(GuiGraphics graphics, GridInventoryData pocket, @Nullable UUID draggedPocketEntryId,
                        @Nullable EquipmentEntryHit draggedEquipmentEntry, int mouseX, int mouseY,
                        HoverAnimationTracker<UUID> pocketHoverAnimations, boolean hoverEnabled) {
@@ -92,7 +113,9 @@ public final class GridColumnPanel {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         for (CardLayout layout : cardLayouts) {
-            if (card(layout.data().stateKey()).mouseClicked(layout.data(), layout.x(), layout.y(), layout.width(), mouseX, mouseY, button)) {
+            StorageAccordionCard card = card(layout.data().stateKey());
+            if (card.mouseClicked(layout.data(), layout.x(), layout.y(), layout.width(), mouseX, mouseY, button)) {
+                StorageAccordionPreferences.setExpanded(layout.data().stateKey(), card.expanded());
                 return true;
             }
         }
@@ -169,7 +192,8 @@ public final class GridColumnPanel {
     }
 
     private StorageAccordionCard card(String key) {
-        return new StorageAccordionCard(cardStates.computeIfAbsent(key, ignored -> new StorageAccordionState()));
+        return new StorageAccordionCard(cardStates.computeIfAbsent(key,
+                ignored -> new StorageAccordionState(StorageAccordionPreferences.expanded(key, true))));
     }
 
     private void renderScrollbar(GuiGraphics graphics, int mouseX, int mouseY) {

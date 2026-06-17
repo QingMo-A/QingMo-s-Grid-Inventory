@@ -53,6 +53,7 @@ public final class StorageCardBodyRenderer {
         graphics.enableScissor(x, y, x + width, y + visibleHeight);
         int cursorY = y + 8 - Math.round((1.0F - expansionProgress) * 4.0F);
         boolean showSectionTitles = data.containers().size() > 1;
+        boolean interactionsEnabled = expansionProgress >= 0.95F;
         for (NamedGridInventoryData container : data.containers()) {
             if (showSectionTitles) {
                 graphics.drawString(Minecraft.getInstance().font, Component.literal(container.title()),
@@ -62,7 +63,7 @@ public final class StorageCardBodyRenderer {
             int gridLeft = x + 10;
             int gridTop = cursorY;
             GridInventoryData inventory = container.inventory();
-            if (data.slot() != null) {
+            if (interactionsEnabled && data.slot() != null) {
                 equipmentRegions.add(new GridColumnPanel.Region(data.slot(), container.id(), inventory, gridLeft, gridTop));
             }
             GridRenderer.renderGrid(graphics, gridLeft, gridTop, inventory, CELL);

@@ -40,13 +40,16 @@ public final class StorageAccordionCard {
         if (button != 0 || !containsHeader(x, y, width, mouseX, mouseY)) {
             return false;
         }
-        state.toggle(data.available());
-        return true;
+        return state.toggle(data.available());
     }
 
     public int animatedHeight(StorageCardData data) {
         return StorageCardHeaderRenderer.HEIGHT
                 + Math.round(StorageCardBodyRenderer.fullHeight(data) * state.expansionProgress()) + GAP;
+    }
+
+    public boolean expanded() {
+        return state.expanded();
     }
 
     private static boolean containsHeader(int x, int y, int width, double mouseX, double mouseY) {
