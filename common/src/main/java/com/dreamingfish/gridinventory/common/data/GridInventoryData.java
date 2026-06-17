@@ -126,8 +126,12 @@ public class GridInventoryData implements IGridInventory {
 
     @Override
     public ItemStack insert(ItemStack stack, GridInsertMode mode) {
+        return insert(stack, mode, 0);
+    }
+
+    public ItemStack insert(ItemStack stack, GridInsertMode mode, int targetDepth) {
         if (!GridStackMerger.itemsStackableInGrid()) {
-            return insertUnstacked(stack, mode);
+            return insertUnstacked(stack, mode, targetDepth);
         }
         ItemStack remainder = stack;
         if (mode == GridInsertMode.EXECUTE) {
@@ -136,7 +140,7 @@ public class GridInventoryData implements IGridInventory {
                 return ItemStack.EMPTY;
             }
         }
-        Optional<GridAutoInsertHelper.Placement> placement = GridAutoInsertHelper.findFirstPlacement(this, remainder);
+        Optional<GridAutoInsertHelper.Placement> placement = GridAutoInsertHelper.findFirstPlacement(this, remainder, targetDepth);
         if (placement.isEmpty()) {
             return remainder;
         }
@@ -148,7 +152,7 @@ public class GridInventoryData implements IGridInventory {
         return ItemStack.EMPTY;
     }
 
-    private ItemStack insertUnstacked(ItemStack stack, GridInsertMode mode) {
+    private ItemStack insertUnstacked(ItemStack stack, GridInsertMode mode, int targetDepth) {
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -156,7 +160,7 @@ public class GridInventoryData implements IGridInventory {
         ItemStack remainder = stack.copy();
         while (!remainder.isEmpty()) {
             ItemStack single = remainder.copyWithCount(1);
-            Optional<GridAutoInsertHelper.Placement> placement = GridAutoInsertHelper.findFirstPlacement(targetInventory, single);
+            Optional<GridAutoInsertHelper.Placement> placement = GridAutoInsertHelper.findFirstPlacement(targetInventory, single, targetDepth);
             if (placement.isEmpty()) {
                 return remainder;
             }

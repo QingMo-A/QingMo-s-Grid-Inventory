@@ -8,6 +8,7 @@ public final class Forge1201ServerConfigAccess implements GridInventoryConfigAcc
     @Override public int defaultItemHeight() { return Forge1201ServerConfig.DEFAULT_ITEM_HEIGHT.get(); }
     @Override public boolean defaultRotatable() { return Forge1201ServerConfig.DEFAULT_ROTATABLE.get(); }
     @Override public boolean gridItemsStackable() { return Forge1201ServerConfig.GRID_ITEMS_STACKABLE.get(); }
+    @Override public int maxNestedBackpackDepth() { return Forge1201ServerConfig.MAX_NESTED_BACKPACK_DEPTH.get(); }
     @Override public int smallGridBagColumns() { return Forge1201ServerConfig.SMALL_GRID_BAG_COLUMNS.get(); }
     @Override public int smallGridBagRows() { return Forge1201ServerConfig.SMALL_GRID_BAG_ROWS.get(); }
     @Override public boolean replaceSurvivalInventory() { return Forge1201ServerConfig.REPLACE_SURVIVAL_INVENTORY.get(); }

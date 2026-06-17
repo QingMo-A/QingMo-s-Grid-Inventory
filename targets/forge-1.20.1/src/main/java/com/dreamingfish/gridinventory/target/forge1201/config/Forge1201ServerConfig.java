@@ -10,6 +10,7 @@ public final class Forge1201ServerConfig {
     public static final ForgeConfigSpec.IntValue DEFAULT_ITEM_HEIGHT;
     public static final ForgeConfigSpec.BooleanValue DEFAULT_ROTATABLE;
     public static final ForgeConfigSpec.BooleanValue GRID_ITEMS_STACKABLE;
+    public static final ForgeConfigSpec.IntValue MAX_NESTED_BACKPACK_DEPTH;
     public static final ForgeConfigSpec.IntValue SMALL_GRID_BAG_COLUMNS;
     public static final ForgeConfigSpec.IntValue SMALL_GRID_BAG_ROWS;
     public static final ForgeConfigSpec.BooleanValue REPLACE_SURVIVAL_INVENTORY;
@@ -44,6 +45,8 @@ public final class Forge1201ServerConfig {
         BUILDER.push("grid_inventory");
         GRID_ITEMS_STACKABLE = BUILDER.comment("If false, items stored inside grid inventories are split into count-1 entries even when vanilla would allow stacking.")
                 .define("items_stackable", true);
+        MAX_NESTED_BACKPACK_DEPTH = BUILDER.comment("Maximum nested backpack depth, including the outermost backpack.")
+                .defineInRange("max_nested_backpack_depth", 3, 1, 16);
         BUILDER.pop();
 
         BUILDER.push("small_grid_bag");

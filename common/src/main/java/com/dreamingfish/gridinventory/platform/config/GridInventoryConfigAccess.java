@@ -11,6 +11,8 @@ public interface GridInventoryConfigAccess {
 
     boolean gridItemsStackable();
 
+    int maxNestedBackpackDepth();
+
     int smallGridBagColumns();
 
     int smallGridBagRows();

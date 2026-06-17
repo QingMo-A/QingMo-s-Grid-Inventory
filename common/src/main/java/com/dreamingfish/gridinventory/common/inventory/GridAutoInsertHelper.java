@@ -14,9 +14,13 @@ public final class GridAutoInsertHelper {
     }
 
     public static Optional<Placement> findFirstPlacement(IGridInventory inventory, ItemStack stack) {
+        return findFirstPlacement(inventory, stack, 0);
+    }
+
+    public static Optional<Placement> findFirstPlacement(IGridInventory inventory, ItemStack stack, int targetDepth) {
         for (int y = 0; y < inventory.getRows(); y++) {
             for (int x = 0; x < inventory.getColumns(); x++) {
-                if (GridPlacementValidator.canPlace(inventory, stack, x, y, false, null)) {
+                if (GridPlacementValidator.canPlace(inventory, stack, x, y, false, null, targetDepth)) {
                     return Optional.of(new Placement(x, y, false));
                 }
             }
@@ -24,7 +28,7 @@ public final class GridAutoInsertHelper {
         if (GridItemSizeManager.getSize(stack).rotatable()) {
             for (int y = 0; y < inventory.getRows(); y++) {
                 for (int x = 0; x < inventory.getColumns(); x++) {
-                    if (GridPlacementValidator.canPlace(inventory, stack, x, y, true, null)) {
+                    if (GridPlacementValidator.canPlace(inventory, stack, x, y, true, null, targetDepth)) {
                         return Optional.of(new Placement(x, y, true));
                     }
                 }

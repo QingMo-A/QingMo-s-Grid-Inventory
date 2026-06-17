@@ -14,7 +14,15 @@ public final class GridPlacementValidator {
     }
 
     public static boolean canPlace(IGridInventory inventory, ItemStack stack, int targetX, int targetY, boolean rotated, @Nullable UUID ignoredEntryId) {
+        return canPlace(inventory, stack, targetX, targetY, rotated, ignoredEntryId, 0);
+    }
+
+    public static boolean canPlace(IGridInventory inventory, ItemStack stack, int targetX, int targetY, boolean rotated,
+                                   @Nullable UUID ignoredEntryId, int targetDepth) {
         if (stack.isEmpty() || stack.is(ModItems.SMALL_GRID_BAG.get())) {
+            return false;
+        }
+        if (!NestedBackpackValidator.canPlaceInTargetDepth(targetDepth, stack)) {
             return false;
         }
         if (targetX < 0 || targetY < 0) {

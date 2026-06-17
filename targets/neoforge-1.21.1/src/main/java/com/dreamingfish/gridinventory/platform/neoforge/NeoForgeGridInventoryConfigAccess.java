@@ -30,6 +30,11 @@ public final class NeoForgeGridInventoryConfigAccess implements GridInventoryCon
     }
 
     @Override
+    public int maxNestedBackpackDepth() {
+        return GridInventoryConfig.MAX_NESTED_BACKPACK_DEPTH.get();
+    }
+
+    @Override
     public int smallGridBagColumns() {
         return GridInventoryConfig.SMALL_GRID_BAG_COLUMNS.get();
     }

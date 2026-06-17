@@ -256,7 +256,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int x = targetGridX(stack, mouseX);
         int y = targetGridY(stack, mouseY);
         boolean valid = GridPlacementValidator.canPlace(menu.getGridData(), stack, x, y, rotatedPreview,
-                draggingEntry == null ? null : draggingEntry.entryId());
+                draggingEntry == null ? null : draggingEntry.entryId(), menu.isPlayerGrid() ? 0 : 1);
         GridItemSize size = GridItemSizeManager.getSize(stack);
         int w = size.placedWidth(rotatedPreview);
         int h = size.placedHeight(rotatedPreview);
@@ -301,7 +301,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     && region.slot() == draggingEquipmentEntry.slot()
                     && region.containerId().equals(draggingEquipmentEntry.containerId());
             boolean valid = GridPlacementValidator.canPlace(region.inventory(), stack, x, y, rotatedPreview,
-                    movingWithinSameRegion ? draggingEquipmentEntry.entry().entryId() : null);
+                    movingWithinSameRegion ? draggingEquipmentEntry.entry().entryId() : null, 1);
             GridItemSize size = GridItemSizeManager.getSize(stack);
             int w = size.placedWidth(rotatedPreview);
             int h = size.placedHeight(rotatedPreview);
