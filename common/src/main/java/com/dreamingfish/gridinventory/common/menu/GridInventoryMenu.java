@@ -565,6 +565,220 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    public boolean extractNestedGridEntryToPlayerSlot(NestedContainerPath sourceOwnerPath, String sourceContainerId,
+                                                      UUID entryId, int playerSlot, int amount) {
+        if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
+            return false;
+        }
+        Optional<MenuPathHandle> sourceOwner = resolveMenuGridPath(sourceOwnerPath);
+        Optional<GridInventoryData> sourceGrid = sourceOwner.flatMap(owner -> nestedGrid(owner.stack(), sourceContainerId));
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = sourceGrid.flatMap(grid -> grid.getEntry(entryId));
+        if (sourceOwner.isEmpty() || sourceGrid.isEmpty() || source.isEmpty()) {
+            return false;
+        }
+        ItemStack stack = source.get().stack();
+        if (!mayInsertIntoVanillaSlot(playerSlot, stack)) {
+            return false;
+        }
+        ItemStack target = playerInventory.getItem(playerSlot);
+        int moveCount = Math.min(amount, stack.getCount());
+        int accepted;
+        if (target.isEmpty()) {
+            accepted = moveCount;
+        } else if (GridItemStacks.sameItemSameData(target, stack) && target.getCount() < target.getMaxStackSize()) {
+            accepted = Math.min(moveCount, target.getMaxStackSize() - target.getCount());
+        } else {
+            return false;
+        }
+        if (accepted <= 0) {
+            return false;
+        }
+        GridInventoryData sourceCopy = sourceGrid.get().copy();
+        ItemStack extracted = sourceCopy.extract(entryId, accepted);
+        ItemStack updatedSourceOwner = sourceOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedSourceOwner, sourceContainerId, sourceCopy) || !sourceOwner.get().write(updatedSourceOwner)) {
+            return false;
+        }
+        if (target.isEmpty()) {
+            playerInventory.setItem(playerSlot, extracted);
+        } else {
+            target.grow(extracted.getCount());
+        }
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
+    public boolean dropNestedGridEntry(NestedContainerPath sourceOwnerPath, String sourceContainerId, UUID entryId) {
+        Optional<MenuPathHandle> sourceOwner = resolveMenuGridPath(sourceOwnerPath);
+        Optional<GridInventoryData> sourceGrid = sourceOwner.flatMap(owner -> nestedGrid(owner.stack(), sourceContainerId));
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = sourceGrid.flatMap(grid -> grid.getEntry(entryId));
+        if (sourceOwner.isEmpty() || sourceGrid.isEmpty() || source.isEmpty()) {
+            return false;
+        }
+        GridInventoryData sourceCopy = sourceGrid.get().copy();
+        ItemStack dropped = sourceCopy.extract(entryId, source.get().stack().getCount());
+        if (dropped.isEmpty()) {
+            return false;
+        }
+        ItemStack updatedSourceOwner = sourceOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedSourceOwner, sourceContainerId, sourceCopy) || !sourceOwner.get().write(updatedSourceOwner)) {
+            return false;
+        }
+        playerInventory.player.drop(dropped, false);
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
+    public boolean quickEquipNestedGridEntry(NestedContainerPath sourceOwnerPath, String sourceContainerId, UUID entryId) {
+        if (!playerGrid) {
+            return false;
+        }
+        Optional<MenuPathHandle> sourceOwner = resolveMenuGridPath(sourceOwnerPath);
+        Optional<GridInventoryData> sourceGrid = sourceOwner.flatMap(owner -> nestedGrid(owner.stack(), sourceContainerId));
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = sourceGrid.flatMap(grid -> grid.getEntry(entryId));
+        if (sourceOwner.isEmpty() || sourceGrid.isEmpty() || source.isEmpty()) {
+            return false;
+        }
+        ItemStack stack = source.get().stack();
+        Optional<EquipmentSlot> targetSlot = findEmptyArmorSlot(stack);
+        boolean canEquipToCurio = GridInventoryServices.accessories().canQuickEquip(playerInventory.player, stack);
+        if (targetSlot.isEmpty() && !canEquipToCurio) {
+            return false;
+        }
+        GridInventoryData sourceCopy = sourceGrid.get().copy();
+        ItemStack equipped = sourceCopy.extract(entryId, 1);
+        if (equipped.isEmpty()) {
+            return false;
+        }
+        ItemStack updatedSourceOwner = sourceOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedSourceOwner, sourceContainerId, sourceCopy) || !sourceOwner.get().write(updatedSourceOwner)) {
+            return false;
+        }
+        boolean equippedToCurio = false;
+        if (targetSlot.isPresent()) {
+            playerInventory.setItem(equipmentPlayerSlot(targetSlot.get()), equipped);
+        } else {
+            equippedToCurio = GridInventoryServices.accessories().quickEquip(playerInventory.player, equipped);
+            if (!equippedToCurio) {
+                return false;
+            }
+        }
+        playerInventory.setChanged();
+        save();
+        return targetSlot.isPresent() || equippedToCurio;
+    }
+
+    public boolean insertPlayerSlotIntoNestedGrid(int playerSlot, NestedContainerPath targetOwnerPath,
+                                                  String targetContainerId, int targetX, int targetY,
+                                                  boolean rotated, boolean targetFolded) {
+        if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize() || !isFreePlayerSlot(playerSlot)) {
+            return false;
+        }
+        ItemStack source = playerInventory.getItem(playerSlot);
+        Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
+        Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
+        if (source.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
+        }
+        GridInventoryData targetCopy = targetGrid.get().copy();
+        if (!GridPlacementValidator.canPlace(targetCopy, moved, targetX, targetY, rotated, null, targetOwnerPath.depth() + 1)) {
+            return false;
+        }
+        targetCopy.add(moved, targetX, targetY, rotated);
+        ItemStack updatedTargetOwner = targetOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedTargetOwner, targetContainerId, targetCopy) || !targetOwner.get().write(updatedTargetOwner)) {
+            return false;
+        }
+        playerInventory.setItem(playerSlot, ItemStack.EMPTY);
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
+    public boolean extractCurioToNestedGrid(String identifier, int index, NestedContainerPath targetOwnerPath,
+                                            String targetContainerId, int targetX, int targetY,
+                                            boolean rotated, boolean targetFolded) {
+        if (!playerGrid) {
+            return false;
+        }
+        Optional<ItemStack> source = GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, identifier, index);
+        Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
+        Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
+        if (source.isEmpty() || source.get().isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.get().copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
+        }
+        GridInventoryData targetCopy = targetGrid.get().copy();
+        if (!GridPlacementValidator.canPlace(targetCopy, moved, targetX, targetY, rotated, null, targetOwnerPath.depth() + 1)) {
+            return false;
+        }
+        targetCopy.add(moved, targetX, targetY, rotated);
+        ItemStack updatedTargetOwner = targetOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedTargetOwner, targetContainerId, targetCopy) || !targetOwner.get().write(updatedTargetOwner)) {
+            return false;
+        }
+        GridInventoryServices.accessories().setAccessoryStack(playerInventory.player, identifier, index, ItemStack.EMPTY);
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
+    public boolean transferEquipmentEntryIntoNestedGrid(EquipmentSlot sourceSlot, String sourceContainerId, UUID entryId,
+                                                        NestedContainerPath targetOwnerPath, String targetContainerId,
+                                                        int targetX, int targetY, boolean rotated, boolean targetFolded) {
+        Optional<EquipmentStorageEdit> sourceEdit = editableEquipmentInventory(sourceSlot, sourceContainerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = sourceEdit.flatMap(edit -> edit.inventory().getEntry(entryId));
+        Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
+        Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
+        if (sourceEdit.isEmpty() || source.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.get().stack().copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
+        }
+        GridInventoryData targetCopy = targetGrid.get().copy();
+        if (!GridPlacementValidator.canPlace(targetCopy, moved, targetX, targetY, rotated, null, targetOwnerPath.depth() + 1)) {
+            return false;
+        }
+        sourceEdit.get().inventory().extract(entryId, moved.getCount());
+        saveEquipmentStorage(sourceSlot, sourceEdit.get().storage());
+        Optional<MenuPathHandle> refreshedTargetOwner = resolveMenuGridPath(targetOwnerPath);
+        Optional<GridInventoryData> refreshedTargetGrid = refreshedTargetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
+        if (refreshedTargetOwner.isEmpty() || refreshedTargetGrid.isEmpty()) {
+            return false;
+        }
+        GridInventoryData refreshedTargetCopy = refreshedTargetGrid.get().copy();
+        if (!GridPlacementValidator.canPlace(refreshedTargetCopy, moved, targetX, targetY, rotated, null, targetOwnerPath.depth() + 1)) {
+            return false;
+        }
+        refreshedTargetCopy.add(moved, targetX, targetY, rotated);
+        ItemStack updatedTargetOwner = refreshedTargetOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedTargetOwner, targetContainerId, refreshedTargetCopy) || !refreshedTargetOwner.get().write(updatedTargetOwner)) {
+            return false;
+        }
+        save();
+        return true;
+    }
+
     public boolean transferNestedGridEntryIntoNestedGrid(NestedContainerPath sourceOwnerPath, String sourceContainerId, UUID entryId,
                                                          NestedContainerPath targetOwnerPath, String targetContainerId,
                                                          int targetX, int targetY, boolean rotated, boolean targetFolded) {

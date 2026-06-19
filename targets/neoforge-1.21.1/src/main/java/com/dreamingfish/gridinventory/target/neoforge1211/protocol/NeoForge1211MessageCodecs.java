@@ -44,6 +44,10 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> b.writeUUID(m.entryId()),
                 b -> new DropGridEntryMessage(b.readUUID())
         ));
+        register(GridMessages.DROP_NESTED_GRID_ENTRY, codec(
+                (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); },
+                b -> new DropNestedGridEntryMessage(readPath(b), b.readUtf(), b.readUUID())
+        ));
         register(GridMessages.EXTRACT_CURIO_TO_EQUIPMENT_STORAGE, codec(
                 (m, b) -> { b.writeUtf(m.identifier()); b.writeVarInt(m.index()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new ExtractCurioToEquipmentStorageMessage(b.readUtf(), b.readVarInt(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
@@ -51,6 +55,10 @@ public final class NeoForge1211MessageCodecs {
         register(GridMessages.EXTRACT_CURIO_TO_GRID, codec(
                 (m, b) -> { b.writeUtf(m.identifier()); b.writeVarInt(m.index()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new ExtractCurioToGridMessage(b.readUtf(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.EXTRACT_CURIO_TO_NESTED_GRID, codec(
+                (m, b) -> { b.writeUtf(m.identifier()); b.writeVarInt(m.index()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new ExtractCurioToNestedGridMessage(b.readUtf(), b.readVarInt(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
         register(GridMessages.EXTRACT_CURIO_TO_PLAYER_SLOT, codec(
                 (m, b) -> { b.writeUtf(m.identifier()); b.writeVarInt(m.index()); b.writeVarInt(m.targetPlayerSlot()); },
@@ -73,6 +81,10 @@ public final class NeoForge1211MessageCodecs {
                 return new ExtractGridEntryToPlayerSlotMessage(buf.readUUID(), buf.readVarInt(), buf.readVarInt());
             }
         });
+        register(GridMessages.EXTRACT_NESTED_GRID_ENTRY_TO_PLAYER_SLOT, codec(
+                (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); b.writeVarInt(m.playerSlot()); b.writeVarInt(m.amount()); },
+                b -> new ExtractNestedGridEntryToPlayerSlotMessage(readPath(b), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt())
+        ));
         register(GridMessages.EXTRACT_TO_PLAYER_INVENTORY, new NeoForge1211MessageCodec<>() {
             @Override
             public void encode(ExtractToPlayerInventoryMessage message, RegistryFriendlyByteBuf buf) {
@@ -113,6 +125,10 @@ public final class NeoForge1211MessageCodecs {
         register(GridMessages.INSERT_INTO_EQUIPMENT_STORAGE, codec(
                 (m, b) -> { b.writeVarInt(m.playerSlot()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new InsertIntoEquipmentStorageMessage(b.readVarInt(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.INSERT_PLAYER_SLOT_INTO_NESTED_GRID, codec(
+                (m, b) -> { b.writeVarInt(m.playerSlot()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new InsertPlayerSlotIntoNestedGridMessage(b.readVarInt(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
         register(GridMessages.INSERT_PLAYER_SLOT_INTO_CURIO, codec(
                 (m, b) -> { b.writeVarInt(m.sourcePlayerSlot()); b.writeUtf(m.identifier()); b.writeVarInt(m.index()); },
@@ -168,6 +184,10 @@ public final class NeoForge1211MessageCodecs {
         register(GridMessages.QUICK_EQUIP_GRID_ENTRY, codec(
                 (m, b) -> b.writeUUID(m.entryId()),
                 b -> new QuickEquipGridEntryMessage(b.readUUID())
+        ));
+        register(GridMessages.QUICK_EQUIP_NESTED_GRID_ENTRY, codec(
+                (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); },
+                b -> new QuickEquipNestedGridEntryMessage(readPath(b), b.readUtf(), b.readUUID())
         ));
         register(GridMessages.QUICK_EQUIP_PLAYER_SLOT, codec(
                 (m, b) -> b.writeVarInt(m.playerSlot()),
@@ -245,6 +265,10 @@ public final class NeoForge1211MessageCodecs {
         register(GridMessages.TRANSFER_EQUIPMENT_STORAGE_ENTRY_INTO_GRID, codec(
                 (m, b) -> { b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new TransferEquipmentStorageEntryIntoGridMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_EQUIPMENT_STORAGE_ENTRY_INTO_NESTED_GRID, codec(
+                (m, b) -> { b.writeEnum(m.sourceSlot()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new TransferEquipmentStorageEntryIntoNestedGridMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
         register(GridMessages.TRANSFER_EQUIPMENT_STORAGE_ENTRY, codec(
                 (m, b) -> { b.writeEnum(m.sourceSlot()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); b.writeEnum(m.targetSlot()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },

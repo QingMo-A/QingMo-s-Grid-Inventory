@@ -7,11 +7,14 @@ import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractCurioToNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.ExtractNestedGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.GridMessages;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
@@ -19,6 +22,7 @@ import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMe
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMessage;
+import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.ManualPickupItemMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
@@ -28,6 +32,7 @@ import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipme
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.SyncBackpackFoldingRulesMessage;
 import com.dreamingfish.gridinventory.common.network.SyncEquipmentStorageMessage;
@@ -36,6 +41,7 @@ import com.dreamingfish.gridinventory.common.network.SyncItemSizeRulesMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
@@ -271,9 +277,25 @@ public final class Forge1201MessageCodecs {
                 (message, buf) -> buf.writeUUID(message.entryId()),
                 buf -> new DropGridEntryMessage(buf.readUUID())
         ));
+        register(GridMessages.DROP_NESTED_GRID_ENTRY, codec(
+                (message, buf) -> {
+                    writePath(buf, message.sourceOwnerPath());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                },
+                buf -> new DropNestedGridEntryMessage(readPath(buf), buf.readUtf(), buf.readUUID())
+        ));
         register(GridMessages.QUICK_EQUIP_GRID_ENTRY, codec(
                 (message, buf) -> buf.writeUUID(message.entryId()),
                 buf -> new QuickEquipGridEntryMessage(buf.readUUID())
+        ));
+        register(GridMessages.QUICK_EQUIP_NESTED_GRID_ENTRY, codec(
+                (message, buf) -> {
+                    writePath(buf, message.sourceOwnerPath());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                },
+                buf -> new QuickEquipNestedGridEntryMessage(readPath(buf), buf.readUtf(), buf.readUUID())
         ));
         register(GridMessages.QUICK_EQUIP_PLAYER_SLOT, codec(
                 (message, buf) -> buf.writeVarInt(message.playerSlot()),
@@ -354,6 +376,20 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new ExtractCurioToPlayerSlotMessage(buf.readUtf(), buf.readVarInt(), buf.readVarInt())
         ));
+        register(GridMessages.EXTRACT_CURIO_TO_NESTED_GRID, codec(
+                (message, buf) -> {
+                    buf.writeUtf(message.identifier());
+                    buf.writeVarInt(message.index());
+                    writePath(buf, message.targetOwnerPath());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new ExtractCurioToNestedGridMessage(buf.readUtf(), buf.readVarInt(), readPath(buf),
+                        buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
         register(GridMessages.INSERT_EQUIPMENT_STORAGE_ENTRY_INTO_CURIO, codec(
                 (message, buf) -> {
                     buf.writeEnum(message.sourceSlot());
@@ -421,6 +457,46 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new TransferNestedGridEntryIntoEquipmentStorageMessage(readPath(buf), buf.readUtf(),
                         buf.readUUID(), buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(),
+                        buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.EXTRACT_NESTED_GRID_ENTRY_TO_PLAYER_SLOT, codec(
+                (message, buf) -> {
+                    writePath(buf, message.sourceOwnerPath());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.playerSlot());
+                    buf.writeVarInt(message.amount());
+                },
+                buf -> new ExtractNestedGridEntryToPlayerSlotMessage(readPath(buf), buf.readUtf(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt())
+        ));
+        register(GridMessages.INSERT_PLAYER_SLOT_INTO_NESTED_GRID, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.playerSlot());
+                    writePath(buf, message.targetOwnerPath());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new InsertPlayerSlotIntoNestedGridMessage(buf.readVarInt(), readPath(buf), buf.readUtf(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_EQUIPMENT_STORAGE_ENTRY_INTO_NESTED_GRID, codec(
+                (message, buf) -> {
+                    buf.writeEnum(message.sourceSlot());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                    writePath(buf, message.targetOwnerPath());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new TransferEquipmentStorageEntryIntoNestedGridMessage(buf.readEnum(EquipmentSlot.class),
+                        buf.readUtf(), buf.readUUID(), readPath(buf), buf.readUtf(), buf.readVarInt(),
                         buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
         ));
         register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_NESTED_GRID, codec(

@@ -1,0 +1,26 @@
+package com.dreamingfish.gridinventory.common.network;
+
+import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
+import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
+import com.dreamingfish.gridinventory.protocol.GridMessage;
+import com.dreamingfish.gridinventory.protocol.GridMessageContext;
+import com.dreamingfish.gridinventory.protocol.GridMessageType;
+
+public record ExtractCurioToNestedGridMessage(String identifier, int index, NestedContainerPath targetOwnerPath,
+                                              String targetContainerId, int targetX, int targetY,
+                                              boolean rotated, boolean targetFolded) implements GridMessage {
+    public static void handle(ExtractCurioToNestedGridMessage message, GridMessageContext context) {
+        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
+            menu.extractCurioToNestedGrid(message.identifier(), message.index(), message.targetOwnerPath(),
+                    message.targetContainerId(), message.targetX(), message.targetY(), message.rotated(),
+                    message.targetFolded());
+            menu.broadcastChanges();
+            ModNetworking.syncMenu(context.player(), menu);
+        }
+    }
+
+    @Override
+    public GridMessageType<?> type() {
+        return GridMessages.EXTRACT_CURIO_TO_NESTED_GRID;
+    }
+}
