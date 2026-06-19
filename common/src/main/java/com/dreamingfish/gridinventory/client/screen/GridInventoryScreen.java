@@ -64,6 +64,7 @@ import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
 import com.dreamingfish.gridinventory.client.access.SlotPositionAccessor;
 import com.dreamingfish.gridinventory.client.sound.GridInventoryUiSounds;
+import com.dreamingfish.gridinventory.client.ui.GridUiLayers;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -82,7 +83,6 @@ import java.util.UUID;
 public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMenu> {
     private static final int CELL = 27;
     private static final int DRAG_START_DISTANCE = 6;
-    private static final float DRAGGED_STACK_Z = 950.0F;
     private int gridLeft;
     private int gridTop;
     private GridEntry draggingEntry;
@@ -252,7 +252,26 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         boolean draggingWindow = nestedWindows.isDraggingWindow();
         boolean draggingAnyItem = !draggedStack().isEmpty();
         boolean mouseOverNestedWindow = nestedWindows.containsWindowAt(mouseX, mouseY);
-        if (!draggingWindow && !draggingAnyItem && !mouseOverNestedWindow) {
+        boolean renderHoverTooltips = !draggingWindow && !draggingAnyItem && !mouseOverNestedWindow;
+        if (renderHoverTooltips) {
+            if (draggingEntry == null && draggingEquipmentEntry == null && draggingNestedEntry == null
+                    && selectedPlayerStack.isEmpty()) {
+                hoveredStack(mouseX, mouseY).ifPresent(stack ->
+                        EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
+            }
+        }
+        nearbyItemsPanel.render(graphics, mouseX, mouseY, draggingAnyItem);
+        graphics.flush();
+        nestedWindows.refresh(this::resolveNestedWindowStack);
+        nestedWindows.render(graphics, mouseX, mouseY, hoverAnimationsEnabled(), nestedPlacementPreview());
+        graphics.flush();
+        if (draggingAnyItem) {
+            renderDraggedStackGhost(graphics, mouseX, mouseY);
+            return;
+        }
+        if (renderHoverTooltips) {
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0F, 0.0F, GridUiLayers.VANILLA_TOOLTIP);
             renderTooltip(graphics, mouseX, mouseY);
             hoveredGridEntry(mouseX, mouseY).ifPresent(entry ->
                     graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
@@ -265,18 +284,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 equipmentColumnPanel.curioSlotAt(mouseX, mouseY)
                         .ifPresent(slot -> graphics.renderTooltip(font, slot.tooltip(), Optional.empty(), mouseX, mouseY));
             }
-            if (draggingEntry == null && draggingEquipmentEntry == null && draggingNestedEntry == null
-                    && selectedPlayerStack.isEmpty()) {
-                hoveredStack(mouseX, mouseY).ifPresent(stack ->
-                        EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
-            }
-        }
-        nearbyItemsPanel.render(graphics, mouseX, mouseY, draggingAnyItem);
-        nestedWindows.refresh(this::resolveNestedWindowStack);
-        nestedWindows.render(graphics, mouseX, mouseY, hoverAnimationsEnabled(), nestedPlacementPreview());
-        if (draggingAnyItem) {
-            renderDraggedStackGhost(graphics, mouseX, mouseY);
-            return;
+            graphics.pose().popPose();
+            graphics.flush();
         }
         renderDraggedStackGhost(graphics, mouseX, mouseY);
     }
@@ -318,7 +327,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
         graphics.flush();
         graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, DRAGGED_STACK_Z);
+        graphics.pose().translate(0.0F, 0.0F, GridUiLayers.DRAGGED_ITEM);
         GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F, rotatedPreview);
         graphics.pose().popPose();
         graphics.flush();

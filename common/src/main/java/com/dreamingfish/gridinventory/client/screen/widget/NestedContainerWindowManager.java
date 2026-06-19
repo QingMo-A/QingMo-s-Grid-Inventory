@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.client.screen.widget;
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.render.GridRenderer;
+import com.dreamingfish.gridinventory.client.ui.GridUiLayers;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import com.dreamingfish.gridinventory.api.GridItemSize;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
@@ -33,8 +34,6 @@ public final class NestedContainerWindowManager {
     private static final int CLOSE_SIZE = 12;
     private static final int CONTAINER_GAP = 10;
     private static final int TITLE_HEIGHT = 12;
-    private static final float WINDOW_BASE_Z = 420.0F;
-    private static final float WINDOW_Z_STEP = 10.0F;
     private final List<Window> windows = new ArrayList<>();
     private final HoverAnimationTracker<EntryAnimationKey> entryHoverAnimations = new HoverAnimationTracker<>();
     private Window dragging;
@@ -67,7 +66,8 @@ public final class NestedContainerWindowManager {
             boolean topHoveredWindow = window == hoveredWindow;
             window.render(graphics, mouseX, mouseY, hoverEnabled && !windowDragging && topHoveredWindow,
                     topHoveredWindow ? preview : Optional.empty(), entryHoverAnimations,
-                    WINDOW_BASE_Z + index * WINDOW_Z_STEP);
+                    GridUiLayers.NESTED_WINDOW_BASE + index * GridUiLayers.NESTED_WINDOW_STEP);
+            graphics.flush();
         }
         entryHoverAnimations.markFrameEnd();
     }
@@ -252,6 +252,8 @@ public final class NestedContainerWindowManager {
             graphics.fill(x, y + 2, x + width, y + height - 2, 0xEE151922);
             graphics.renderOutline(x, y, width, height, contains(mouseX, mouseY) ? 0x88AABEDC : 0x44FFFFFF);
             graphics.fill(x, y, x + width, y + HEADER_HEIGHT, 0xAA202733);
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_HEADER);
             graphics.renderItem(stack, x + 5, y + 3);
             graphics.drawString(font, font.plainSubstrByWidth(title.getString(), width - 42), x + 24,
                     y + (HEADER_HEIGHT - font.lineHeight) / 2, 0xF1F5F9, false);
@@ -263,13 +265,17 @@ public final class NestedContainerWindowManager {
             graphics.fill(closeX + 5, closeY + 5, closeX + 7, closeY + 7, closeColor);
             graphics.fill(closeX + 3, closeY + 7, closeX + 5, closeY + 9, closeColor);
             graphics.fill(closeX + 7, closeY + 7, closeX + 9, closeY + 9, closeColor);
+            graphics.pose().popPose();
 
             int gridY = y + HEADER_HEIGHT + PADDING;
             boolean showSectionTitles = containers.size() > 1;
             for (ContainerView view : views) {
                 GridInventoryData inventory = view.inventory();
                 if (showSectionTitles) {
+                    graphics.pose().pushPose();
+                    graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_HEADER);
                     graphics.drawString(font, view.title(), x + PADDING, gridY, 0x94A3B8, false);
+                    graphics.pose().popPose();
                     gridY += TITLE_HEIGHT;
                 }
                 int gridX = gridLeft(view);
@@ -281,6 +287,8 @@ public final class NestedContainerWindowManager {
                     hoverCellX = GridLayoutMetrics.cellXAt(inventory, mouseX - gridX, mouseY - gridTop, CELL);
                     hoverCellY = GridLayoutMetrics.cellYAt(inventory, mouseX - gridX, mouseY - gridTop, CELL);
                 }
+                graphics.pose().pushPose();
+                graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_ITEM);
                 for (EntryView entryView : view.entries()) {
                     GridEntry entry = entryView.entry();
                     boolean hovered = hoverEnabled && entry.contains(hoverCellX, hoverCellY);
@@ -288,8 +296,12 @@ public final class NestedContainerWindowManager {
                     GridItemRenderer.renderEntry(graphics, entry, inventory, gridX, gridTop, CELL, 1.0F,
                             hoverProgress);
                 }
+                graphics.pose().popPose();
+                graphics.pose().pushPose();
+                graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_OVERLAY);
                 preview.ifPresent(value -> renderPlacementPreview(graphics, value, view, inventory, gridX, gridTop,
                         mouseX, mouseY));
+                graphics.pose().popPose();
                 gridY += view.gridOuterHeight() + CONTAINER_GAP;
             }
             graphics.pose().popPose();

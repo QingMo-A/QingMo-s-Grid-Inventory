@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
+import com.dreamingfish.gridinventory.client.ui.GridUiLayers;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,7 +21,6 @@ public final class EquipmentStorageTooltipRenderer {
     private static final int PADDING = 8;
     private static final int CONTAINER_GAP = 10;
     private static final int TITLE_HEIGHT = 12;
-    private static final float TOOLTIP_Z = 350.0F;
     private static CachedTooltip cachedTooltip;
 
     private EquipmentStorageTooltipRenderer() {
@@ -40,7 +40,7 @@ public final class EquipmentStorageTooltipRenderer {
         int panelY = Mth.clamp(mouseY - panelHeight / 2, 4, Math.max(4, screenHeight - panelHeight - 4));
 
         graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, TOOLTIP_Z);
+        graphics.pose().translate(0.0F, 0.0F, GridUiLayers.EQUIPMENT_TOOLTIP);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xF0181818);
         graphics.renderOutline(panelX, panelY, panelWidth, panelHeight, 0xFFD0D0D0);
 
@@ -54,12 +54,17 @@ public final class EquipmentStorageTooltipRenderer {
             int gridLeft = panelX + PADDING + GRID_BORDER;
             int gridTop = y + GRID_BORDER;
             GridRenderer.renderGrid(graphics, gridLeft, gridTop, container.inventory(), CELL);
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0F, 0.0F,
+                    GridUiLayers.EQUIPMENT_TOOLTIP_ITEM - GridUiLayers.EQUIPMENT_TOOLTIP);
             for (var entry : container.inventory().getEntries()) {
                 GridItemRenderer.renderEntry(graphics, entry, container.inventory(), gridLeft, gridTop, CELL, 1.0F);
             }
+            graphics.pose().popPose();
             y += container.gridOuterHeight() + CONTAINER_GAP;
         }
         graphics.pose().popPose();
+        graphics.flush();
     }
 
     private static CachedTooltip tooltip(ItemStack stack) {
