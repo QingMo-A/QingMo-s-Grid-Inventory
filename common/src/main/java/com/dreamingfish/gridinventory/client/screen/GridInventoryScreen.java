@@ -173,17 +173,20 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        boolean mouseBlockedByNestedWindow = nestedWindows.containsWindowAt(mouseX, mouseY);
+        int interactionMouseX = mouseBlockedByNestedWindow ? Integer.MIN_VALUE / 2 : mouseX;
+        int interactionMouseY = mouseBlockedByNestedWindow ? Integer.MIN_VALUE / 2 : mouseY;
         if (menu.isPlayerGrid()) {
             graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0x2E101010);
-            equipmentColumnPanel.render(graphics, mouseX, mouseY, hotbarTop(), menu.slots, lastPlayerSlot,
+            equipmentColumnPanel.render(graphics, interactionMouseX, interactionMouseY, hotbarTop(), menu.slots, lastPlayerSlot,
                     draggedStack(), !draggedStack().isEmpty(), !nestedWindows.isDraggingWindow());
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(),
-                    draggingEquipmentEntry, mouseX, mouseY, gridHoverAnimations, hoverAnimationsEnabled());
+                    draggingEquipmentEntry, interactionMouseX, interactionMouseY, gridHoverAnimations, hoverAnimationsEnabled());
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
-            renderHover(graphics, mouseX, mouseY);
-            renderPreview(graphics, mouseX, mouseY);
-            renderEquipmentPreview(graphics, mouseX, mouseY);
+            renderHover(graphics, interactionMouseX, interactionMouseY);
+            renderPreview(graphics, interactionMouseX, interactionMouseY);
+            renderEquipmentPreview(graphics, interactionMouseX, interactionMouseY);
             gridHoverAnimations.markFrameEnd();
             return;
         }
@@ -193,13 +196,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (draggingEntry != null && draggingEntry.entryId().equals(entry.entryId())) {
                 continue;
             }
-            boolean hovered = hoverAnimationsEnabled() && entry.contains(cellX(mouseX, mouseY), cellY(mouseX, mouseY));
+            boolean hovered = hoverAnimationsEnabled() && !mouseBlockedByNestedWindow
+                    && entry.contains(cellX(mouseX, mouseY), cellY(mouseX, mouseY));
             float hoverProgress = gridHoverAnimations.update(entry.entryId(), hovered);
             GridItemRenderer.renderEntry(graphics, entry, gridLeft, gridTop, CELL, 1.0F, hoverProgress);
         }
         renderDraggedOriginShadow(graphics);
-        renderHover(graphics, mouseX, mouseY);
-        renderPreview(graphics, mouseX, mouseY);
+        renderHover(graphics, interactionMouseX, interactionMouseY);
+        renderPreview(graphics, interactionMouseX, interactionMouseY);
         gridHoverAnimations.markFrameEnd();
     }
 
@@ -247,7 +251,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         super.render(graphics, mouseX, mouseY, partialTick);
         boolean draggingWindow = nestedWindows.isDraggingWindow();
         boolean draggingAnyItem = !draggedStack().isEmpty();
-        if (!draggingWindow && !draggingAnyItem) {
+        boolean mouseOverNestedWindow = nestedWindows.containsWindowAt(mouseX, mouseY);
+        if (!draggingWindow && !draggingAnyItem && !mouseOverNestedWindow) {
             renderTooltip(graphics, mouseX, mouseY);
             hoveredGridEntry(mouseX, mouseY).ifPresent(entry ->
                     graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
@@ -471,6 +476,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nestedWindows.mouseClicked(mouseX, mouseY, button, width, height)) {
             return true;
         }
+        if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
+            return true;
+        }
         if (button == 1 && nearbyItemsPanel.isDraggingGroundItem()) {
             rotateDraggedPreview();
             return true;
@@ -597,6 +605,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     hit.ownerPath(), hit.containerId(), hit.entry().entryId()));
             return true;
         }
+        if (nestedWindows.containsWindowAt(mouseX, mouseY)) {
+            return true;
+        }
         if (menu.isPlayerGrid()) {
             Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt(mouseX, mouseY);
             if (equipmentHit.isPresent()) {
@@ -659,6 +670,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
                 released = true;
             }
+            if (!released && nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
+                clearDragState();
+                return true;
+            }
             Optional<GridColumnPanel.Region> equipmentRegion = !released && menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region region = equipmentRegion.get();
@@ -698,6 +713,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         target.cellX() - anchorCellX(draggedStack()),
                         target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
                 playReleaseSound(true, false, false);
+                clearDragState();
+                return true;
+            }
+            if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
                 clearDragState();
                 return true;
             }
@@ -760,6 +779,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         target.cellX() - anchorCellX(draggedStack()),
                         target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
                 released = true;
+            } else if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
+                clearDragState();
+                return true;
             } else {
                 Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
                         ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
@@ -809,6 +831,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 clearDragState();
                 return true;
             }
+            if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
+                clearDragState();
+                return true;
+            }
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
                 GridInventoryServices.network().sendToServer(new InsertGridEntryIntoCurioMessage(
@@ -853,6 +879,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         target.cellY() - anchorCellY(draggedStack()), rotatedPreview,
                         GridBackpackItem.isFolded(draggedStack())));
                 playReleaseSound(true, false, false);
+                clearDragState();
+                return true;
+            }
+            if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
                 clearDragState();
                 return true;
             }

@@ -61,9 +61,12 @@ public final class NestedContainerWindowManager {
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, boolean hoverEnabled, Optional<PlacementPreview> preview) {
         boolean windowDragging = dragging != null;
+        Window hoveredWindow = topWindowAt(mouseX, mouseY).orElse(null);
         for (int index = 0; index < windows.size(); index++) {
             Window window = windows.get(index);
-            window.render(graphics, mouseX, mouseY, hoverEnabled && !windowDragging, preview, entryHoverAnimations,
+            boolean topHoveredWindow = window == hoveredWindow;
+            window.render(graphics, mouseX, mouseY, hoverEnabled && !windowDragging && topHoveredWindow,
+                    topHoveredWindow ? preview : Optional.empty(), entryHoverAnimations,
                     WINDOW_BASE_Z + index * WINDOW_Z_STEP);
         }
         entryHoverAnimations.markFrameEnd();
@@ -80,19 +83,43 @@ public final class NestedContainerWindowManager {
 
     public Optional<GridHit> gridAt(int mouseX, int mouseY) {
         for (int i = windows.size() - 1; i >= 0; i--) {
-            Optional<GridHit> hit = windows.get(i).gridAt(mouseX, mouseY);
+            Window window = windows.get(i);
+            if (!window.contains(mouseX, mouseY)) {
+                continue;
+            }
+            Optional<GridHit> hit = window.gridAt(mouseX, mouseY);
             if (hit.isPresent()) {
                 return hit;
             }
+            return Optional.empty();
         }
         return Optional.empty();
     }
 
     public Optional<EntryHit> entryAt(int mouseX, int mouseY) {
         for (int i = windows.size() - 1; i >= 0; i--) {
-            Optional<EntryHit> hit = windows.get(i).entryHitAt(mouseX, mouseY);
+            Window window = windows.get(i);
+            if (!window.contains(mouseX, mouseY)) {
+                continue;
+            }
+            Optional<EntryHit> hit = window.entryHitAt(mouseX, mouseY);
             if (hit.isPresent()) {
                 return hit;
+            }
+            return Optional.empty();
+        }
+        return Optional.empty();
+    }
+
+    public boolean containsWindowAt(int mouseX, int mouseY) {
+        return windows.stream().anyMatch(window -> window.contains(mouseX, mouseY));
+    }
+
+    private Optional<Window> topWindowAt(int mouseX, int mouseY) {
+        for (int i = windows.size() - 1; i >= 0; i--) {
+            Window window = windows.get(i);
+            if (window.contains(mouseX, mouseY)) {
+                return Optional.of(window);
             }
         }
         return Optional.empty();
