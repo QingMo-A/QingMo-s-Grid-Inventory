@@ -9,6 +9,8 @@ import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
+import com.dreamingfish.gridinventory.common.inventory.NestedContainerAccess;
+import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.item.SmallGridBagItem;
 import com.dreamingfish.gridinventory.common.network.ModNetworking;
@@ -452,6 +454,182 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    public boolean transferGridEntryIntoNestedGrid(UUID entryId, NestedContainerPath targetOwnerPath, String targetContainerId,
+                                                   int targetX, int targetY, boolean rotated, boolean targetFolded) {
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = gridData.getEntry(entryId);
+        Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
+        if (source.isEmpty() || targetOwner.isEmpty() || ownsTopLevelEntry(targetOwnerPath, entryId)) {
+            return false;
+        }
+        Optional<GridInventoryData> targetGrid = nestedGrid(targetOwner.get().stack(), targetContainerId);
+        if (targetGrid.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.get().stack().copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
+        }
+        GridInventoryData targetCopy = targetGrid.get().copy();
+        if (!GridPlacementValidator.canPlace(targetCopy, moved, targetX, targetY, rotated, null, targetOwnerPath.depth())) {
+            return false;
+        }
+        targetCopy.add(moved, targetX, targetY, rotated);
+        ItemStack updatedOwner = targetOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedOwner, targetContainerId, targetCopy)) {
+            return false;
+        }
+        if (!targetOwner.get().write(updatedOwner)) {
+            return false;
+        }
+        gridData.extract(entryId, moved.getCount());
+        save();
+        return true;
+    }
+
+    public boolean transferNestedGridEntryIntoGrid(NestedContainerPath sourceOwnerPath, String sourceContainerId, UUID entryId,
+                                                   int targetX, int targetY, boolean rotated, boolean targetFolded) {
+        Optional<MenuPathHandle> sourceOwner = resolveMenuGridPath(sourceOwnerPath);
+        if (sourceOwner.isEmpty()) {
+            return false;
+        }
+        Optional<GridInventoryData> sourceGrid = nestedGrid(sourceOwner.get().stack(), sourceContainerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = sourceGrid
+                .flatMap(grid -> grid.getEntry(entryId));
+        if (source.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.get().stack().copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
+        }
+        if (!GridPlacementValidator.canPlace(gridData, moved, targetX, targetY, rotated, null, gridTargetDepth())) {
+            return false;
+        }
+        GridInventoryData sourceCopy = sourceGrid.get().copy();
+        sourceCopy.extract(entryId, moved.getCount());
+        ItemStack updatedOwner = sourceOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedOwner, sourceContainerId, sourceCopy)) {
+            return false;
+        }
+        if (!sourceOwner.get().write(updatedOwner)) {
+            return false;
+        }
+        gridData.add(moved, targetX, targetY, rotated);
+        save();
+        return true;
+    }
+
+    public boolean transferNestedGridEntryIntoNestedGrid(NestedContainerPath sourceOwnerPath, String sourceContainerId, UUID entryId,
+                                                         NestedContainerPath targetOwnerPath, String targetContainerId,
+                                                         int targetX, int targetY, boolean rotated, boolean targetFolded) {
+        Optional<MenuPathHandle> sourceOwner = resolveMenuGridPath(sourceOwnerPath);
+        Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
+        if (sourceOwner.isEmpty() || targetOwner.isEmpty() || ownsNestedEntry(targetOwnerPath, targetContainerId, sourceOwnerPath, sourceContainerId, entryId)) {
+            return false;
+        }
+        Optional<GridInventoryData> sourceGrid = nestedGrid(sourceOwner.get().stack(), sourceContainerId);
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> source = sourceGrid.flatMap(grid -> grid.getEntry(entryId));
+        Optional<GridInventoryData> targetGrid = nestedGrid(targetOwner.get().stack(), targetContainerId);
+        if (source.isEmpty() || sourceGrid.isEmpty() || targetGrid.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.get().stack().copy();
+        if (moved.getItem() instanceof GridBackpackItem) {
+            if (targetFolded && !GridBackpackItem.canFold(moved)) {
+                return false;
+            }
+            GridInventoryServices.itemStackData().setBackpackFolded(moved, targetFolded);
+        }
+        boolean sameGrid = sourceOwnerPath.equals(targetOwnerPath) && sourceContainerId.equals(targetContainerId);
+        GridInventoryData targetCopy = sameGrid ? sourceGrid.get().copy() : targetGrid.get().copy();
+        if (sameGrid) {
+            targetCopy.extract(entryId, moved.getCount());
+        }
+        if (!GridPlacementValidator.canPlace(targetCopy, moved, targetX, targetY, rotated, null, targetOwnerPath.depth() + 1)) {
+            return false;
+        }
+        targetCopy.add(moved, targetX, targetY, rotated);
+        if (sameGrid) {
+            ItemStack updatedOwner = sourceOwner.get().stack().copy();
+            if (!writeNestedGrid(updatedOwner, sourceContainerId, targetCopy)) {
+                return false;
+            }
+            if (!sourceOwner.get().write(updatedOwner)) {
+                return false;
+            }
+            save();
+            return true;
+        }
+        GridInventoryData sourceCopy = sourceGrid.get().copy();
+        sourceCopy.extract(entryId, moved.getCount());
+        ItemStack updatedSourceOwner = sourceOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedSourceOwner, sourceContainerId, sourceCopy)) {
+            return false;
+        }
+        if (!sourceOwner.get().write(updatedSourceOwner)) {
+            return false;
+        }
+        Optional<MenuPathHandle> refreshedTargetOwner = resolveMenuGridPath(targetOwnerPath);
+        if (refreshedTargetOwner.isEmpty()) {
+            return false;
+        }
+        ItemStack updatedTargetOwner = refreshedTargetOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedTargetOwner, targetContainerId, targetCopy)) {
+            return false;
+        }
+        if (!refreshedTargetOwner.get().write(updatedTargetOwner)) {
+            return false;
+        }
+        save();
+        return true;
+    }
+
+    private Optional<GridInventoryData> nestedGrid(ItemStack owner, String containerId) {
+        if (containerId.isEmpty()) {
+            return Optional.ofNullable(GridInventoryServices.itemStackData().getGridInventory(owner));
+        }
+        EquipmentStorageData storage = GridInventoryServices.itemStackData().getEquipmentStorage(owner);
+        if (storage == null) {
+            return Optional.empty();
+        }
+        return storage.containers().stream()
+                .filter(container -> container.id().equals(containerId))
+                .findFirst()
+                .map(container -> container.inventory().copy());
+    }
+
+    private boolean writeNestedGrid(ItemStack owner, String containerId, GridInventoryData inventory) {
+        if (containerId.isEmpty()) {
+            GridInventoryServices.itemStackData().setGridInventory(owner, inventory);
+            return true;
+        }
+        EquipmentStorageData storage = GridInventoryServices.itemStackData().getEquipmentStorage(owner);
+        if (storage == null) {
+            return false;
+        }
+        boolean[] found = {false};
+        EquipmentStorageData updated = new EquipmentStorageData(storage.containers().stream()
+                .map(container -> {
+                    if (container.id().equals(containerId)) {
+                        found[0] = true;
+                        return new NamedGridInventoryData(container.id(), container.title(), inventory.copy());
+                    }
+                    return new NamedGridInventoryData(container.id(), container.title(), container.inventory().copy());
+                })
+                .toList());
+        if (!found[0]) {
+            return false;
+        }
+        GridInventoryServices.itemStackData().setEquipmentStorage(owner, updated);
+        return true;
+    }
+
     public boolean insertCurioIntoEquipmentStorage(String identifier, int index, EquipmentSlot equipmentSlot, String containerId,
                                                   int targetX, int targetY, boolean rotated) {
         return insertCurioIntoEquipmentStorage(identifier, index, equipmentSlot, containerId, targetX, targetY, rotated, false);
@@ -633,6 +811,176 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, "back", 0).orElse(ItemStack.EMPTY);
         }
         return playerInventory.player.getItemBySlot(slot);
+    }
+
+    private Optional<MenuPathHandle> resolveMenuGridPath(NestedContainerPath path) {
+        if (path.segments().isEmpty()) {
+            return Optional.empty();
+        }
+        if (path.segments().get(0) instanceof NestedContainerPath.EquipmentEntrySegment firstEquipment) {
+            return resolveEquipmentPath(path, firstEquipment);
+        }
+        if (path.segments().get(0) instanceof NestedContainerPath.PlayerSlotSegment playerSlot) {
+            return resolvePlayerSlotPath(path, playerSlot);
+        }
+        if (path.segments().get(0) instanceof NestedContainerPath.AccessorySegment accessory) {
+            return resolveAccessoryPath(path, accessory);
+        }
+        if (!(path.segments().get(0) instanceof NestedContainerPath.GridEntrySegment first)) {
+            return Optional.empty();
+        }
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = gridData.getEntry(first.entryId());
+        if (entry.isEmpty()) {
+            return Optional.empty();
+        }
+        if (path.segments().size() == 1) {
+            return Optional.of(new MenuPathHandle(entry.get().stack().copy(), updated -> replaceMenuGridEntryStack(first.entryId(), updated)));
+        }
+        NestedContainerPath tail = path.tail();
+        return NestedContainerAccess.resolve(entry.get().stack(), tail)
+                .map(handle -> new MenuPathHandle(handle.stack(), updated -> {
+                    ItemStack updatedTop = handle.write(updated);
+                    return replaceMenuGridEntryStack(first.entryId(), updatedTop);
+                }));
+    }
+
+    private Optional<MenuPathHandle> resolvePlayerSlotPath(NestedContainerPath path, NestedContainerPath.PlayerSlotSegment first) {
+        if (first.slot() < 0 || first.slot() >= playerInventory.getContainerSize()) {
+            return Optional.empty();
+        }
+        ItemStack stack = playerInventory.getItem(first.slot());
+        if (stack.isEmpty()) {
+            return Optional.empty();
+        }
+        if (path.segments().size() == 1) {
+            return Optional.of(new MenuPathHandle(stack.copy(), updated -> replacePlayerSlotStack(first.slot(), updated)));
+        }
+        return NestedContainerAccess.resolve(stack, path.tail())
+                .map(handle -> new MenuPathHandle(handle.stack(), updated -> {
+                    ItemStack updatedTop = handle.write(updated);
+                    return replacePlayerSlotStack(first.slot(), updatedTop);
+                }));
+    }
+
+    private Optional<MenuPathHandle> resolveAccessoryPath(NestedContainerPath path, NestedContainerPath.AccessorySegment first) {
+        Optional<ItemStack> stack = GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, first.identifier(), first.index());
+        if (stack.isEmpty() || stack.get().isEmpty()) {
+            return Optional.empty();
+        }
+        if (path.segments().size() == 1) {
+            return Optional.of(new MenuPathHandle(stack.get().copy(),
+                    updated -> replaceAccessoryStack(first.identifier(), first.index(), updated)));
+        }
+        return NestedContainerAccess.resolve(stack.get(), path.tail())
+                .map(handle -> new MenuPathHandle(handle.stack(), updated -> {
+                    ItemStack updatedTop = handle.write(updated);
+                    return replaceAccessoryStack(first.identifier(), first.index(), updatedTop);
+                }));
+    }
+
+    private Optional<MenuPathHandle> resolveEquipmentPath(NestedContainerPath path, NestedContainerPath.EquipmentEntrySegment first) {
+        Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(first.slot(), first.containerId());
+        Optional<com.dreamingfish.gridinventory.common.data.GridEntry> entry = edit.flatMap(value -> value.inventory().getEntry(first.entryId()));
+        if (edit.isEmpty() || entry.isEmpty()) {
+            return Optional.empty();
+        }
+        if (path.segments().size() == 1) {
+            return Optional.of(new MenuPathHandle(entry.get().stack().copy(),
+                    updated -> replaceEquipmentStorageEntryStack(first.slot(), first.containerId(), first.entryId(), updated)));
+        }
+        NestedContainerPath tail = path.tail();
+        return NestedContainerAccess.resolve(entry.get().stack(), tail)
+                .map(handle -> new MenuPathHandle(handle.stack(), updated -> {
+                    ItemStack updatedTop = handle.write(updated);
+                    return replaceEquipmentStorageEntryStack(first.slot(), first.containerId(), first.entryId(), updatedTop);
+                }));
+    }
+
+    private boolean replaceMenuGridEntryStack(UUID entryId, ItemStack stack) {
+        for (int index = 0; index < gridData.getEntries().size(); index++) {
+            com.dreamingfish.gridinventory.common.data.GridEntry entry = gridData.getEntries().get(index);
+            if (entry.entryId().equals(entryId)) {
+                gridData.getEntries().set(index, new com.dreamingfish.gridinventory.common.data.GridEntry(
+                        entry.entryId(), stack.copy(), entry.x(), entry.y(), entry.width(), entry.height(), entry.rotated()));
+                gridData.setChanged();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean replaceEquipmentStorageEntryStack(EquipmentSlot slot, String containerId, UUID entryId, ItemStack stack) {
+        Optional<EquipmentStorageEdit> edit = editableEquipmentInventory(slot, containerId);
+        if (edit.isEmpty()) {
+            return false;
+        }
+        for (int index = 0; index < edit.get().inventory().getEntries().size(); index++) {
+            com.dreamingfish.gridinventory.common.data.GridEntry entry = edit.get().inventory().getEntries().get(index);
+            if (entry.entryId().equals(entryId)) {
+                edit.get().inventory().getEntries().set(index, new com.dreamingfish.gridinventory.common.data.GridEntry(
+                        entry.entryId(), stack.copy(), entry.x(), entry.y(), entry.width(), entry.height(), entry.rotated()));
+                edit.get().inventory().setChanged();
+                saveEquipmentStorage(slot, edit.get().storage());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean replacePlayerSlotStack(int slotIndex, ItemStack stack) {
+        if (slotIndex < 0 || slotIndex >= playerInventory.getContainerSize()) {
+            return false;
+        }
+        playerInventory.setItem(slotIndex, stack.copy());
+        playerInventory.setChanged();
+        return true;
+    }
+
+    private boolean replaceAccessoryStack(String identifier, int index, ItemStack stack) {
+        GridInventoryServices.accessories().setAccessoryStack(playerInventory.player, identifier, index, stack.copy());
+        return true;
+    }
+
+    private static boolean ownsTopLevelEntry(NestedContainerPath path, UUID entryId) {
+        return !path.segments().isEmpty()
+                && path.segments().get(0) instanceof NestedContainerPath.GridEntrySegment segment
+                && segment.entryId().equals(entryId);
+    }
+
+    private static boolean ownsNestedEntry(NestedContainerPath targetOwnerPath, String targetContainerId,
+                                           NestedContainerPath sourceOwnerPath, String sourceContainerId, UUID entryId) {
+        if (!startsWith(targetOwnerPath, sourceOwnerPath)) {
+            return false;
+        }
+        if (targetOwnerPath.segments().size() == sourceOwnerPath.segments().size()) {
+            return false;
+        }
+        NestedContainerPath.Segment next = targetOwnerPath.segments().get(sourceOwnerPath.segments().size());
+        if (sourceContainerId.isEmpty() && next instanceof NestedContainerPath.GridEntrySegment segment) {
+            return segment.entryId().equals(entryId);
+        }
+        if (!sourceContainerId.isEmpty() && next instanceof NestedContainerPath.ContainerEntrySegment segment) {
+            return sourceContainerId.equals(segment.containerId()) && segment.entryId().equals(entryId);
+        }
+        return false;
+    }
+
+    private static boolean startsWith(NestedContainerPath path, NestedContainerPath prefix) {
+        if (prefix.segments().size() > path.segments().size()) {
+            return false;
+        }
+        for (int index = 0; index < prefix.segments().size(); index++) {
+            if (!path.segments().get(index).equals(prefix.segments().get(index))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private record MenuPathHandle(ItemStack stack, java.util.function.Function<ItemStack, Boolean> writer) {
+        boolean write(ItemStack updated) {
+            return writer.apply(updated);
+        }
     }
 
     private record EquipmentStorageEdit(EquipmentStorageData storage, GridInventoryData inventory) {

@@ -3,12 +3,19 @@ package com.dreamingfish.gridinventory.client.render;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import net.minecraft.client.gui.GuiGraphics;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+
 public final class GridRenderer {
     private static final int SECTION_GAP = 3;
     private static final int SECTION_BORDER_WIDTH = 1;
     private static final int SECTION_FILL = 0xFF111111;
     private static final int SECTION_BORDER = 0xFF555555;
     private static final int SECTION_GRID_LINE = 0x332F2F2F;
+    private static final Map<GridInventoryData, Map<Integer, SectionRenderGeometry>> SECTION_GEOMETRY_CACHE = new WeakHashMap<>();
 
     private GridRenderer() {
     }
@@ -31,79 +38,77 @@ public final class GridRenderer {
             renderGrid(graphics, left, top, inventory.getColumns(), inventory.getRows(), cell);
             return;
         }
-        graphics.fill(left, top, left + GridLayoutMetrics.width(inventory, cell), top + GridLayoutMetrics.height(inventory, cell), 0x00111111);
-        for (int y = 0; y < inventory.getRows(); y++) {
-            for (int x = 0; x < inventory.getColumns(); x++) {
-                if (!inventory.isEnabledCell(x, y)) {
-                    continue;
-                }
-                int cellLeft = left + GridLayoutMetrics.cellLeft(inventory, x, y, cell);
-                int cellTop = top + GridLayoutMetrics.cellTop(inventory, x, y, cell);
-                graphics.fill(cellLeft, cellTop, cellLeft + cell, cellTop + cell, SECTION_FILL);
-            }
+        SectionRenderGeometry geometry = geometry(inventory, cell);
+        graphics.fill(left, top, left + geometry.width(), top + geometry.height(), 0x00111111);
+        for (Rect rect : geometry.fills()) {
+            graphics.fill(left + rect.x(), top + rect.y(), left + rect.right(), top + rect.bottom(), rect.color());
         }
-        renderSectionBorders(graphics, left, top, inventory, cell);
+        for (Rect rect : geometry.borders()) {
+            graphics.fill(left + rect.x(), top + rect.y(), left + rect.right(), top + rect.bottom(), rect.color());
+        }
     }
 
-    private static void renderSectionBorders(GuiGraphics graphics, int left, int top, GridInventoryData inventory, int cell) {
+    private static SectionRenderGeometry geometry(GridInventoryData inventory, int cell) {
+        synchronized (SECTION_GEOMETRY_CACHE) {
+            return SECTION_GEOMETRY_CACHE.computeIfAbsent(inventory, ignored -> new HashMap<>())
+                    .computeIfAbsent(cell, ignored -> computeGeometry(inventory, cell));
+        }
+    }
+
+    private static SectionRenderGeometry computeGeometry(GridInventoryData inventory, int cell) {
+        List<CellGeometry> cells = new ArrayList<>();
+        List<Rect> fills = new ArrayList<>();
+        List<Rect> borders = new ArrayList<>();
         for (int y = 0; y < inventory.getRows(); y++) {
             for (int x = 0; x < inventory.getColumns(); x++) {
                 String current = inventory.sectionAt(x, y);
                 if (current == null) {
                     continue;
                 }
-                int cellLeft = left + GridLayoutMetrics.cellLeft(inventory, x, y, cell);
-                int cellTop = top + GridLayoutMetrics.cellTop(inventory, x, y, cell);
-                int renderLeft = cellLeft;
-                int renderTop = cellTop;
-                int renderRight = cellLeft + cell;
-                int renderBottom = cellTop + cell;
-                if (!hasSameSectionTouching(inventory, current, x, y, cell, Direction.LEFT)) {
-                    graphics.fill(renderLeft, renderTop, renderLeft + SECTION_BORDER_WIDTH, renderBottom, SECTION_BORDER);
-                }
-                if (!hasSameSectionTouching(inventory, current, x, y, cell, Direction.RIGHT)) {
-                    graphics.fill(renderRight - SECTION_BORDER_WIDTH, renderTop, renderRight, renderBottom, SECTION_BORDER);
-                } else {
-                    graphics.fill(renderRight - 1, renderTop, renderRight, renderBottom, SECTION_GRID_LINE);
-                }
-                if (!hasSameSectionTouching(inventory, current, x, y, cell, Direction.UP)) {
-                    graphics.fill(renderLeft, renderTop, renderRight, renderTop + SECTION_BORDER_WIDTH, SECTION_BORDER);
-                }
-                if (!hasSameSectionTouching(inventory, current, x, y, cell, Direction.DOWN)) {
-                    graphics.fill(renderLeft, renderBottom - SECTION_BORDER_WIDTH, renderRight, renderBottom, SECTION_BORDER);
-                } else {
-                    graphics.fill(renderLeft, renderBottom - 1, renderRight, renderBottom, SECTION_GRID_LINE);
-                }
+                int cellLeft = GridLayoutMetrics.cellLeft(inventory, x, y, cell);
+                int cellTop = GridLayoutMetrics.cellTop(inventory, x, y, cell);
+                cells.add(new CellGeometry(current, cellLeft, cellTop, cellLeft + cell, cellTop + cell));
+                fills.add(new Rect(cellLeft, cellTop, cell, cell, SECTION_FILL));
             }
         }
+        for (CellGeometry current : cells) {
+            if (!hasSameSectionTouching(cells, current, Direction.LEFT)) {
+                borders.add(new Rect(current.left(), current.top(), SECTION_BORDER_WIDTH, current.height(), SECTION_BORDER));
+            }
+            if (!hasSameSectionTouching(cells, current, Direction.RIGHT)) {
+                borders.add(new Rect(current.right() - SECTION_BORDER_WIDTH, current.top(), SECTION_BORDER_WIDTH, current.height(), SECTION_BORDER));
+            } else {
+                borders.add(new Rect(current.right() - 1, current.top(), 1, current.height(), SECTION_GRID_LINE));
+            }
+            if (!hasSameSectionTouching(cells, current, Direction.UP)) {
+                borders.add(new Rect(current.left(), current.top(), current.width(), SECTION_BORDER_WIDTH, SECTION_BORDER));
+            }
+            if (!hasSameSectionTouching(cells, current, Direction.DOWN)) {
+                borders.add(new Rect(current.left(), current.bottom() - SECTION_BORDER_WIDTH, current.width(), SECTION_BORDER_WIDTH, SECTION_BORDER));
+            } else {
+                borders.add(new Rect(current.left(), current.bottom() - 1, current.width(), 1, SECTION_GRID_LINE));
+            }
+        }
+        return new SectionRenderGeometry(GridLayoutMetrics.width(inventory, cell), GridLayoutMetrics.height(inventory, cell),
+                List.copyOf(fills), List.copyOf(borders));
     }
 
-    private static boolean hasSameSectionTouching(GridInventoryData inventory, String section, int x, int y, int cell, Direction direction) {
-        int left = GridLayoutMetrics.cellLeft(inventory, x, y, cell);
-        int top = GridLayoutMetrics.cellTop(inventory, x, y, cell);
-        int right = left + cell;
-        int bottom = top + cell;
-        for (int otherY = 0; otherY < inventory.getRows(); otherY++) {
-            for (int otherX = 0; otherX < inventory.getColumns(); otherX++) {
-                if ((otherX == x && otherY == y) || !section.equals(inventory.sectionAt(otherX, otherY))) {
-                    continue;
-                }
-                int otherLeft = GridLayoutMetrics.cellLeft(inventory, otherX, otherY, cell);
-                int otherTop = GridLayoutMetrics.cellTop(inventory, otherX, otherY, cell);
-                int otherRight = otherLeft + cell;
-                int otherBottom = otherTop + cell;
-                if (direction == Direction.LEFT && otherRight == left && rangesOverlap(top, bottom, otherTop, otherBottom)) {
-                    return true;
-                }
-                if (direction == Direction.RIGHT && otherLeft == right && rangesOverlap(top, bottom, otherTop, otherBottom)) {
-                    return true;
-                }
-                if (direction == Direction.UP && otherBottom == top && rangesOverlap(left, right, otherLeft, otherRight)) {
-                    return true;
-                }
-                if (direction == Direction.DOWN && otherTop == bottom && rangesOverlap(left, right, otherLeft, otherRight)) {
-                    return true;
-                }
+    private static boolean hasSameSectionTouching(List<CellGeometry> cells, CellGeometry current, Direction direction) {
+        for (CellGeometry other : cells) {
+            if (other == current || !current.section().equals(other.section())) {
+                continue;
+            }
+            if (direction == Direction.LEFT && other.right() == current.left() && rangesOverlap(current.top(), current.bottom(), other.top(), other.bottom())) {
+                return true;
+            }
+            if (direction == Direction.RIGHT && other.left() == current.right() && rangesOverlap(current.top(), current.bottom(), other.top(), other.bottom())) {
+                return true;
+            }
+            if (direction == Direction.UP && other.bottom() == current.top() && rangesOverlap(current.left(), current.right(), other.left(), other.right())) {
+                return true;
+            }
+            if (direction == Direction.DOWN && other.top() == current.bottom() && rangesOverlap(current.left(), current.right(), other.left(), other.right())) {
+                return true;
             }
         }
         return false;
@@ -118,5 +123,28 @@ public final class GridRenderer {
         RIGHT,
         UP,
         DOWN
+    }
+
+    private record SectionRenderGeometry(int width, int height, List<Rect> fills, List<Rect> borders) {
+    }
+
+    private record CellGeometry(String section, int left, int top, int right, int bottom) {
+        int width() {
+            return right - left;
+        }
+
+        int height() {
+            return bottom - top;
+        }
+    }
+
+    private record Rect(int x, int y, int width, int height, int color) {
+        int right() {
+            return x + width;
+        }
+
+        int bottom() {
+            return y + height;
+        }
     }
 }

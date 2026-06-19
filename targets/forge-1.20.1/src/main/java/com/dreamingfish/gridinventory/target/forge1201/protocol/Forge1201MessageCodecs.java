@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.api.BackpackFoldingDefinition;
 import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
@@ -37,6 +38,9 @@ import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFold
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
 import net.minecraft.network.FriendlyByteBuf;
@@ -376,6 +380,95 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new InsertPlayerSlotIntoCurioMessage(buf.readVarInt(), buf.readUtf(), buf.readVarInt())
         ));
+        register(GridMessages.TRANSFER_GRID_ENTRY_INTO_NESTED_GRID, codec(
+                (message, buf) -> {
+                    buf.writeUUID(message.entryId());
+                    writePath(buf, message.targetOwnerPath());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new TransferGridEntryIntoNestedGridMessage(buf.readUUID(), readPath(buf),
+                        buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_GRID, codec(
+                (message, buf) -> {
+                    writePath(buf, message.sourceOwnerPath());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new TransferNestedGridEntryIntoGridMessage(readPath(buf), buf.readUtf(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_NESTED_GRID, codec(
+                (message, buf) -> {
+                    writePath(buf, message.sourceOwnerPath());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                    writePath(buf, message.targetOwnerPath());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new TransferNestedGridEntryIntoNestedGridMessage(readPath(buf), buf.readUtf(), buf.readUUID(),
+                        readPath(buf), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+    }
+
+    private static void writePath(FriendlyByteBuf buf, NestedContainerPath path) {
+        buf.writeVarInt(path.segments().size());
+        for (NestedContainerPath.Segment segment : path.segments()) {
+            if (segment instanceof NestedContainerPath.GridEntrySegment gridEntry) {
+                buf.writeVarInt(0);
+                buf.writeUUID(gridEntry.entryId());
+            } else if (segment instanceof NestedContainerPath.EquipmentEntrySegment equipmentEntry) {
+                buf.writeVarInt(1);
+                buf.writeEnum(equipmentEntry.slot());
+                buf.writeUtf(equipmentEntry.containerId());
+                buf.writeUUID(equipmentEntry.entryId());
+            } else if (segment instanceof NestedContainerPath.ContainerEntrySegment containerEntry) {
+                buf.writeVarInt(2);
+                buf.writeUtf(containerEntry.containerId());
+                buf.writeUUID(containerEntry.entryId());
+            } else if (segment instanceof NestedContainerPath.PlayerSlotSegment playerSlot) {
+                buf.writeVarInt(3);
+                buf.writeVarInt(playerSlot.slot());
+            } else if (segment instanceof NestedContainerPath.AccessorySegment accessory) {
+                buf.writeVarInt(4);
+                buf.writeUtf(accessory.identifier());
+                buf.writeVarInt(accessory.index());
+            }
+        }
+    }
+
+    private static NestedContainerPath readPath(FriendlyByteBuf buf) {
+        int count = buf.readVarInt();
+        NestedContainerPath path = NestedContainerPath.root();
+        for (int index = 0; index < count; index++) {
+            int type = buf.readVarInt();
+            if (type == 0) {
+                path = path.gridEntry(buf.readUUID());
+            } else if (type == 1) {
+                path = path.equipmentEntry(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID());
+            } else if (type == 2) {
+                path = path.containerEntry(buf.readUtf(), buf.readUUID());
+            } else if (type == 3) {
+                path = path.playerSlot(buf.readVarInt());
+            } else if (type == 4) {
+                path = path.accessory(buf.readUtf(), buf.readVarInt());
+            } else {
+                throw new IllegalStateException("Unknown nested container path segment type " + type);
+            }
+        }
+        return path;
     }
 
     private static <T extends GridMessage> void register(GridMessageType<T> type, Forge1201MessageCodec<T> codec) {

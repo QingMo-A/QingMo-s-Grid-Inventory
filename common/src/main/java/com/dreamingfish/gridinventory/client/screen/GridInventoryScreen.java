@@ -8,9 +8,13 @@ import com.dreamingfish.gridinventory.client.render.GridRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.render.EquipmentStorageTooltipRenderer;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
+import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
+import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
+import com.dreamingfish.gridinventory.common.inventory.NestedContainerAccess;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
+import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
@@ -22,6 +26,9 @@ import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntr
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
@@ -42,6 +49,7 @@ import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
+import com.dreamingfish.gridinventory.client.screen.widget.NestedContainerWindowManager;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
@@ -51,6 +59,7 @@ import com.dreamingfish.gridinventory.client.access.SlotPositionAccessor;
 import com.dreamingfish.gridinventory.client.sound.GridInventoryUiSounds;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -70,9 +79,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private int gridTop;
     private GridEntry draggingEntry;
     private GridColumnPanel.EquipmentEntryHit draggingEquipmentEntry;
+    private NestedContainerWindowManager.EntryHit draggingNestedEntry;
     private CuriosSlotWidget draggingCurioSlot;
     private GridEntry pendingGridDrag;
     private GridColumnPanel.EquipmentEntryHit pendingEquipmentDrag;
+    private NestedContainerWindowManager.EntryHit pendingNestedDrag;
     private CuriosSlotWidget pendingCurioDrag;
     private Slot pendingSlotDrag;
     private int pendingSlotIndex = -1;
@@ -91,6 +102,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private int dragAnchorPixelX = CELL / 2;
     private int dragAnchorPixelY = CELL / 2;
     private final NearbyItemsPanel nearbyItemsPanel = new NearbyItemsPanel();
+    private final NestedContainerWindowManager nestedWindows = new NestedContainerWindowManager();
     private final EquipmentColumnPanel equipmentColumnPanel = new EquipmentColumnPanel();
     private final GridColumnPanel gridColumnPanel = new GridColumnPanel();
     private final HoverAnimationTracker<UUID> gridHoverAnimations = new HoverAnimationTracker<>();
@@ -213,6 +225,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private boolean hoverAnimationsEnabled() {
         return draggingEntry == null
                 && draggingEquipmentEntry == null
+                && draggingNestedEntry == null
                 && draggingCurioSlot == null
                 && !nearbyItemsPanel.isDraggingGroundItem()
                 && !hasPendingDrag()
@@ -228,12 +241,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
         boolean draggingAnyItem = !draggedStack().isEmpty();
         nearbyItemsPanel.render(graphics, mouseX, mouseY, draggingAnyItem);
+        nestedWindows.refresh(this::resolveNestedWindowStack);
+        nestedWindows.render(graphics, mouseX, mouseY, hoverAnimationsEnabled(), nestedPlacementPreview());
         if (draggingAnyItem) {
             renderDraggedStackGhost(graphics, mouseX, mouseY);
             return;
         }
         hoveredGridEntry(mouseX, mouseY).ifPresent(entry -> graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
-        if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()) {
+        if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null && draggingNestedEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()) {
             equipmentColumnPanel.slotAt(mouseX, mouseY)
                     .map(slot -> menu.slots.get(slot.menuIndex()))
                     .filter(Slot::hasItem)
@@ -241,7 +256,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             equipmentColumnPanel.curioSlotAt(mouseX, mouseY)
                     .ifPresent(slot -> graphics.renderTooltip(font, slot.tooltip(), Optional.empty(), mouseX, mouseY));
         }
-        if (draggingEntry == null && draggingEquipmentEntry == null && selectedPlayerStack.isEmpty()) {
+        if (draggingEntry == null && draggingEquipmentEntry == null && draggingNestedEntry == null && selectedPlayerStack.isEmpty()) {
             hoveredStack(mouseX, mouseY).ifPresent(stack ->
                     EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
         }
@@ -317,6 +332,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
         return draggingEntry != null ? draggingEntry.stack()
                 : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack()
+                : draggingNestedEntry != null ? draggingNestedEntry.entry().stack()
                 : draggingCurioSlot != null ? draggingCurioSlot.view().stack()
                 : nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack).orElse(selectedPlayerStack);
     }
@@ -424,6 +440,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        Optional<NestedContainerWindowManager.EntryHit> nestedEntryHit = nestedWindows.entryAt((int) mouseX, (int) mouseY);
+        if (button == 0 && nestedEntryHit.isPresent()) {
+            NestedContainerWindowManager.EntryHit hit = nestedEntryHit.get();
+            beginPendingNestedDrag(hit, (int) mouseX, (int) mouseY, hit.drawX(), hit.drawY());
+            return true;
+        }
+        if (nestedWindows.mouseClicked(mouseX, mouseY, button, width, height)) {
+            return true;
+        }
         if (button == 1 && nearbyItemsPanel.isDraggingGroundItem()) {
             rotateDraggedPreview();
             return true;
@@ -524,7 +549,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode)
-                && (draggingCurioSlot != null || !selectedPlayerStack.isEmpty())) {
+                && (draggingNestedEntry != null || draggingCurioSlot != null || !selectedPlayerStack.isEmpty())) {
             toggleDraggedBackpackPreview();
             return true;
         }
@@ -568,12 +593,19 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (nestedWindows.mouseReleased(button)) {
+            return true;
+        }
         if (button == 0 && nearbyItemsPanel.isDraggingGroundItem()) {
             handleGroundItemRelease((int) mouseX, (int) mouseY);
             nearbyItemsPanel.clearDrag();
             return true;
         }
         if (button == 0 && hasPendingDrag()) {
+            if (openPendingNestedWindow((int) mouseX, (int) mouseY)) {
+                clearPendingDrag();
+                return true;
+            }
             clearPendingDrag();
             return true;
         }
@@ -666,9 +698,42 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             clearDragState();
             return true;
         }
+        if (button == 0 && draggingNestedEntry != null) {
+            boolean released = false;
+            Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
+            if (nestedTarget.isPresent()) {
+                NestedContainerWindowManager.GridHit target = nestedTarget.get();
+                GridInventoryServices.network().sendToServer(new TransferNestedGridEntryIntoNestedGridMessage(
+                        draggingNestedEntry.ownerPath(), draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId(),
+                        target.ownerPath(), target.containerId(),
+                        target.cellX() - anchorCellX(draggedStack()),
+                        target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
+            } else if (inGrid((int) mouseX, (int) mouseY)) {
+                GridInventoryServices.network().sendToServer(new TransferNestedGridEntryIntoGridMessage(
+                        draggingNestedEntry.ownerPath(), draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId(),
+                        targetGridX(draggedStack(), (int) mouseX),
+                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                released = true;
+            }
+            playReleaseSound(released, false, false);
+            clearDragState();
+            return true;
+        }
         if (button == 0 && draggingEntry != null) {
             boolean released = false;
             boolean equipped = false;
+            Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
+            if (nestedTarget.isPresent()) {
+                NestedContainerWindowManager.GridHit target = nestedTarget.get();
+                GridInventoryServices.network().sendToServer(new TransferGridEntryIntoNestedGridMessage(
+                        draggingEntry.entryId(), target.ownerPath(), target.containerId(),
+                        target.cellX() - anchorCellX(draggedStack()),
+                        target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                playReleaseSound(true, false, false);
+                clearDragState();
+                return true;
+            }
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
                 GridInventoryServices.network().sendToServer(new InsertGridEntryIntoCurioMessage(
@@ -760,6 +825,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (nestedWindows.mouseDragged(mouseX, mouseY, button, width, height)) {
+            return true;
+        }
         if (nearbyItemsPanel.mouseDragged(mouseX, mouseY, button)) {
             return true;
         }
@@ -795,6 +863,106 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         return false;
+    }
+
+    private boolean openPendingNestedWindow(int mouseX, int mouseY) {
+        ItemStack stack = ItemStack.EMPTY;
+        if (pendingGridDrag != null) {
+            stack = pendingGridDrag.stack();
+            return nestedWindows.open(stack, NestedContainerPath.root().gridEntry(pendingGridDrag.entryId()), mouseX, mouseY, width, height);
+        } else if (pendingEquipmentDrag != null) {
+            stack = pendingEquipmentDrag.entry().stack();
+            return nestedWindows.open(stack, NestedContainerPath.root().equipmentEntry(
+                    pendingEquipmentDrag.slot(), pendingEquipmentDrag.containerId(), pendingEquipmentDrag.entry().entryId()),
+                    mouseX, mouseY, width, height);
+        } else if (pendingNestedDrag != null) {
+            stack = pendingNestedDrag.entry().stack();
+            return nestedWindows.open(stack, pendingNestedDrag.childPath(), mouseX, mouseY, width, height);
+        } else if (pendingCurioDrag != null) {
+            stack = pendingCurioDrag.view().stack();
+            return nestedWindows.open(stack, NestedContainerPath.root().accessory(
+                    pendingCurioDrag.view().identifier(), pendingCurioDrag.view().index()), mouseX, mouseY, width, height);
+        } else if (pendingSlotDrag != null) {
+            stack = pendingSlotDrag.getItem();
+            return nestedWindows.open(stack, NestedContainerPath.root().playerSlot(pendingSlotIndex), mouseX, mouseY, width, height);
+        }
+        return nestedWindows.open(stack, NestedContainerPath.root(), mouseX, mouseY, width, height);
+    }
+
+    private Optional<ItemStack> resolveNestedWindowStack(NestedContainerPath path) {
+        if (path.segments().isEmpty()) {
+            return Optional.empty();
+        }
+        NestedContainerPath.Segment first = path.segments().get(0);
+        Optional<ItemStack> root = Optional.empty();
+        if (first instanceof NestedContainerPath.GridEntrySegment gridEntry) {
+            root = menu.getGridData().getEntry(gridEntry.entryId()).map(entry -> entry.stack().copy());
+        } else if (first instanceof NestedContainerPath.EquipmentEntrySegment equipmentEntry) {
+            root = resolveEquipmentEntryStack(equipmentEntry.slot(), equipmentEntry.containerId(), equipmentEntry.entryId());
+        } else if (first instanceof NestedContainerPath.PlayerSlotSegment playerSlot) {
+            root = resolvePlayerSlotStack(playerSlot.slot());
+        } else if (first instanceof NestedContainerPath.AccessorySegment accessory) {
+            Minecraft minecraft = Minecraft.getInstance();
+            root = minecraft.player == null
+                    ? Optional.empty()
+                    : GridInventoryServices.accessories().getAccessoryStack(minecraft.player, accessory.identifier(), accessory.index())
+                    .map(ItemStack::copy);
+        }
+        if (root.isEmpty()) {
+            return Optional.empty();
+        }
+        if (path.segments().size() == 1) {
+            return root;
+        }
+        return NestedContainerAccess.resolve(root.get(), path.tail()).map(NestedContainerAccess.Handle::stack);
+    }
+
+    private Optional<ItemStack> resolveEquipmentEntryStack(net.minecraft.world.entity.EquipmentSlot slot, String containerId, UUID entryId) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null) {
+            return Optional.empty();
+        }
+        ItemStack equipped = GridEquipmentSlots.isBack(slot)
+                ? GridInventoryServices.accessories().getAccessoryStack(minecraft.player, "back", 0).orElse(ItemStack.EMPTY)
+                : minecraft.player.getItemBySlot(slot);
+        if (equipped.isEmpty()) {
+            return Optional.empty();
+        }
+        EquipmentStorageData storage = GridInventoryServices.itemStackData().getEquipmentStorage(equipped);
+        if (storage == null) {
+            return Optional.empty();
+        }
+        return storage.containers().stream()
+                .filter(container -> container.id().equals(containerId))
+                .findFirst()
+                .flatMap(container -> container.inventory().getEntry(entryId))
+                .map(entry -> entry.stack().copy());
+    }
+
+    private Optional<ItemStack> resolvePlayerSlotStack(int slot) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || slot < 0 || slot >= minecraft.player.getInventory().getContainerSize()) {
+            return Optional.empty();
+        }
+        ItemStack stack = minecraft.player.getInventory().getItem(slot);
+        return stack.isEmpty() ? Optional.empty() : Optional.of(stack.copy());
+    }
+
+    private Optional<NestedContainerWindowManager.PlacementPreview> nestedPlacementPreview() {
+        ItemStack stack = draggedStack();
+        if (stack.isEmpty()) {
+            return Optional.empty();
+        }
+        Optional<NestedContainerPath> sourceOwnerPath = Optional.empty();
+        Optional<String> sourceContainerId = Optional.empty();
+        Optional<UUID> sourceEntryId = Optional.empty();
+        if (draggingNestedEntry != null) {
+            sourceOwnerPath = Optional.of(draggingNestedEntry.ownerPath());
+            sourceContainerId = Optional.of(draggingNestedEntry.containerId());
+            sourceEntryId = Optional.of(draggingNestedEntry.entry().entryId());
+        }
+        return Optional.of(new NestedContainerWindowManager.PlacementPreview(stack, rotatedPreview,
+                anchorCellX(stack), anchorCellY(stack), sourceOwnerPath, sourceContainerId, sourceEntryId));
     }
 
     private Optional<GridEntry> entryAt(int mouseX, int mouseY) {
@@ -950,6 +1118,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         pendingItemHeight = hit.entry().height();
     }
 
+    private void beginPendingNestedDrag(NestedContainerWindowManager.EntryHit hit, int mouseX, int mouseY, int itemLeft, int itemTop) {
+        clearPendingDrag();
+        pendingNestedDrag = hit;
+        pendingMouseX = mouseX;
+        pendingMouseY = mouseY;
+        pendingItemLeft = itemLeft;
+        pendingItemTop = itemTop;
+        pendingItemWidth = hit.entry().width();
+        pendingItemHeight = hit.entry().height();
+    }
+
     private void beginPendingCurioDrag(CuriosSlotWidget slot, int mouseX, int mouseY) {
         clearPendingDrag();
         pendingCurioDrag = slot;
@@ -984,6 +1163,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             dragPreviewStack = draggingEquipmentEntry.entry().stack().copy();
             rotatedPreview = draggingEquipmentEntry.entry().rotated();
             setGridDragAnchor(pendingMouseX, pendingMouseY, pendingItemLeft, pendingItemTop, pendingItemWidth, pendingItemHeight);
+        } else if (pendingNestedDrag != null) {
+            draggingNestedEntry = pendingNestedDrag;
+            dragPreviewStack = draggingNestedEntry.entry().stack().copy();
+            rotatedPreview = draggingNestedEntry.entry().rotated();
+            setGridDragAnchor(pendingMouseX, pendingMouseY, pendingItemLeft, pendingItemTop, pendingItemWidth, pendingItemHeight);
         } else if (pendingCurioDrag != null) {
             draggingCurioSlot = pendingCurioDrag;
             selectedPlayerStack = ItemStack.EMPTY;
@@ -1005,7 +1189,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private boolean hasPendingDrag() {
-        return pendingGridDrag != null || pendingEquipmentDrag != null || pendingCurioDrag != null || pendingSlotDrag != null;
+        return pendingGridDrag != null || pendingEquipmentDrag != null || pendingNestedDrag != null || pendingCurioDrag != null || pendingSlotDrag != null;
     }
 
     private void playReleaseSound(boolean released, boolean equipped, boolean unequipped) {
@@ -1024,6 +1208,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private void clearPendingDrag() {
         pendingGridDrag = null;
         pendingEquipmentDrag = null;
+        pendingNestedDrag = null;
         pendingCurioDrag = null;
         pendingSlotDrag = null;
         pendingSlotIndex = -1;
@@ -1063,6 +1248,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         clearPendingDrag();
         draggingEntry = null;
         draggingEquipmentEntry = null;
+        draggingNestedEntry = null;
         draggingCurioSlot = null;
         dragPreviewStack = ItemStack.EMPTY;
         selectedPlayerStack = ItemStack.EMPTY;

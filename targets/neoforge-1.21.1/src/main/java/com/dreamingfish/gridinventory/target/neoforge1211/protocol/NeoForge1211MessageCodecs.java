@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.api.BackpackFoldingDefinition;
 import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.network.*;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
@@ -253,6 +254,66 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> { b.writeUUID(m.entryId()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new TransferGridEntryIntoEquipmentStorageMessage(b.readUUID(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
+        register(GridMessages.TRANSFER_GRID_ENTRY_INTO_NESTED_GRID, codec(
+                (m, b) -> { b.writeUUID(m.entryId()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new TransferGridEntryIntoNestedGridMessage(b.readUUID(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_GRID, codec(
+                (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new TransferNestedGridEntryIntoGridMessage(readPath(b), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_NESTED_GRID, codec(
+                (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new TransferNestedGridEntryIntoNestedGridMessage(readPath(b), b.readUtf(), b.readUUID(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+    }
+
+    private static void writePath(RegistryFriendlyByteBuf buf, NestedContainerPath path) {
+        buf.writeVarInt(path.segments().size());
+        for (NestedContainerPath.Segment segment : path.segments()) {
+            if (segment instanceof NestedContainerPath.GridEntrySegment gridEntry) {
+                buf.writeVarInt(0);
+                buf.writeUUID(gridEntry.entryId());
+            } else if (segment instanceof NestedContainerPath.EquipmentEntrySegment equipmentEntry) {
+                buf.writeVarInt(1);
+                buf.writeEnum(equipmentEntry.slot());
+                buf.writeUtf(equipmentEntry.containerId());
+                buf.writeUUID(equipmentEntry.entryId());
+            } else if (segment instanceof NestedContainerPath.ContainerEntrySegment containerEntry) {
+                buf.writeVarInt(2);
+                buf.writeUtf(containerEntry.containerId());
+                buf.writeUUID(containerEntry.entryId());
+            } else if (segment instanceof NestedContainerPath.PlayerSlotSegment playerSlot) {
+                buf.writeVarInt(3);
+                buf.writeVarInt(playerSlot.slot());
+            } else if (segment instanceof NestedContainerPath.AccessorySegment accessory) {
+                buf.writeVarInt(4);
+                buf.writeUtf(accessory.identifier());
+                buf.writeVarInt(accessory.index());
+            }
+        }
+    }
+
+    private static NestedContainerPath readPath(RegistryFriendlyByteBuf buf) {
+        int count = buf.readVarInt();
+        NestedContainerPath path = NestedContainerPath.root();
+        for (int index = 0; index < count; index++) {
+            int type = buf.readVarInt();
+            if (type == 0) {
+                path = path.gridEntry(buf.readUUID());
+            } else if (type == 1) {
+                path = path.equipmentEntry(buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readUUID());
+            } else if (type == 2) {
+                path = path.containerEntry(buf.readUtf(), buf.readUUID());
+            } else if (type == 3) {
+                path = path.playerSlot(buf.readVarInt());
+            } else if (type == 4) {
+                path = path.accessory(buf.readUtf(), buf.readVarInt());
+            } else {
+                throw new IllegalStateException("Unknown nested container path segment type " + type);
+            }
+        }
+        return path;
     }
 
     private static <T extends GridMessage> void register(GridMessageType<T> type, NeoForge1211MessageCodec<T> codec) {
