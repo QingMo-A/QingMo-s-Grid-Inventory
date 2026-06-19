@@ -33,6 +33,8 @@ public final class NestedContainerWindowManager {
     private static final int CLOSE_SIZE = 12;
     private static final int CONTAINER_GAP = 10;
     private static final int TITLE_HEIGHT = 12;
+    private static final float WINDOW_BASE_Z = 5_000.0F;
+    private static final float WINDOW_Z_STEP = 1_000.0F;
     private final List<Window> windows = new ArrayList<>();
     private final HoverAnimationTracker<EntryAnimationKey> entryHoverAnimations = new HoverAnimationTracker<>();
     private Window dragging;
@@ -44,6 +46,12 @@ public final class NestedContainerWindowManager {
         if (stack.isEmpty() || !NestedContainerAccess.hasOpenableContainer(stack)) {
             return false;
         }
+        for (Window window : windows) {
+            if (window.path.equals(path)) {
+                bringToFront(window);
+                return true;
+            }
+        }
         Window window = Window.create(stack.copy(), path, mouseX + 12, mouseY + 10);
         window.clamp(screenWidth, screenHeight);
         windows.add(window);
@@ -52,8 +60,11 @@ public final class NestedContainerWindowManager {
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, boolean hoverEnabled, Optional<PlacementPreview> preview) {
-        for (Window window : windows) {
-            window.render(graphics, mouseX, mouseY, hoverEnabled, preview, entryHoverAnimations);
+        boolean windowDragging = dragging != null;
+        for (int index = 0; index < windows.size(); index++) {
+            Window window = windows.get(index);
+            window.render(graphics, mouseX, mouseY, hoverEnabled && !windowDragging, preview, entryHoverAnimations,
+                    WINDOW_BASE_Z + index * WINDOW_Z_STEP);
         }
         entryHoverAnimations.markFrameEnd();
     }
@@ -103,12 +114,8 @@ public final class NestedContainerWindowManager {
             }
             Optional<EntryHit> entry = window.entryHitAt((int) mouseX, (int) mouseY);
             if (entry.isPresent() && NestedContainerAccess.hasOpenableContainer(entry.get().entry().stack())) {
-                Window nested = Window.create(entry.get().entry().stack().copy(), entry.get().childPath(),
-                        (int) mouseX + 12, (int) mouseY + 10);
-                nested.clamp(screenWidth, screenHeight);
-                windows.add(nested);
-                bringToFront(nested);
-                return true;
+                return open(entry.get().entry().stack(), entry.get().childPath(), (int) mouseX, (int) mouseY,
+                        screenWidth, screenHeight);
             }
             if (window.headerContains((int) mouseX, (int) mouseY)) {
                 dragging = window;
@@ -137,6 +144,10 @@ public final class NestedContainerWindowManager {
         }
         dragging = null;
         return true;
+    }
+
+    public boolean isDraggingWindow() {
+        return dragging != null;
     }
 
     private void bringToFront(Window window) {
@@ -206,10 +217,10 @@ public final class NestedContainerWindowManager {
 
         private void render(GuiGraphics graphics, int mouseX, int mouseY, boolean hoverEnabled,
                             Optional<PlacementPreview> preview,
-                            HoverAnimationTracker<EntryAnimationKey> hoverAnimations) {
+                            HoverAnimationTracker<EntryAnimationKey> hoverAnimations, float z) {
             Font font = Minecraft.getInstance().font;
             graphics.pose().pushPose();
-            graphics.pose().translate(0.0F, 0.0F, 650.0F);
+            graphics.pose().translate(0.0F, 0.0F, z);
             graphics.fill(x + 2, y, x + width - 2, y + height, 0xEE151922);
             graphics.fill(x, y + 2, x + width, y + height - 2, 0xEE151922);
             graphics.renderOutline(x, y, width, height, contains(mouseX, mouseY) ? 0x88AABEDC : 0x44FFFFFF);

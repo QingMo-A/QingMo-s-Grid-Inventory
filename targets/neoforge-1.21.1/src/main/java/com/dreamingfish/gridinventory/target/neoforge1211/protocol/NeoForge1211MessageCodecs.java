@@ -262,6 +262,10 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new TransferNestedGridEntryIntoGridMessage(readPath(b), b.readUtf(), b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
         ));
+        register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_EQUIPMENT_STORAGE, codec(
+                (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
+                b -> new TransferNestedGridEntryIntoEquipmentStorageMessage(readPath(b), b.readUtf(), b.readUUID(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
         register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_NESTED_GRID, codec(
                 (m, b) -> { writePath(b, m.sourceOwnerPath()); b.writeUtf(m.sourceContainerId()); b.writeUUID(m.entryId()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.targetFolded()); },
                 b -> new TransferNestedGridEntryIntoNestedGridMessage(readPath(b), b.readUtf(), b.readUUID(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())

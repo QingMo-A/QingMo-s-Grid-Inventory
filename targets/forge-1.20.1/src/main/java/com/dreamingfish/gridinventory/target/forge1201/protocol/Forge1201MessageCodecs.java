@@ -39,6 +39,7 @@ import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEnt
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
+import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
@@ -405,6 +406,22 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new TransferNestedGridEntryIntoGridMessage(readPath(buf), buf.readUtf(), buf.readUUID(),
                         buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_EQUIPMENT_STORAGE, codec(
+                (message, buf) -> {
+                    writePath(buf, message.sourceOwnerPath());
+                    buf.writeUtf(message.sourceContainerId());
+                    buf.writeUUID(message.entryId());
+                    buf.writeEnum(message.equipmentSlot());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.targetFolded());
+                },
+                buf -> new TransferNestedGridEntryIntoEquipmentStorageMessage(readPath(buf), buf.readUtf(),
+                        buf.readUUID(), buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(),
+                        buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
         ));
         register(GridMessages.TRANSFER_NESTED_GRID_ENTRY_INTO_NESTED_GRID, codec(
                 (message, buf) -> {

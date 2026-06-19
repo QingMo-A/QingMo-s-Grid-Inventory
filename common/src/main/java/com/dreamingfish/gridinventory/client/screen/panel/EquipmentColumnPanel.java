@@ -112,6 +112,12 @@ public final class EquipmentColumnPanel {
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, int hotbarTop, List<Slot> slots,
                        int draggedPlayerSlot, ItemStack draggedStack, boolean supportsDropToFreeSlot) {
+        render(graphics, mouseX, mouseY, hotbarTop, slots, draggedPlayerSlot, draggedStack, supportsDropToFreeSlot, true);
+    }
+
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, int hotbarTop, List<Slot> slots,
+                       int draggedPlayerSlot, ItemStack draggedStack, boolean supportsDropToFreeSlot,
+                       boolean hoverAnimationsEnabled) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null) {
             return;
@@ -124,7 +130,7 @@ public final class EquipmentColumnPanel {
         FreeSlotWidget legs = freeSlots.get(2);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.armor_upper"), helmet.x(), helmet.y() - 12, 0x8F8F8F, false);
         graphics.drawString(minecraft.font, Component.translatable("screen.df_grid_inventory.armor_lower"), legs.x(), legs.y() - 12, 0x8F8F8F, false);
-        renderCuriosToggle(graphics, mouseX, mouseY);
+        renderCuriosToggle(graphics, mouseX, mouseY, hoverAnimationsEnabled);
 
         int modelLeft = left + 7;
         int modelRight = left + width - 7;
@@ -151,7 +157,7 @@ public final class EquipmentColumnPanel {
             Boolean dropAllowed = !draggedStack.isEmpty()
                     ? supportsDropToFreeSlot && canReceive(slot, draggedStack, slots, draggedPlayerSlot, minecraft.player) : null;
             float hoverProgress = slotHoverAnimations.update("free:" + freeSlot.menuIndex(),
-                    hovered && draggedStack.isEmpty() && !dragged);
+                    hoverAnimationsEnabled && hovered && draggedStack.isEmpty() && !dragged);
             freeSlot.render(graphics, slot, hovered, dragged, dropAllowed, hoverProgress);
         }
         if (curiosExpansionProgress > 0.02F && curiosViewportHeight > 0) {
@@ -165,7 +171,7 @@ public final class EquipmentColumnPanel {
                         draggedStack, curioSlot.view().stack().isEmpty()) : null;
                 float hoverProgress = slotHoverAnimations.update(
                         "curio:" + curioSlot.view().identifier() + ":" + curioSlot.view().index(),
-                        hovered && draggedStack.isEmpty() && interactable);
+                        hoverAnimationsEnabled && hovered && draggedStack.isEmpty() && interactable);
                 curioSlot.render(graphics, hovered, dropAllowed, false, hoverProgress);
             }
             graphics.disableScissor();
@@ -251,10 +257,14 @@ public final class EquipmentColumnPanel {
     }
 
     private void renderCuriosToggle(GuiGraphics graphics, int mouseX, int mouseY) {
+        renderCuriosToggle(graphics, mouseX, mouseY, true);
+    }
+
+    private void renderCuriosToggle(GuiGraphics graphics, int mouseX, int mouseY, boolean hoverAnimationsEnabled) {
         if (!GridInventoryServices.accessories().isLoaded()) {
             return;
         }
-        boolean hovered = mouseX >= curiosToggleX && mouseY >= curiosToggleY
+        boolean hovered = hoverAnimationsEnabled && mouseX >= curiosToggleX && mouseY >= curiosToggleY
                 && mouseX < curiosToggleX + curiosToggleSize && mouseY < curiosToggleY + curiosToggleSize;
         curiosButtonFrame = curiosButtonState.update(hovered, false, curiosExpanded);
         float hover = curiosButtonFrame.hoverProgress();

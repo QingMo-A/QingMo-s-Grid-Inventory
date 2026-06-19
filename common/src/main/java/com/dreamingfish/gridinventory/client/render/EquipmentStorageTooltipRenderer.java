@@ -20,6 +20,7 @@ public final class EquipmentStorageTooltipRenderer {
     private static final int PADDING = 8;
     private static final int CONTAINER_GAP = 10;
     private static final int TITLE_HEIGHT = 12;
+    private static final float TOOLTIP_Z = 350.0F;
     private static CachedTooltip cachedTooltip;
 
     private EquipmentStorageTooltipRenderer() {
@@ -39,7 +40,7 @@ public final class EquipmentStorageTooltipRenderer {
         int panelY = Mth.clamp(mouseY - panelHeight / 2, 4, Math.max(4, screenHeight - panelHeight - 4));
 
         graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, 500.0F);
+        graphics.pose().translate(0.0F, 0.0F, TOOLTIP_Z);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xF0181818);
         graphics.renderOutline(panelX, panelY, panelWidth, panelHeight, 0xFFD0D0D0);
 
