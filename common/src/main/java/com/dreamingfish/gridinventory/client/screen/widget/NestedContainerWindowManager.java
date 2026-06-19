@@ -33,8 +33,8 @@ public final class NestedContainerWindowManager {
     private static final int CLOSE_SIZE = 12;
     private static final int CONTAINER_GAP = 10;
     private static final int TITLE_HEIGHT = 12;
-    private static final float WINDOW_BASE_Z = 5_000.0F;
-    private static final float WINDOW_Z_STEP = 1_000.0F;
+    private static final float WINDOW_BASE_Z = 420.0F;
+    private static final float WINDOW_Z_STEP = 10.0F;
     private final List<Window> windows = new ArrayList<>();
     private final HoverAnimationTracker<EntryAnimationKey> entryHoverAnimations = new HoverAnimationTracker<>();
     private Window dragging;

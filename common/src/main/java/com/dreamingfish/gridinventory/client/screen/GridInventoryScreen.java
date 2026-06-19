@@ -82,7 +82,7 @@ import java.util.UUID;
 public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMenu> {
     private static final int CELL = 27;
     private static final int DRAG_START_DISTANCE = 6;
-    private static final float DRAGGED_STACK_Z = 50_000.0F;
+    private static final float DRAGGED_STACK_Z = 950.0F;
     private int gridLeft;
     private int gridTop;
     private GridEntry draggingEntry;
@@ -311,10 +311,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int h = size.placedHeight(rotatedPreview);
         int left = mouseX - anchorCellX(stack) * CELL - dragAnchorPixelX;
         int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
+        graphics.flush();
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, 0.0F, DRAGGED_STACK_Z);
         GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F, rotatedPreview);
         graphics.pose().popPose();
+        graphics.flush();
     }
 
     private void renderEquipmentPreview(GuiGraphics graphics, int mouseX, int mouseY) {
