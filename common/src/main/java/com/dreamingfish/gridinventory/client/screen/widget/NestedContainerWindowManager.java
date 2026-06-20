@@ -252,9 +252,15 @@ public final class NestedContainerWindowManager {
             graphics.fill(x, y + 2, x + width, y + height - 2, 0xEE151922);
             graphics.renderOutline(x, y, width, height, contains(mouseX, mouseY) ? 0x88AABEDC : 0x44FFFFFF);
             graphics.fill(x, y, x + width, y + HEADER_HEIGHT, 0xAA202733);
+            graphics.pose().popPose();
+
             graphics.pose().pushPose();
-            graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_HEADER);
+            graphics.pose().translate(0.0F, 0.0F, z + GridUiLayers.NESTED_WINDOW_HEADER_ICON);
             graphics.renderItem(stack, x + 5, y + 3);
+            graphics.pose().popPose();
+
+            graphics.pose().pushPose();
+            graphics.pose().translate(0.0F, 0.0F, z + GridUiLayers.NESTED_WINDOW_HEADER);
             graphics.drawString(font, font.plainSubstrByWidth(title.getString(), width - 42), x + 24,
                     y + (HEADER_HEIGHT - font.lineHeight) / 2, 0xF1F5F9, false);
             int closeX = closeX();
@@ -273,14 +279,17 @@ public final class NestedContainerWindowManager {
                 GridInventoryData inventory = view.inventory();
                 if (showSectionTitles) {
                     graphics.pose().pushPose();
-                    graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_HEADER);
+                    graphics.pose().translate(0.0F, 0.0F, z + GridUiLayers.NESTED_WINDOW_SECTION_LABEL);
                     graphics.drawString(font, view.title(), x + PADDING, gridY, 0x94A3B8, false);
                     graphics.pose().popPose();
                     gridY += TITLE_HEIGHT;
                 }
                 int gridX = gridLeft(view);
                 int gridTop = gridY + GRID_BORDER;
+                graphics.pose().pushPose();
+                graphics.pose().translate(0.0F, 0.0F, z + GridUiLayers.NESTED_WINDOW_GRID);
                 GridRenderer.renderGrid(graphics, gridX, gridTop, inventory, CELL);
+                graphics.pose().popPose();
                 int hoverCellX = -1;
                 int hoverCellY = -1;
                 if (hoverEnabled) {
@@ -288,7 +297,7 @@ public final class NestedContainerWindowManager {
                     hoverCellY = GridLayoutMetrics.cellYAt(inventory, mouseX - gridX, mouseY - gridTop, CELL);
                 }
                 graphics.pose().pushPose();
-                graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_ITEM);
+                graphics.pose().translate(0.0F, 0.0F, z + GridUiLayers.NESTED_WINDOW_ITEM);
                 for (EntryView entryView : view.entries()) {
                     GridEntry entry = entryView.entry();
                     boolean hovered = hoverEnabled && entry.contains(hoverCellX, hoverCellY);
@@ -298,13 +307,12 @@ public final class NestedContainerWindowManager {
                 }
                 graphics.pose().popPose();
                 graphics.pose().pushPose();
-                graphics.pose().translate(0.0F, 0.0F, GridUiLayers.NESTED_WINDOW_OVERLAY);
+                graphics.pose().translate(0.0F, 0.0F, z + GridUiLayers.NESTED_WINDOW_OVERLAY);
                 preview.ifPresent(value -> renderPlacementPreview(graphics, value, view, inventory, gridX, gridTop,
                         mouseX, mouseY));
                 graphics.pose().popPose();
                 gridY += view.gridOuterHeight() + CONTAINER_GAP;
             }
-            graphics.pose().popPose();
         }
 
         private void renderPlacementPreview(GuiGraphics graphics, PlacementPreview preview, ContainerView view,
