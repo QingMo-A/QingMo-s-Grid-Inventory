@@ -7,6 +7,7 @@ import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
 import com.dreamingfish.gridinventory.client.render.EquipmentStorageTooltipRenderer;
+import com.dreamingfish.gridinventory.client.render.GridGuiRenderState;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
@@ -271,15 +272,19 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         graphics.flush();
         if (renderHoverTooltips && draggingNestedEntry == null && selectedPlayerStack.isEmpty()) {
             float nestedTooltipZ = GridUiLayers.nestedWindowTooltipZ(nestedWindows.topWindowContentZ());
-            hoveredNestedEntry.map(hit -> hit.entry().stack())
-                    .ifPresent(stack -> EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY,
-                            width, height, nestedTooltipZ));
+            hoveredNestedEntry.ifPresent(hit -> {
+                GridGuiRenderState.prepareOverlayAfterGuiItems();
+                EquipmentStorageTooltipRenderer.render(graphics, hit.entry().stack(), mouseX, mouseY,
+                        width, height, nestedTooltipZ);
+                graphics.flush();
+            });
         }
         if (draggingAnyItem) {
             renderDraggedStackGhost(graphics, mouseX, mouseY);
             return;
         }
         if (renderMainHoverTooltips || hoveredNestedEntry.isPresent()) {
+            GridGuiRenderState.prepareOverlayAfterGuiItems();
             graphics.pose().pushPose();
             graphics.pose().translate(0.0F, 0.0F, GridUiLayers.VANILLA_TOOLTIP);
             if (hoveredNestedEntry.isPresent()) {
