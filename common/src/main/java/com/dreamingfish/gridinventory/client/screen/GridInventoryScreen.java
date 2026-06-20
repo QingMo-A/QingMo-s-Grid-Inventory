@@ -178,8 +178,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int interactionMouseY = mouseBlockedByNestedWindow ? Integer.MIN_VALUE / 2 : mouseY;
         if (menu.isPlayerGrid()) {
             graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, 0x2E101010);
-            equipmentColumnPanel.render(graphics, interactionMouseX, interactionMouseY, hotbarTop(), menu.slots, lastPlayerSlot,
-                    draggedStack(), !draggedStack().isEmpty(), !nestedWindows.isDraggingWindow());
+            equipmentColumnPanel.render(graphics, interactionMouseX, interactionMouseY, mouseX, mouseY, hotbarTop(),
+                    menu.slots, lastPlayerSlot, draggedStack(), !draggedStack().isEmpty(),
+                    !nestedWindows.isDraggingWindow());
             gridColumnPanel.render(graphics, menu.getGridData(), draggingEntry == null ? null : draggingEntry.entryId(),
                     draggingEquipmentEntry, interactionMouseX, interactionMouseY, gridHoverAnimations, hoverAnimationsEnabled());
             gridLeft = gridColumnPanel.pocketLeft();

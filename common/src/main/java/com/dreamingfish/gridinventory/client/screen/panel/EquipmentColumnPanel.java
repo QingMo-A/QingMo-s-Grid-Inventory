@@ -118,6 +118,13 @@ public final class EquipmentColumnPanel {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, int hotbarTop, List<Slot> slots,
                        int draggedPlayerSlot, ItemStack draggedStack, boolean supportsDropToFreeSlot,
                        boolean hoverAnimationsEnabled) {
+        render(graphics, mouseX, mouseY, mouseX, mouseY, hotbarTop, slots, draggedPlayerSlot, draggedStack,
+                supportsDropToFreeSlot, hoverAnimationsEnabled);
+    }
+
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, int modelMouseX, int modelMouseY,
+                       int hotbarTop, List<Slot> slots, int draggedPlayerSlot, ItemStack draggedStack,
+                       boolean supportsDropToFreeSlot, boolean hoverAnimationsEnabled) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null) {
             return;
@@ -143,7 +150,7 @@ public final class EquipmentColumnPanel {
         int scale = Math.min(68, Math.max(39, Math.round((modelHeight / 2.0F + 8.0F) * 1.3F)));
         graphics.enableScissor(modelLeft, modelTop, modelRight, modelBottom);
         GridInventoryClientServices.bridge().renderEntityInInventoryFollowsMouse(
-                graphics, modelLeft, modelTop, modelRight, modelBottom, scale, mouseX, mouseY, minecraft.player);
+                graphics, modelLeft, modelTop, modelRight, modelBottom, scale, modelMouseX, modelMouseY, minecraft.player);
         graphics.disableScissor();
 
         FreeSlotWidget offhand = freeSlots.get(4);
