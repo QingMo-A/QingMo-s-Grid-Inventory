@@ -253,8 +253,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         boolean draggingWindow = nestedWindows.isDraggingWindow();
         boolean draggingAnyItem = !draggedStack().isEmpty();
         boolean mouseOverNestedWindow = nestedWindows.containsWindowAt(mouseX, mouseY);
-        boolean renderHoverTooltips = !draggingWindow && !draggingAnyItem && !mouseOverNestedWindow;
-        if (renderHoverTooltips) {
+        boolean renderHoverTooltips = !draggingWindow && !draggingAnyItem;
+        boolean renderMainHoverTooltips = renderHoverTooltips && !mouseOverNestedWindow;
+        Optional<NestedContainerWindowManager.EntryHit> hoveredNestedEntry = renderHoverTooltips
+                ? nestedWindows.entryAt(mouseX, mouseY) : Optional.empty();
+        if (renderMainHoverTooltips) {
             if (draggingEntry == null && draggingEquipmentEntry == null && draggingNestedEntry == null
                     && selectedPlayerStack.isEmpty()) {
                 hoveredStack(mouseX, mouseY).ifPresent(stack ->
@@ -266,24 +269,32 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         nestedWindows.refresh(this::resolveNestedWindowStack);
         nestedWindows.render(graphics, mouseX, mouseY, hoverAnimationsEnabled(), nestedPlacementPreview());
         graphics.flush();
+        if (renderHoverTooltips && draggingNestedEntry == null && selectedPlayerStack.isEmpty()) {
+            hoveredNestedEntry.map(hit -> hit.entry().stack())
+                    .ifPresent(stack -> EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
+        }
         if (draggingAnyItem) {
             renderDraggedStackGhost(graphics, mouseX, mouseY);
             return;
         }
-        if (renderHoverTooltips) {
+        if (renderMainHoverTooltips || hoveredNestedEntry.isPresent()) {
             graphics.pose().pushPose();
             graphics.pose().translate(0.0F, 0.0F, GridUiLayers.VANILLA_TOOLTIP);
-            renderTooltip(graphics, mouseX, mouseY);
-            hoveredGridEntry(mouseX, mouseY).ifPresent(entry ->
-                    graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
-            if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null
-                    && draggingNestedEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()) {
-                equipmentColumnPanel.slotAt(mouseX, mouseY)
-                        .map(slot -> menu.slots.get(slot.menuIndex()))
-                        .filter(Slot::hasItem)
-                        .ifPresent(slot -> graphics.renderTooltip(font, tooltipWithQuickEquipHint(slot.getItem()), Optional.empty(), mouseX, mouseY));
-                equipmentColumnPanel.curioSlotAt(mouseX, mouseY)
-                        .ifPresent(slot -> graphics.renderTooltip(font, slot.tooltip(), Optional.empty(), mouseX, mouseY));
+            if (hoveredNestedEntry.isPresent()) {
+                graphics.renderTooltip(font, gridEntryTooltip(hoveredNestedEntry.get().entry()), Optional.empty(), mouseX, mouseY);
+            } else {
+                renderTooltip(graphics, mouseX, mouseY);
+                hoveredGridEntry(mouseX, mouseY).ifPresent(entry ->
+                        graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
+                if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null
+                        && draggingNestedEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()) {
+                    equipmentColumnPanel.slotAt(mouseX, mouseY)
+                            .map(slot -> menu.slots.get(slot.menuIndex()))
+                            .filter(Slot::hasItem)
+                            .ifPresent(slot -> graphics.renderTooltip(font, tooltipWithQuickEquipHint(slot.getItem()), Optional.empty(), mouseX, mouseY));
+                    equipmentColumnPanel.curioSlotAt(mouseX, mouseY)
+                            .ifPresent(slot -> graphics.renderTooltip(font, slot.tooltip(), Optional.empty(), mouseX, mouseY));
+                }
             }
             graphics.pose().popPose();
             graphics.flush();
