@@ -17,8 +17,14 @@ public final class GridUiLayers {
     public static final float NESTED_WINDOW_ITEM = 80.0F;
     public static final float NESTED_WINDOW_ITEM_DECORATION = 100.0F;
     public static final float NESTED_WINDOW_OVERLAY = 130.0F;
-    public static final float DRAGGED_ITEM = 10000.0F;
-    public static final float VANILLA_TOOLTIP = 11000.0F;
+    public static final float DRAGGED_ITEM_ABOVE_NESTED_WINDOW = 80.0F;
+    public static final float MAX_SAFE_GUI_ITEM_Z = 2500.0F;
+    public static final float DRAGGED_ITEM = 2400.0F;
+    public static final float VANILLA_TOOLTIP = 2600.0F;
+
+    public static float draggedItemZ(float topNestedWindowZ) {
+        return Math.min(topNestedWindowZ + DRAGGED_ITEM_ABOVE_NESTED_WINDOW, MAX_SAFE_GUI_ITEM_Z);
+    }
 
     private GridUiLayers() {
     }

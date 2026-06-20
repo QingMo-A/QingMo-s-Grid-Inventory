@@ -111,6 +111,31 @@ public final class GridItemRenderer {
         renderStackInArea(graphics, stack, x, y, width, height, alpha, rotated, true, hoverProgress);
     }
 
+    public static void renderDraggedStackOverlay(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height,
+                                                 float alpha, boolean rotated) {
+        int padding = GridInventoryServices.clientConfig().gridItemInnerPadding();
+        int iconSize = Math.max(8, Math.min(width, height) - padding * 2);
+        float scale = iconSize / 16.0F;
+        float iconCenterX = x + width / 2.0F + 0.5F;
+        float iconCenterY = y + height / 2.0F + 0.5F;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(iconCenterX, iconCenterY, 0.0F);
+        if (rotated) {
+            graphics.pose().mulPose(Axis.ZP.rotationDegrees(-90.0F));
+        }
+        graphics.pose().scale(scale, scale, 1.0F);
+        graphics.setColor(1.0F, 1.0F, 1.0F, alpha);
+        graphics.renderItem(stack, -8, -8);
+        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+        graphics.pose().popPose();
+
+        graphics.setColor(1.0F, 1.0F, 1.0F, alpha);
+        GridItemRarityServices.compat().renderItemDecorations(graphics, Minecraft.getInstance().font, stack,
+                x + width - 17, y + height - 17);
+        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
     private static void renderStackInArea(GuiGraphics graphics, ItemStack stack, int x, int y, int width, int height, float alpha, boolean rotated, boolean renderRarityBackground, float hoverProgress) {
         int padding = GridInventoryServices.clientConfig().gridItemInnerPadding();
         int iconSize = Math.max(8, Math.min(width, height) - padding * 2);

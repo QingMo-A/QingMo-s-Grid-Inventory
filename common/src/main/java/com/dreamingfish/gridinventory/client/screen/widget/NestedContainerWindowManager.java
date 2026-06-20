@@ -72,6 +72,15 @@ public final class NestedContainerWindowManager {
         entryHoverAnimations.markFrameEnd();
     }
 
+    public float topWindowContentZ() {
+        if (windows.isEmpty()) {
+            return GridUiLayers.NESTED_WINDOW_BASE;
+        }
+        return GridUiLayers.NESTED_WINDOW_BASE
+                + (windows.size() - 1) * GridUiLayers.NESTED_WINDOW_STEP
+                + GridUiLayers.NESTED_WINDOW_OVERLAY;
+    }
+
     public void refresh(Function<NestedContainerPath, Optional<ItemStack>> resolver) {
         long now = System.nanoTime();
         if (now - lastRefreshNanos < REFRESH_INTERVAL_NANOS) {

@@ -328,8 +328,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
         graphics.flush();
         graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, GridUiLayers.DRAGGED_ITEM);
-        GridItemRenderer.renderStackInArea(graphics, stack, left, top, w * CELL, h * CELL, 0.75F, rotatedPreview);
+        graphics.pose().translate(0.0F, 0.0F, GridUiLayers.draggedItemZ(nestedWindows.topWindowContentZ()));
+        GridItemRenderer.renderDraggedStackOverlay(graphics, stack, left, top, w * CELL, h * CELL, 0.75F, rotatedPreview);
         graphics.pose().popPose();
         graphics.flush();
     }
