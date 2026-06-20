@@ -27,6 +27,11 @@ public final class EquipmentStorageTooltipRenderer {
     }
 
     public static void render(GuiGraphics graphics, ItemStack stack, int mouseX, int mouseY, int screenWidth, int screenHeight) {
+        render(graphics, stack, mouseX, mouseY, screenWidth, screenHeight, GridUiLayers.EQUIPMENT_TOOLTIP);
+    }
+
+    public static void render(GuiGraphics graphics, ItemStack stack, int mouseX, int mouseY, int screenWidth,
+                              int screenHeight, float z) {
         CachedTooltip tooltip = tooltip(stack);
         if (tooltip == null) {
             return;
@@ -40,7 +45,7 @@ public final class EquipmentStorageTooltipRenderer {
         int panelY = Mth.clamp(mouseY - panelHeight / 2, 4, Math.max(4, screenHeight - panelHeight - 4));
 
         graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, GridUiLayers.EQUIPMENT_TOOLTIP);
+        graphics.pose().translate(0.0F, 0.0F, z);
         graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xF0181818);
         graphics.renderOutline(panelX, panelY, panelWidth, panelHeight, 0xFFD0D0D0);
 
@@ -55,8 +60,7 @@ public final class EquipmentStorageTooltipRenderer {
             int gridTop = y + GRID_BORDER;
             GridRenderer.renderGrid(graphics, gridLeft, gridTop, container.inventory(), CELL);
             graphics.pose().pushPose();
-            graphics.pose().translate(0.0F, 0.0F,
-                    GridUiLayers.EQUIPMENT_TOOLTIP_ITEM - GridUiLayers.EQUIPMENT_TOOLTIP);
+            graphics.pose().translate(0.0F, 0.0F, GridUiLayers.EQUIPMENT_TOOLTIP_ITEM_OFFSET);
             for (var entry : container.inventory().getEntries()) {
                 GridItemRenderer.renderEntry(graphics, entry, container.inventory(), gridLeft, gridTop, CELL, 1.0F);
             }

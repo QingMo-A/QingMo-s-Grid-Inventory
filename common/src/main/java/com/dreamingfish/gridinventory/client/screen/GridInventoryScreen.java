@@ -270,8 +270,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         nestedWindows.render(graphics, mouseX, mouseY, hoverAnimationsEnabled(), nestedPlacementPreview());
         graphics.flush();
         if (renderHoverTooltips && draggingNestedEntry == null && selectedPlayerStack.isEmpty()) {
+            float nestedTooltipZ = GridUiLayers.nestedWindowTooltipZ(nestedWindows.topWindowContentZ());
             hoveredNestedEntry.map(hit -> hit.entry().stack())
-                    .ifPresent(stack -> EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
+                    .ifPresent(stack -> EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY,
+                            width, height, nestedTooltipZ));
         }
         if (draggingAnyItem) {
             renderDraggedStackGhost(graphics, mouseX, mouseY);
