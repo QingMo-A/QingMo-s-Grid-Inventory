@@ -11,11 +11,12 @@ public record ExtractCurioToNestedGridMessage(String identifier, int index, Nest
                                               boolean rotated, boolean targetFolded) implements GridMessage {
     public static void handle(ExtractCurioToNestedGridMessage message, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.extractCurioToNestedGrid(message.identifier(), message.index(), message.targetOwnerPath(),
+            if (menu.extractCurioToNestedGrid(message.identifier(), message.index(), message.targetOwnerPath(),
                     message.targetContainerId(), message.targetX(), message.targetY(), message.rotated(),
-                    message.targetFolded());
-            menu.broadcastChanges();
-            ModNetworking.syncMenu(context.player(), menu);
+                    message.targetFolded())) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(context.player(), menu);
+            }
         }
     }
 

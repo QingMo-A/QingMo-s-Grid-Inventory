@@ -11,11 +11,12 @@ public record InsertPlayerSlotIntoNestedGridMessage(int playerSlot, NestedContai
                                                     boolean rotated, boolean targetFolded) implements GridMessage {
     public static void handle(InsertPlayerSlotIntoNestedGridMessage message, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.insertPlayerSlotIntoNestedGrid(message.playerSlot(), message.targetOwnerPath(),
+            if (menu.insertPlayerSlotIntoNestedGrid(message.playerSlot(), message.targetOwnerPath(),
                     message.targetContainerId(), message.targetX(), message.targetY(), message.rotated(),
-                    message.targetFolded());
-            menu.broadcastChanges();
-            ModNetworking.syncMenu(context.player(), menu);
+                    message.targetFolded())) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(context.player(), menu);
+            }
         }
     }
 

@@ -20,11 +20,12 @@ public record TransferNestedGridEntryIntoEquipmentStorageMessage(NestedContainer
                                                                  boolean targetFolded) implements GridMessage {
     public static void handle(TransferNestedGridEntryIntoEquipmentStorageMessage message, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.transferNestedGridEntryIntoEquipmentStorage(message.sourceOwnerPath(), message.sourceContainerId(),
+            if (menu.transferNestedGridEntryIntoEquipmentStorage(message.sourceOwnerPath(), message.sourceContainerId(),
                     message.entryId(), message.equipmentSlot(), message.targetContainerId(), message.targetX(),
-                    message.targetY(), message.rotated(), message.targetFolded());
-            menu.broadcastChanges();
-            ModNetworking.syncMenu(context.player(), menu);
+                    message.targetY(), message.rotated(), message.targetFolded())) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(context.player(), menu);
+            }
         }
     }
 

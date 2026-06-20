@@ -13,8 +13,11 @@ public record TransferNestedGridEntryIntoGridMessage(NestedContainerPath sourceO
                                                      boolean targetFolded) implements GridMessage {
     public static void handle(TransferNestedGridEntryIntoGridMessage message, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.transferNestedGridEntryIntoGrid(message.sourceOwnerPath(), message.sourceContainerId(), message.entryId(),
-                    message.targetX(), message.targetY(), message.rotated(), message.targetFolded());
+            if (menu.transferNestedGridEntryIntoGrid(message.sourceOwnerPath(), message.sourceContainerId(), message.entryId(),
+                    message.targetX(), message.targetY(), message.rotated(), message.targetFolded())) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(context.player(), menu);
+            }
         }
     }
 
