@@ -27,6 +27,7 @@
   "screen.df_grid_inventory.armor_lower": "护腿 / 靴子",
   "screen.df_grid_inventory.offhand": "左手",
   "screen.df_grid_inventory.nearby_items": "附近物品",
+  "screen.df_grid_inventory.creative_items": "创造物品",
   "screen.df_grid_inventory.not_equipped": "未装备",
   "screen.df_grid_inventory.no_storage_space": "无储物空间",
   "screen.df_grid_inventory.storage_size": "%s × %s 储物空间",

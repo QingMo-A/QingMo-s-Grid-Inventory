@@ -15,11 +15,17 @@ import java.util.Optional;
 public final class VanillaCreativeSidebarPanel {
     private static final int SLOT = 18;
     private static final int TAB = 20;
+    private static final int PAD = 6;
+    private static final int TITLE_HEIGHT = 14;
+    private static final int TAB_BAR_HEIGHT = 24;
+    private static final int SEARCH_HEIGHT = 16;
+    private static final int SEARCH_GAP = 4;
     private int left;
     private int top;
     private int width;
     private int height;
     private int scrollRows;
+    private int tabScroll;
     private int selectedTab;
     private String search = "";
     private boolean searchFocused;
@@ -31,6 +37,7 @@ public final class VanillaCreativeSidebarPanel {
         this.width = width;
         this.height = height;
         selectedTab = Math.min(selectedTab, Math.max(0, tabs().size() - 1));
+        tabScroll = clampTabScroll(tabScroll);
         scrollRows = clampScroll(scrollRows);
     }
 
@@ -47,11 +54,11 @@ public final class VanillaCreativeSidebarPanel {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, boolean suppressTooltip) {
         Font font = Minecraft.getInstance().font;
         graphics.fill(left, top, left + width, top + height, 0xEE171717);
-        graphics.drawString(font, Component.translatable("screen.df_grid_inventory.creative_items"), left + 6, top + 4, 0xFFFFFF, false);
+        graphics.drawString(font, Component.translatable("screen.df_grid_inventory.creative_items"), left + PAD, top + 4, 0xFFFFFF, false);
         renderTabs(graphics, mouseX, mouseY);
         renderSearch(graphics, font);
-        int gridLeft = left + 6;
-        int gridTop = top + 46;
+        int gridLeft = gridLeft();
+        int gridTop = gridTop();
         int columns = columns();
         int rows = visibleRows();
         List<ItemStack> items = visibleItems();
@@ -72,6 +79,7 @@ public final class VanillaCreativeSidebarPanel {
             graphics.renderItemDecorations(font, stack, x + 1, y + 1);
         }
         graphics.disableScissor();
+        renderItemScrollbar(graphics);
         if (!suppressTooltip) {
             hoveredTab(mouseX, mouseY).ifPresent(tab -> graphics.renderTooltip(font, tab.title(), mouseX, mouseY));
             hoveredSlot(mouseX, mouseY).ifPresent(index -> graphics.renderTooltip(font, items.get(index), mouseX, mouseY));
@@ -86,6 +94,7 @@ public final class VanillaCreativeSidebarPanel {
         Optional<Integer> tab = hoveredTabIndex((int) mouseX, (int) mouseY);
         if (tab.isPresent()) {
             selectedTab = tab.get();
+            tabScroll = clampTabScroll(tabScroll);
             scrollRows = 0;
             searchFocused = false;
             return true;
@@ -115,7 +124,11 @@ public final class VanillaCreativeSidebarPanel {
         if (!contains(mouseX, mouseY)) {
             return false;
         }
-        scrollRows = clampScroll(scrollRows - (int) Math.signum(deltaY));
+        if (inTabBar(mouseX, mouseY)) {
+            tabScroll = clampTabScroll(tabScroll - (int) Math.signum(deltaY));
+        } else {
+            scrollRows = clampScroll(scrollRows - (int) Math.signum(deltaY));
+        }
         return true;
     }
 
@@ -158,26 +171,43 @@ public final class VanillaCreativeSidebarPanel {
 
     private void renderTabs(GuiGraphics graphics, int mouseX, int mouseY) {
         List<VanillaCreativeTabView> tabs = tabs();
-        int x = left + 5;
-        int y = top + 17;
-        for (int index = 0; index < tabs.size(); index++) {
-            int tx = x + index * TAB;
-            if (tx + TAB > left + width - 4) {
+        int x = left + PAD;
+        int y = tabTop();
+        int visible = visibleTabCount();
+        graphics.enableScissor(x, y, x + visible * TAB, y + 18);
+        for (int index = tabScroll; index < tabs.size(); index++) {
+            int tx = x + (index - tabScroll) * TAB;
+            if (index - tabScroll >= visible) {
                 break;
             }
             int color = index == selectedTab ? 0xFF505A70 : 0xFF2B303A;
             graphics.fill(tx, y, tx + 18, y + 18, color);
             graphics.renderItem(tabs.get(index).icon(), tx + 1, y + 1);
         }
+        graphics.disableScissor();
+        if (tabs.size() > visible) {
+            int barLeft = x;
+            int barRight = x + visible * TAB - 2;
+            int barY = y + 20;
+            graphics.fill(barLeft, barY, barRight, barY + 2, 0x774B5563);
+            int thumbWidth = Math.max(10, (barRight - barLeft) * visible / tabs.size());
+            int maxScroll = Math.max(1, tabs.size() - visible);
+            int thumbX = barLeft + (barRight - barLeft - thumbWidth) * tabScroll / maxScroll;
+            graphics.fill(thumbX, barY, thumbX + thumbWidth, barY + 2, 0xFFC7D2FE);
+        }
     }
 
     private void renderSearch(GuiGraphics graphics, Font font) {
         int color = searchFocused ? 0xFF8FB3FF : 0xFF606A7A;
-        graphics.fill(left + 6, top + 39, left + width - 6, top + 40, color);
+        int boxLeft = left + PAD;
+        int boxTop = searchTop();
+        int boxRight = left + width - PAD;
+        graphics.fill(boxLeft, boxTop, boxRight, boxTop + SEARCH_HEIGHT, 0xFF111827);
+        graphics.renderOutline(boxLeft, boxTop, boxRight - boxLeft, SEARCH_HEIGHT, color);
         Component text = search.isEmpty()
                 ? Component.translatable("gui.recipebook.search_hint").withStyle(ChatFormatting.DARK_GRAY)
                 : Component.literal(search);
-        graphics.drawString(font, text, left + 8, top + 28, search.isEmpty() ? 0x777777 : 0xE6EDF5, false);
+        graphics.drawString(font, text, boxLeft + 4, boxTop + 4, search.isEmpty() ? 0x777777 : 0xE6EDF5, false);
     }
 
     private Optional<VanillaCreativeTabView> hoveredTab(int mouseX, int mouseY) {
@@ -185,20 +215,21 @@ public final class VanillaCreativeSidebarPanel {
     }
 
     private Optional<Integer> hoveredTabIndex(int mouseX, int mouseY) {
-        int y = top + 17;
+        int y = tabTop();
         if (mouseY < y || mouseY >= y + 18) {
             return Optional.empty();
         }
-        int index = (mouseX - (left + 5)) / TAB;
-        if (index >= 0 && index < tabs().size() && left + 5 + index * TAB + 18 <= left + width - 4) {
+        int visibleIndex = (mouseX - (left + PAD)) / TAB;
+        int index = tabScroll + visibleIndex;
+        if (visibleIndex >= 0 && visibleIndex < visibleTabCount() && index >= 0 && index < tabs().size()) {
             return Optional.of(index);
         }
         return Optional.empty();
     }
 
     private Optional<Integer> hoveredSlot(int mouseX, int mouseY) {
-        int gridLeft = left + 6;
-        int gridTop = top + 46;
+        int gridLeft = gridLeft();
+        int gridTop = gridTop();
         int columns = columns();
         int col = (mouseX - gridLeft) / SLOT;
         int row = (mouseY - gridTop) / SLOT;
@@ -210,7 +241,13 @@ public final class VanillaCreativeSidebarPanel {
     }
 
     private boolean inSearch(double mouseX, double mouseY) {
-        return mouseX >= left + 6 && mouseX < left + width - 6 && mouseY >= top + 26 && mouseY < top + 42;
+        return mouseX >= left + PAD && mouseX < left + width - PAD
+                && mouseY >= searchTop() && mouseY < searchTop() + SEARCH_HEIGHT;
+    }
+
+    private boolean inTabBar(double mouseX, double mouseY) {
+        return mouseX >= left + PAD && mouseX < left + width - PAD
+                && mouseY >= tabTop() && mouseY < tabTop() + TAB_BAR_HEIGHT;
     }
 
     private boolean contains(double mouseX, double mouseY) {
@@ -230,15 +267,56 @@ public final class VanillaCreativeSidebarPanel {
     }
 
     private int columns() {
-        return Math.max(1, (width - 12) / SLOT);
+        return Math.max(1, (width - PAD * 2 - 6) / SLOT);
     }
 
     private int visibleRows() {
-        return Math.max(1, (height - 48) / SLOT);
+        return Math.max(1, (height - (gridTop() - top) - PAD) / SLOT);
     }
 
     private int clampScroll(int value) {
         int maxRows = Math.max(0, (visibleItems().size() + columns() - 1) / columns() - visibleRows());
         return Math.max(0, Math.min(maxRows, value));
+    }
+
+    private int clampTabScroll(int value) {
+        return Math.max(0, Math.min(Math.max(0, tabs().size() - visibleTabCount()), value));
+    }
+
+    private int visibleTabCount() {
+        return Math.max(1, (width - PAD * 2) / TAB);
+    }
+
+    private int tabTop() {
+        return top + TITLE_HEIGHT;
+    }
+
+    private int searchTop() {
+        return top + TITLE_HEIGHT + TAB_BAR_HEIGHT + SEARCH_GAP;
+    }
+
+    private int gridTop() {
+        return searchTop() + SEARCH_HEIGHT + SEARCH_GAP;
+    }
+
+    private int gridLeft() {
+        return left + PAD;
+    }
+
+    private void renderItemScrollbar(GuiGraphics graphics) {
+        int columns = columns();
+        int totalRows = Math.max(1, (visibleItems().size() + columns - 1) / columns);
+        int rows = visibleRows();
+        if (totalRows <= rows) {
+            return;
+        }
+        int trackLeft = left + width - PAD - 3;
+        int trackTop = gridTop();
+        int trackHeight = rows * SLOT;
+        graphics.fill(trackLeft, trackTop, trackLeft + 2, trackTop + trackHeight, 0x774B5563);
+        int thumbHeight = Math.max(10, trackHeight * rows / totalRows);
+        int maxScroll = Math.max(1, totalRows - rows);
+        int thumbY = trackTop + (trackHeight - thumbHeight) * scrollRows / maxScroll;
+        graphics.fill(trackLeft - 1, thumbY, trackLeft + 3, thumbY + thumbHeight, 0xFFC7D2FE);
     }
 }
