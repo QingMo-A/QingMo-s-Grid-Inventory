@@ -252,8 +252,12 @@ public final class VanillaCreativeSidebarPanel {
         int gridLeft = gridLeft();
         int gridTop = gridTop();
         int columns = columns();
-        int col = (mouseX - gridLeft) / SLOT;
+        int localX = mouseX - gridLeft;
         int localY = mouseY - gridTop;
+        if (localX < 0 || localY < 0) {
+            return Optional.empty();
+        }
+        int col = localX / SLOT;
         int row = localY / SLOT;
         if (col < 0 || row < 0 || col >= columns || row >= visibleRows()) {
             return Optional.empty();
