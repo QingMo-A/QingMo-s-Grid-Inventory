@@ -69,6 +69,11 @@ public final class NeoForgeCuriosAccessoryBridge implements GridInventoryAccesso
     }
 
     @Override
+    public boolean insertStackIntoAccessory(Player player, ItemStack source, String identifier, int index) {
+        return NeoForgeCuriosIntegration.insertStackIntoCurio(player, source, identifier, index);
+    }
+
+    @Override
     public boolean moveAccessoryToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
         return NeoForgeCuriosIntegration.moveCurioToPlayerSlot(player, identifier, index, targetPlayerSlot);
     }

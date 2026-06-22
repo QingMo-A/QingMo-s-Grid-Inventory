@@ -68,6 +68,11 @@ public final class Forge1201CuriosAccessoryBridge implements GridInventoryAccess
     }
 
     @Override
+    public boolean insertStackIntoAccessory(Player player, ItemStack source, String identifier, int index) {
+        return Forge1201CuriosIntegration.insertStackIntoCurio(player, source, identifier, index);
+    }
+
+    @Override
     public boolean moveAccessoryToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
         return Forge1201CuriosIntegration.moveCurioToPlayerSlot(player, identifier, index, targetPlayerSlot);
     }

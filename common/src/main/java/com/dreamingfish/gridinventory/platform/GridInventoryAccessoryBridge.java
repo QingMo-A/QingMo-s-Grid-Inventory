@@ -27,6 +27,8 @@ public interface GridInventoryAccessoryBridge {
 
     boolean moveEquipmentEntryToAccessory(Player player, GridInventoryData inventory, UUID entryId, String identifier, int index);
 
+    boolean insertStackIntoAccessory(Player player, ItemStack source, String identifier, int index);
+
     boolean moveAccessoryToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot);
 
     boolean moveAccessoryToGrid(Player player, GridInventoryData grid, String identifier, int index, int targetX, int targetY, boolean rotated);

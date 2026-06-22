@@ -506,6 +506,51 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    public boolean pickupGroundItemIntoPlayerSlot(int entityId, int playerSlot) {
+        if (!(playerInventory.player instanceof ServerPlayer player) || !playerGrid
+                || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize() || !isFreePlayerSlot(playerSlot)) {
+            return false;
+        }
+        Optional<ItemEntity> itemEntity = ManualPickupHandler.findReachableItem(player, entityId);
+        if (itemEntity.isEmpty()) {
+            return false;
+        }
+        ItemStack groundStack = itemEntity.get().getItem();
+        ItemStack current = playerInventory.getItem(playerSlot);
+        if (groundStack.isEmpty() || !current.isEmpty() || !mayInsertIntoVanillaSlot(playerSlot, groundStack)) {
+            return false;
+        }
+        int moved = Math.min(groundStack.getCount(), Math.min(groundStack.getMaxStackSize(), playerInventory.getMaxStackSize()));
+        playerInventory.setItem(playerSlot, groundStack.copyWithCount(moved));
+        playerInventory.setChanged();
+        finishGroundPickup(itemEntity.get(), moved);
+        return true;
+    }
+
+    public boolean pickupGroundItemIntoCurio(int entityId, String identifier, int index) {
+        if (!(playerInventory.player instanceof ServerPlayer player) || !playerGrid) {
+            return false;
+        }
+        Optional<ItemEntity> itemEntity = ManualPickupHandler.findReachableItem(player, entityId);
+        if (itemEntity.isEmpty()) {
+            return false;
+        }
+        ItemStack groundStack = itemEntity.get().getItem();
+        if (groundStack.isEmpty()) {
+            return false;
+        }
+        int before = groundStack.getCount();
+        if (!GridInventoryServices.accessories().insertStackIntoAccessory(playerInventory.player, groundStack, identifier, index)) {
+            return false;
+        }
+        int moved = before - groundStack.getCount();
+        if (moved <= 0) {
+            return false;
+        }
+        finishGroundPickup(itemEntity.get(), moved);
+        return true;
+    }
+
     public boolean pickupGroundItemIntoNestedGrid(int entityId, NestedContainerPath targetOwnerPath,
                                                   String targetContainerId, int targetX, int targetY,
                                                   boolean rotated) {
@@ -536,6 +581,21 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         finishGroundPickup(itemEntity.get(), inserted.getCount());
         playerInventory.setChanged();
         save();
+        return true;
+    }
+
+    public boolean dropPlayerSlot(int playerSlot) {
+        if (!playerGrid || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize() || !isFreePlayerSlot(playerSlot)) {
+            return false;
+        }
+        ItemStack stack = playerInventory.getItem(playerSlot);
+        if (stack.isEmpty()) {
+            return false;
+        }
+        ItemStack dropped = stack.copy();
+        playerInventory.setItem(playerSlot, ItemStack.EMPTY);
+        playerInventory.player.drop(dropped, false);
+        playerInventory.setChanged();
         return true;
     }
 
@@ -1422,6 +1482,20 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             return false;
         }
         return GridInventoryServices.accessories().moveAccessoryToPlayerSlot(playerInventory.player, identifier, index, targetPlayerSlot);
+    }
+
+    public boolean dropCurio(String identifier, int index) {
+        if (!playerGrid) {
+            return false;
+        }
+        Optional<ItemStack> stack = GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, identifier, index);
+        if (stack.isEmpty() || stack.get().isEmpty()) {
+            return false;
+        }
+        GridInventoryServices.accessories().setAccessoryStack(playerInventory.player, identifier, index, ItemStack.EMPTY);
+        playerInventory.player.drop(stack.get().copy(), false);
+        playerInventory.setChanged();
+        return true;
     }
 
     public boolean extractCurioToGrid(String identifier, int index, int targetX, int targetY, boolean rotated) {

@@ -166,6 +166,22 @@ public final class NeoForgeCuriosIntegration {
                 .orElse(false);
     }
 
+    public static boolean insertStackIntoCurio(Player player, ItemStack source, String identifier, int index) {
+        if (!isLoaded() || source.isEmpty() || !validCurio(player, identifier, index, source)) {
+            return false;
+        }
+        Optional<IDynamicStackHandler> target = stacks(player, identifier);
+        if (target.isEmpty() || index < 0 || index >= target.get().getSlots() || !target.get().getStackInSlot(index).isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.copyWithCount(1);
+        GridBackpackItem.unfold(moved);
+        target.get().setStackInSlot(index, moved);
+        source.shrink(1);
+        player.getInventory().setChanged();
+        return true;
+    }
+
     public static boolean canQuickEquip(Player player, ItemStack stack) {
         if (!isLoaded() || stack.isEmpty()) {
             return false;

@@ -95,6 +95,11 @@ public final class Forge1201AccessoryBridge implements GridInventoryAccessoryBri
     }
 
     @Override
+    public boolean insertStackIntoAccessory(Player player, ItemStack source, String identifier, int index) {
+        return delegate().insertStackIntoAccessory(player, source, identifier, index);
+    }
+
+    @Override
     public boolean moveAccessoryToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
         return delegate().moveAccessoryToPlayerSlot(player, identifier, index, targetPlayerSlot);
     }
@@ -161,6 +166,11 @@ public final class Forge1201AccessoryBridge implements GridInventoryAccessoryBri
 
         @Override
         public boolean moveEquipmentEntryToAccessory(Player player, GridInventoryData inventory, UUID entryId, String identifier, int index) {
+            return false;
+        }
+
+        @Override
+        public boolean insertStackIntoAccessory(Player player, ItemStack source, String identifier, int index) {
             return false;
         }
 

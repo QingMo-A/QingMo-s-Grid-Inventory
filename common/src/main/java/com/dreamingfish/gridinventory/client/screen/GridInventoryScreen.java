@@ -40,11 +40,15 @@ import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageE
 import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
+import com.dreamingfish.gridinventory.common.network.DropCurioMessage;
+import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoNestedGridMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoNestedGridMessage;
@@ -665,6 +669,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 GridInventoryServices.network().sendToServer(new DropEquipmentStorageEntryMessage(hit.slot(), hit.containerId(), hit.entry().entryId()));
                 return true;
             }
+            Optional<CuriosSlotWidget> curioHit = equipmentColumnPanel.curioSlotAt(mouseX, mouseY);
+            if (curioHit.isPresent() && !curioHit.get().view().stack().isEmpty()) {
+                GridInventoryServices.network().sendToServer(new DropCurioMessage(
+                        curioHit.get().view().identifier(), curioHit.get().view().index()));
+                return true;
+            }
+            Slot hovered = findHoveredSlot(mouseX, mouseY);
+            if (hovered != null && hovered.hasItem()) {
+                GridInventoryServices.network().sendToServer(new DropPlayerSlotMessage(hovered.getSlotIndex()));
+                return true;
+            }
         }
         Optional<GridEntry> entry = entryAt(mouseX, mouseY);
         if (entry.isPresent()) {
@@ -995,6 +1010,22 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             rotatedPreview = false;
             return;
         }
+        if (menu.isPlayerGrid()) {
+            Optional<CuriosSlotWidget> curioHit = equipmentColumnPanel.curioSlotAt(mouseX, mouseY);
+            if (curioHit.isPresent()) {
+                GridInventoryServices.network().sendToServer(new PickupGroundItemIntoCurioMessage(
+                        view.entityId(), curioHit.get().view().identifier(), curioHit.get().view().index()));
+                rotatedPreview = false;
+                return;
+            }
+            Slot hovered = findHoveredSlot(mouseX, mouseY);
+            if (hovered != null && !hovered.hasItem()) {
+                GridInventoryServices.network().sendToServer(new PickupGroundItemIntoPlayerSlotMessage(
+                        view.entityId(), hovered.getSlotIndex()));
+                rotatedPreview = false;
+                return;
+            }
+        }
         Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
                 ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
         if (equipmentRegion.isPresent()) {
@@ -1002,6 +1033,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             GridInventoryServices.network().sendToServer(new PickupGroundItemIntoEquipmentStorageMessage(
                     view.entityId(), region.slot(), region.containerId(),
                     targetRegionX(region, view.stack(), mouseX), targetRegionY(region, view.stack(), mouseY), rotatedPreview));
+        } else if (menu.isPlayerGrid()) {
+            if (inGrid(mouseX, mouseY)) {
+                GridInventoryServices.network().sendToServer(new PickupGroundItemIntoGridMessage(
+                        view.entityId(), targetGridX(view.stack(), mouseX), targetGridY(view.stack(), mouseY), rotatedPreview));
+            }
         } else if (inGrid(mouseX, mouseY)) {
             GridInventoryServices.network().sendToServer(new PickupGroundItemIntoGridMessage(
                     view.entityId(), targetGridX(view.stack(), mouseX), targetGridY(view.stack(), mouseY), rotatedPreview));

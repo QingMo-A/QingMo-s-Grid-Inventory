@@ -171,6 +171,24 @@ public final class Forge1201CuriosIntegration {
         return true;
     }
 
+    public static boolean insertStackIntoCurio(Player player, ItemStack source, String identifier, int index) {
+        if (source.isEmpty() || !targetSlotEmptyAndValid(player, identifier, index, source)) {
+            return false;
+        }
+        Optional<IDynamicStackHandler> target = stacks(player, identifier);
+        if (target.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = source.copyWithCount(1);
+        if (moved.getItem() instanceof GridBackpackItem) {
+            GridBackpackItem.unfold(moved);
+        }
+        target.get().setStackInSlot(index, moved);
+        source.shrink(1);
+        player.getInventory().setChanged();
+        return true;
+    }
+
     public static boolean moveCurioToPlayerSlot(Player player, String identifier, int index, int targetPlayerSlot) {
         if (targetPlayerSlot < 0 || targetPlayerSlot >= player.getInventory().getContainerSize()) {
             return false;
