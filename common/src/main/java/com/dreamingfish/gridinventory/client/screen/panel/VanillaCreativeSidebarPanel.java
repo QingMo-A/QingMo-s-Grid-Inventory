@@ -26,8 +26,14 @@ public final class VanillaCreativeSidebarPanel {
     private int top;
     private int width;
     private int height;
-    private int scrollRows;
+    private final PanelScrollbar itemScrollbar = new PanelScrollbar();
     private int tabScroll;
+    private double tabScrollPosition;
+    private double tabScrollVelocity;
+    private float tabScrollbarAlpha;
+    private boolean draggingTabScrollbar;
+    private int tabDragOffset;
+    private int itemScrollPixels;
     private int selectedTab;
     private String search = "";
     private boolean searchFocused;
@@ -40,7 +46,7 @@ public final class VanillaCreativeSidebarPanel {
         this.height = height;
         selectedTab = Math.min(selectedTab, Math.max(0, tabs().size() - 1));
         tabScroll = clampTabScroll(tabScroll);
-        scrollRows = clampScroll(scrollRows);
+        tabScrollPosition = clampTabScroll((int) Math.round(tabScrollPosition));
     }
 
     public void selectDefaultTab() {
@@ -64,24 +70,28 @@ public final class VanillaCreativeSidebarPanel {
         int columns = columns();
         int rows = visibleRows();
         List<CreativeItemReference> items = visibleItems();
+        itemScrollbar.update(gridLeft, gridTop, columns * SLOT + 8, rows * SLOT, totalRows(items.size(), columns) * SLOT);
+        itemScrollPixels = itemScrollbar.scroll();
+        int firstRow = itemScrollPixels / SLOT;
+        int rowOffset = itemScrollPixels % SLOT;
         int hoveredIndex = hoveredSlot(mouseX, mouseY).orElse(-1);
         graphics.enableScissor(gridLeft, gridTop, gridLeft + columns * SLOT, gridTop + rows * SLOT);
-        for (int index = scrollRows * columns; index < items.size(); index++) {
-            int local = index - scrollRows * columns;
+        for (int index = firstRow * columns; index < items.size(); index++) {
+            int local = index - firstRow * columns;
             int row = local / columns;
-            if (row >= rows) {
+            if (row > rows) {
                 break;
             }
             int col = local % columns;
             int x = gridLeft + col * SLOT;
-            int y = gridTop + row * SLOT;
+            int y = gridTop + row * SLOT - rowOffset;
             ItemStack stack = items.get(index).stack();
             graphics.fill(x, y, x + SLOT, y + SLOT, hoveredIndex == index ? 0x665A6F9A : 0x55333333);
             graphics.renderItem(stack, x + 1, y + 1);
             graphics.renderItemDecorations(font, stack, x + 1, y + 1);
         }
         graphics.disableScissor();
-        renderItemScrollbar(graphics);
+        itemScrollbar.render(graphics, mouseX, mouseY);
         if (!suppressTooltip) {
             hoveredTab(mouseX, mouseY).ifPresent(tab -> graphics.renderTooltip(font, tab.title(), mouseX, mouseY));
             hoveredSlot(mouseX, mouseY).ifPresent(index -> graphics.renderTooltip(font, items.get(index).stack(), mouseX, mouseY));
@@ -93,11 +103,15 @@ public final class VanillaCreativeSidebarPanel {
             searchFocused = false;
             return false;
         }
+        if (itemScrollbar.mouseClicked(mouseX, mouseY, button) || mouseClickedTabScrollbar(mouseX, mouseY, button)) {
+            searchFocused = false;
+            return true;
+        }
         Optional<Integer> tab = hoveredTabIndex((int) mouseX, (int) mouseY);
         if (tab.isPresent()) {
             selectedTab = tab.get();
             tabScroll = clampTabScroll(tabScroll);
-            scrollRows = 0;
+            resetItemScroll();
             searchFocused = false;
             return true;
         }
@@ -115,10 +129,17 @@ public final class VanillaCreativeSidebarPanel {
     }
 
     public boolean mouseDragged(double mouseX, double mouseY, int button) {
+        if (itemScrollbar.mouseDragged(mouseX, mouseY, button) || mouseDraggedTabScrollbar(mouseX, mouseY, button)) {
+            return true;
+        }
         return button == 0 && draggedItem != null;
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        boolean releasedScrollbar = itemScrollbar.mouseReleased(button) | mouseReleasedTabScrollbar(button);
+        if (releasedScrollbar) {
+            return true;
+        }
         return button == 0 && draggedItem != null;
     }
 
@@ -127,11 +148,10 @@ public final class VanillaCreativeSidebarPanel {
             return false;
         }
         if (inTabBar(mouseX, mouseY)) {
-            tabScroll = clampTabScroll(tabScroll - (int) Math.signum(deltaY));
-        } else {
-            scrollRows = clampScroll(scrollRows - (int) Math.signum(deltaY));
+            scrollTabs(deltaY);
+            return true;
         }
-        return true;
+        return itemScrollbar.mouseScrolled(mouseX, mouseY, deltaY, SLOT * 3);
     }
 
     public boolean keyPressed(int keyCode) {
@@ -144,7 +164,7 @@ public final class VanillaCreativeSidebarPanel {
         }
         if (keyCode == 259 && !search.isEmpty()) {
             search = search.substring(0, search.length() - 1);
-            scrollRows = 0;
+            resetItemScroll();
             return true;
         }
         return false;
@@ -155,7 +175,7 @@ public final class VanillaCreativeSidebarPanel {
             return false;
         }
         search += codePoint;
-        scrollRows = 0;
+        resetItemScroll();
         return true;
     }
 
@@ -180,6 +200,7 @@ public final class VanillaCreativeSidebarPanel {
         int x = left + PAD;
         int y = tabTop();
         int visible = visibleTabCount();
+        advanceTabScroll();
         graphics.enableScissor(x, y, x + visible * TAB, y + 18);
         for (int index = tabScroll; index < tabs.size(); index++) {
             int tx = x + (index - tabScroll) * TAB;
@@ -191,16 +212,7 @@ public final class VanillaCreativeSidebarPanel {
             graphics.renderItem(tabs.get(index).icon(), tx + 1, y + 1);
         }
         graphics.disableScissor();
-        if (tabs.size() > visible) {
-            int barLeft = x;
-            int barRight = x + visible * TAB - 2;
-            int barY = y + 20;
-            graphics.fill(barLeft, barY, barRight, barY + 2, 0x774B5563);
-            int thumbWidth = Math.max(10, (barRight - barLeft) * visible / tabs.size());
-            int maxScroll = Math.max(1, tabs.size() - visible);
-            int thumbX = barLeft + (barRight - barLeft - thumbWidth) * tabScroll / maxScroll;
-            graphics.fill(thumbX, barY, thumbX + thumbWidth, barY + 2, 0xFFC7D2FE);
-        }
+        renderTabScrollbar(graphics, mouseX, mouseY, x, y, visible, tabs.size());
     }
 
     private void renderSearch(GuiGraphics graphics, Font font) {
@@ -242,7 +254,7 @@ public final class VanillaCreativeSidebarPanel {
         if (col < 0 || row < 0 || col >= columns || row >= visibleRows()) {
             return Optional.empty();
         }
-        int index = (scrollRows + row) * columns + col;
+        int index = ((itemScrollPixels + row * SLOT) / SLOT) * columns + col;
         return index >= 0 && index < visibleItems().size() ? Optional.of(index) : Optional.empty();
     }
 
@@ -304,11 +316,6 @@ public final class VanillaCreativeSidebarPanel {
         return Math.max(1, (height - (gridTop() - top) - PAD) / SLOT);
     }
 
-    private int clampScroll(int value) {
-        int maxRows = Math.max(0, (visibleItems().size() + columns() - 1) / columns() - visibleRows());
-        return Math.max(0, Math.min(maxRows, value));
-    }
-
     private int clampTabScroll(int value) {
         return Math.max(0, Math.min(Math.max(0, tabs().size() - visibleTabCount()), value));
     }
@@ -333,20 +340,160 @@ public final class VanillaCreativeSidebarPanel {
         return left + PAD;
     }
 
-    private void renderItemScrollbar(GuiGraphics graphics) {
-        int columns = columns();
-        int totalRows = Math.max(1, (visibleItems().size() + columns - 1) / columns);
-        int rows = visibleRows();
-        if (totalRows <= rows) {
+    private static int totalRows(int itemCount, int columns) {
+        return Math.max(1, (itemCount + columns - 1) / columns);
+    }
+
+    private void resetItemScroll() {
+        itemScrollbar.update(gridLeft(), gridTop(), columns() * SLOT + 8, visibleRows() * SLOT, visibleRows() * SLOT);
+    }
+
+    private void scrollTabs(double deltaY) {
+        if (maxTabScroll() <= 0) {
             return;
         }
-        int trackLeft = left + width - PAD - 3;
-        int trackTop = gridTop();
-        int trackHeight = rows * SLOT;
-        graphics.fill(trackLeft, trackTop, trackLeft + 2, trackTop + trackHeight, 0x774B5563);
-        int thumbHeight = Math.max(10, trackHeight * rows / totalRows);
-        int maxScroll = Math.max(1, totalRows - rows);
-        int thumbY = trackTop + (trackHeight - thumbHeight) * scrollRows / maxScroll;
-        graphics.fill(trackLeft - 1, thumbY, trackLeft + 3, thumbY + thumbHeight, 0xFFC7D2FE);
+        double impulse = -Math.signum(deltaY) * 0.42D;
+        tabScrollVelocity = clamp(tabScrollVelocity + impulse, -1.35D, 1.35D);
+    }
+
+    private void advanceTabScroll() {
+        int max = maxTabScroll();
+        if (max <= 0) {
+            tabScroll = 0;
+            tabScrollPosition = 0.0D;
+            tabScrollVelocity = 0.0D;
+            return;
+        }
+        if (draggingTabScrollbar) {
+            tabScrollPosition = tabScroll;
+            tabScrollVelocity = 0.0D;
+        } else if (Math.abs(tabScrollVelocity) > 0.02D) {
+            tabScrollPosition = clamp(tabScrollPosition + tabScrollVelocity, 0.0D, max);
+            tabScrollVelocity *= 0.78D;
+            tabScroll = clampTabScroll((int) Math.round(tabScrollPosition));
+        } else if (Math.abs(tabScrollPosition - tabScroll) > 0.05D) {
+            tabScrollPosition += (tabScroll - tabScrollPosition) * 0.22D;
+        } else {
+            tabScrollPosition = tabScroll;
+            tabScrollVelocity = 0.0D;
+        }
+    }
+
+    private void renderTabScrollbar(GuiGraphics graphics, int mouseX, int mouseY, int x, int y, int visible, int total) {
+        if (total <= visible) {
+            tabScrollbarAlpha = approach(tabScrollbarAlpha, 0.0F, 0.06F);
+            return;
+        }
+        boolean active = draggingTabScrollbar || inTabBar(mouseX, mouseY);
+        tabScrollbarAlpha = approach(tabScrollbarAlpha, active ? 1.0F : 0.0F, active ? 0.18F : 0.06F);
+        if (tabScrollbarAlpha <= 0.03F) {
+            return;
+        }
+        int barLeft = x;
+        int barRight = x + visible * TAB - 2;
+        int barY = y + 20;
+        int trackAlpha = (int) (0x36 * tabScrollbarAlpha);
+        int thumbAlpha = (int) ((draggingTabScrollbar ? 0xF0 : 0xB8) * tabScrollbarAlpha);
+        drawPill(graphics, barLeft, barY, barRight - barLeft, 2, argb(trackAlpha, 225, 228, 232));
+        int thumbWidth = tabThumbWidth(barLeft, barRight, visible, total);
+        drawPill(graphics, tabThumbX(barLeft, barRight, thumbWidth), barY - 1, thumbWidth, 4, argb(thumbAlpha, 210, 218, 226));
+    }
+
+    private boolean mouseClickedTabScrollbar(double mouseX, double mouseY, int button) {
+        if (button != 0 || maxTabScroll() <= 0 || !inTabScrollbar(mouseX, mouseY)) {
+            return false;
+        }
+        int barLeft = left + PAD;
+        int barRight = barLeft + visibleTabCount() * TAB - 2;
+        int thumbWidth = tabThumbWidth(barLeft, barRight, visibleTabCount(), tabs().size());
+        int thumbX = tabThumbX(barLeft, barRight, thumbWidth);
+        if (mouseX >= thumbX && mouseX < thumbX + thumbWidth) {
+            draggingTabScrollbar = true;
+            tabDragOffset = (int) mouseX - thumbX;
+        } else {
+            moveTabThumbTo((int) mouseX - thumbWidth / 2, thumbWidth);
+            draggingTabScrollbar = true;
+            tabDragOffset = thumbWidth / 2;
+        }
+        return true;
+    }
+
+    private boolean mouseDraggedTabScrollbar(double mouseX, double mouseY, int button) {
+        if (button != 0 || !draggingTabScrollbar) {
+            return false;
+        }
+        int barLeft = left + PAD;
+        int barRight = barLeft + visibleTabCount() * TAB - 2;
+        int thumbWidth = tabThumbWidth(barLeft, barRight, visibleTabCount(), tabs().size());
+        moveTabThumbTo((int) mouseX - tabDragOffset, thumbWidth);
+        return true;
+    }
+
+    private boolean mouseReleasedTabScrollbar(int button) {
+        if (button != 0 || !draggingTabScrollbar) {
+            return false;
+        }
+        draggingTabScrollbar = false;
+        return true;
+    }
+
+    private void moveTabThumbTo(int thumbX, int thumbWidth) {
+        int barLeft = left + PAD;
+        int barRight = barLeft + visibleTabCount() * TAB - 2;
+        int travel = Math.max(1, barRight - barLeft - thumbWidth);
+        int relative = clamp(thumbX - barLeft, 0, travel);
+        tabScroll = clampTabScroll(relative * maxTabScroll() / travel);
+        tabScrollPosition = tabScroll;
+        tabScrollVelocity = 0.0D;
+    }
+
+    private boolean inTabScrollbar(double mouseX, double mouseY) {
+        int y = tabTop() + 18;
+        return mouseX >= left + PAD && mouseX < left + PAD + visibleTabCount() * TAB
+                && mouseY >= y && mouseY < y + 8;
+    }
+
+    private int tabThumbWidth(int barLeft, int barRight, int visible, int total) {
+        return Math.max(12, (barRight - barLeft) * visible / total);
+    }
+
+    private int tabThumbX(int barLeft, int barRight, int thumbWidth) {
+        int max = Math.max(1, maxTabScroll());
+        return barLeft + (barRight - barLeft - thumbWidth) * tabScroll / max;
+    }
+
+    private int maxTabScroll() {
+        return Math.max(0, tabs().size() - visibleTabCount());
+    }
+
+    private static void drawPill(GuiGraphics graphics, int x, int y, int width, int height, int color) {
+        if (height <= 0 || width <= 0) {
+            return;
+        }
+        if (height <= 2) {
+            graphics.fill(x + 1, y, x + width - 1, y + height, color);
+            return;
+        }
+        graphics.fill(x + 1, y, x + width - 1, y + height, color);
+        graphics.fill(x, y + 1, x + width, y + height - 1, color);
+    }
+
+    private static int argb(int alpha, int red, int green, int blue) {
+        return (clamp(alpha, 0, 255) << 24) | (red << 16) | (green << 8) | blue;
+    }
+
+    private static float approach(float value, float target, float step) {
+        if (value < target) {
+            return Math.min(target, value + step);
+        }
+        return Math.max(target, value - step);
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }
