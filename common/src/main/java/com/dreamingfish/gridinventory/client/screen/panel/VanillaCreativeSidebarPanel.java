@@ -201,10 +201,13 @@ public final class VanillaCreativeSidebarPanel {
         int y = tabTop();
         int visible = visibleTabCount();
         advanceTabScroll();
+        int firstTab = (int) Math.floor(tabScrollPosition);
+        int tabOffset = (int) Math.round((tabScrollPosition - firstTab) * TAB);
         graphics.enableScissor(x, y, x + visible * TAB, y + 18);
-        for (int index = tabScroll; index < tabs.size(); index++) {
-            int tx = x + (index - tabScroll) * TAB;
-            if (index - tabScroll >= visible) {
+        for (int index = firstTab; index < tabs.size(); index++) {
+            int local = index - firstTab;
+            int tx = x + local * TAB - tabOffset;
+            if (local > visible) {
                 break;
             }
             int color = index == selectedTab ? 0xFF505A70 : 0xFF2B303A;
@@ -237,9 +240,9 @@ public final class VanillaCreativeSidebarPanel {
         if (mouseY < y || mouseY >= y + 18) {
             return Optional.empty();
         }
-        int visibleIndex = (mouseX - (left + PAD)) / TAB;
-        int index = tabScroll + visibleIndex;
-        if (visibleIndex >= 0 && visibleIndex < visibleTabCount() && index >= 0 && index < tabs().size()) {
+        int visibleIndex = (int) Math.floor((mouseX - (left + PAD) + (tabScrollPosition - Math.floor(tabScrollPosition)) * TAB) / TAB);
+        int index = (int) Math.floor(tabScrollPosition) + visibleIndex;
+        if (visibleIndex >= 0 && visibleIndex < visibleTabCount() + 1 && index >= 0 && index < tabs().size()) {
             return Optional.of(index);
         }
         return Optional.empty();
@@ -365,16 +368,13 @@ public final class VanillaCreativeSidebarPanel {
             return;
         }
         if (draggingTabScrollbar) {
-            tabScrollPosition = tabScroll;
             tabScrollVelocity = 0.0D;
         } else if (Math.abs(tabScrollVelocity) > 0.02D) {
             tabScrollPosition = clamp(tabScrollPosition + tabScrollVelocity, 0.0D, max);
             tabScrollVelocity *= 0.78D;
-            tabScroll = clampTabScroll((int) Math.round(tabScrollPosition));
-        } else if (Math.abs(tabScrollPosition - tabScroll) > 0.05D) {
-            tabScrollPosition += (tabScroll - tabScrollPosition) * 0.22D;
+            tabScroll = clampTabScroll((int) Math.floor(tabScrollPosition));
         } else {
-            tabScrollPosition = tabScroll;
+            tabScroll = clampTabScroll((int) Math.floor(tabScrollPosition));
             tabScrollVelocity = 0.0D;
         }
     }
@@ -442,8 +442,8 @@ public final class VanillaCreativeSidebarPanel {
         int barRight = barLeft + visibleTabCount() * TAB - 2;
         int travel = Math.max(1, barRight - barLeft - thumbWidth);
         int relative = clamp(thumbX - barLeft, 0, travel);
-        tabScroll = clampTabScroll(relative * maxTabScroll() / travel);
-        tabScrollPosition = tabScroll;
+        tabScrollPosition = clamp((double) relative * maxTabScroll() / travel, 0.0D, maxTabScroll());
+        tabScroll = clampTabScroll((int) Math.floor(tabScrollPosition));
         tabScrollVelocity = 0.0D;
     }
 
@@ -459,7 +459,7 @@ public final class VanillaCreativeSidebarPanel {
 
     private int tabThumbX(int barLeft, int barRight, int thumbWidth) {
         int max = Math.max(1, maxTabScroll());
-        return barLeft + (barRight - barLeft - thumbWidth) * tabScroll / max;
+        return barLeft + (int) Math.round((barRight - barLeft - thumbWidth) * tabScrollPosition / max);
     }
 
     private int maxTabScroll() {
