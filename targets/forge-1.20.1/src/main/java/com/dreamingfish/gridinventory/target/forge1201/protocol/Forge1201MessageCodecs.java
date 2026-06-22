@@ -30,6 +30,7 @@ import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotMessage;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
@@ -341,6 +342,18 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new PickupGroundItemIntoEquipmentStorageMessage(buf.readVarInt(), buf.readEnum(EquipmentSlot.class),
                         buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+        ));
+        register(GridMessages.PICKUP_GROUND_ITEM_INTO_NESTED_GRID, codec(
+                (message, buf) -> {
+                    buf.writeVarInt(message.entityId());
+                    writePath(buf, message.targetOwnerPath());
+                    buf.writeUtf(message.targetContainerId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                },
+                buf -> new PickupGroundItemIntoNestedGridMessage(buf.readVarInt(), readPath(buf), buf.readUtf(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
         ));
         register(GridMessages.EXTRACT_CURIO_TO_EQUIPMENT_STORAGE, codec(
                 (message, buf) -> {

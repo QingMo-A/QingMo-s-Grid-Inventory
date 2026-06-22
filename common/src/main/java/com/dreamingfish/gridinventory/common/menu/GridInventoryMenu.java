@@ -503,6 +503,39 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
+    public boolean pickupGroundItemIntoNestedGrid(int entityId, NestedContainerPath targetOwnerPath,
+                                                  String targetContainerId, int targetX, int targetY,
+                                                  boolean rotated) {
+        if (!(playerInventory.player instanceof ServerPlayer player)) {
+            return false;
+        }
+        Optional<ItemEntity> itemEntity = ManualPickupHandler.findReachableItem(player, entityId);
+        Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
+        Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
+        if (itemEntity.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()) {
+            return false;
+        }
+        ItemStack groundStack = itemEntity.get().getItem();
+        int targetDepth = targetOwnerPath.depth() + 1;
+        if (groundStack.isEmpty()
+                || !GridPlacementValidator.canPlace(targetGrid.get(), groundStack, targetX, targetY, rotated, null,
+                targetDepth)) {
+            return false;
+        }
+        ItemStack inserted = groundStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? groundStack.getCount() : 1);
+        GridInventoryData targetCopy = targetGrid.get().copy();
+        targetCopy.add(inserted, targetX, targetY, rotated);
+        ItemStack updatedTargetOwner = targetOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedTargetOwner, targetContainerId, targetCopy)
+                || !targetOwner.get().write(updatedTargetOwner)) {
+            return false;
+        }
+        finishGroundPickup(itemEntity.get(), inserted.getCount());
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
     private boolean insertGroundStackIntoGrid(ItemEntity itemEntity, GridInventoryData inventory, int targetX, int targetY, boolean rotated, int targetDepth) {
         ItemStack groundStack = itemEntity.getItem();
         if (groundStack.isEmpty() || !GridPlacementValidator.canPlace(inventory, groundStack, targetX, targetY, rotated, null, targetDepth)) {
@@ -510,15 +543,20 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         }
         ItemStack inserted = groundStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? groundStack.getCount() : 1);
         inventory.add(inserted, targetX, targetY, rotated);
-        groundStack.shrink(inserted.getCount());
-        playerInventory.player.take(itemEntity, inserted.getCount());
+        finishGroundPickup(itemEntity, inserted.getCount());
+        return true;
+    }
+
+    private void finishGroundPickup(ItemEntity itemEntity, int amount) {
+        ItemStack groundStack = itemEntity.getItem();
+        groundStack.shrink(amount);
+        playerInventory.player.take(itemEntity, amount);
         if (groundStack.isEmpty()) {
             itemEntity.discard();
         }
         playerInventory.player.level().playSound(null, playerInventory.player.getX(), playerInventory.player.getY(), playerInventory.player.getZ(),
                 SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2F,
                 ((playerInventory.player.getRandom().nextFloat() - playerInventory.player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
-        return true;
     }
 
     public boolean transferGridEntryIntoEquipmentStorage(UUID entryId, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {

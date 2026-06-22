@@ -180,6 +180,10 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> { b.writeVarInt(m.entityId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); },
                 b -> new PickupGroundItemIntoGridMessage(b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean())
         ));
+        register(GridMessages.PICKUP_GROUND_ITEM_INTO_NESTED_GRID, codec(
+                (m, b) -> { b.writeVarInt(m.entityId()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); },
+                b -> new PickupGroundItemIntoNestedGridMessage(b.readVarInt(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean())
+        ));
         register(GridMessages.QUICK_EQUIP_EQUIPMENT_STORAGE_ENTRY, equipmentUuid(QuickEquipEquipmentStorageEntryMessage::new));
         register(GridMessages.QUICK_EQUIP_GRID_ENTRY, codec(
                 (m, b) -> b.writeUUID(m.entryId()),

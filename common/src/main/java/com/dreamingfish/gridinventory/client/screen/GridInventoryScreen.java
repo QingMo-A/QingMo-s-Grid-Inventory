@@ -44,6 +44,7 @@ import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFold
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
@@ -489,6 +490,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         Optional<NestedContainerWindowManager.EntryHit> nestedEntryHit = nestedWindows.entryAt((int) mouseX, (int) mouseY);
+        if (button == 1 && !draggedStack().isEmpty()) {
+            rotateDraggedPreview();
+            return true;
+        }
         if (button == 1 && nestedEntryHit.isPresent() && menu.isPlayerGrid()) {
             NestedContainerWindowManager.EntryHit hit = nestedEntryHit.get();
             GridInventoryServices.network().sendToServer(new QuickEquipNestedGridEntryMessage(
@@ -505,10 +510,6 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
-            return true;
-        }
-        if (button == 1 && nearbyItemsPanel.isDraggingGroundItem()) {
-            rotateDraggedPreview();
             return true;
         }
         if (nearbyItemsPanel.mouseClicked(mouseX, mouseY, button)) {
@@ -954,6 +955,16 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return;
         }
         NearbyGroundItemView view = dragged.get();
+        Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt(mouseX, mouseY);
+        if (nestedTarget.isPresent()) {
+            NestedContainerWindowManager.GridHit target = nestedTarget.get();
+            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoNestedGridMessage(
+                    view.entityId(), target.ownerPath(), target.containerId(),
+                    target.cellX() - anchorCellX(view.stack()), target.cellY() - anchorCellY(view.stack()),
+                    rotatedPreview));
+            rotatedPreview = false;
+            return;
+        }
         Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
                 ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
         if (equipmentRegion.isPresent()) {
