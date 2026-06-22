@@ -253,11 +253,12 @@ public final class VanillaCreativeSidebarPanel {
         int gridTop = gridTop();
         int columns = columns();
         int col = (mouseX - gridLeft) / SLOT;
-        int row = (mouseY - gridTop) / SLOT;
+        int localY = mouseY - gridTop;
+        int row = localY / SLOT;
         if (col < 0 || row < 0 || col >= columns || row >= visibleRows()) {
             return Optional.empty();
         }
-        int index = ((itemScrollPixels + row * SLOT) / SLOT) * columns + col;
+        int index = ((itemScrollPixels + localY) / SLOT) * columns + col;
         return index >= 0 && index < visibleItems().size() ? Optional.of(index) : Optional.empty();
     }
 
@@ -291,14 +292,15 @@ public final class VanillaCreativeSidebarPanel {
             return List.of();
         }
         int tab = Math.min(selectedTab, tabs.size() - 1);
-        return referencesForTab(tab, tabs.get(tab).displayItems());
+        VanillaCreativeTabView view = tabs.get(tab);
+        return referencesForTab(view.sourceIndex(), view.displayItems());
     }
 
     private List<CreativeItemReference> allReferences() {
         ArrayList<CreativeItemReference> references = new ArrayList<>();
         List<VanillaCreativeTabView> tabs = tabs();
-        for (int tab = 0; tab < tabs.size(); tab++) {
-            references.addAll(referencesForTab(tab, tabs.get(tab).displayItems()));
+        for (VanillaCreativeTabView tab : tabs) {
+            references.addAll(referencesForTab(tab.sourceIndex(), tab.displayItems()));
         }
         return references;
     }

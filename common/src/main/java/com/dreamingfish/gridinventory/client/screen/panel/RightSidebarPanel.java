@@ -36,6 +36,7 @@ public final class RightSidebarPanel {
             creativePanel.selectDefaultTab();
         } else {
             page = Page.NEARBY;
+            creativePanel.clearDrag();
         }
     }
 
@@ -60,6 +61,10 @@ public final class RightSidebarPanel {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 && mouseY >= top && mouseY < top + 18 && mouseX >= left && mouseX < left + width) {
+            if (!creative) {
+                page = Page.NEARBY;
+                return true;
+            }
             int tab = (int) ((mouseX - left) / Math.max(1, width / 2));
             if (tab == 0) {
                 page = Page.NEARBY;
@@ -106,19 +111,19 @@ public final class RightSidebarPanel {
     }
 
     public SidebarDragKind dragKind() {
-        if (creativePanel.draggedStack().isPresent()) {
+        if (creative && creativePanel.draggedStack().isPresent()) {
             return SidebarDragKind.CREATIVE_ITEM;
         }
         return nearbyItemsPanel.isDraggingGroundItem() ? SidebarDragKind.NEARBY_GROUND_ITEM : SidebarDragKind.NONE;
     }
 
     public Optional<ItemStack> draggedStack() {
-        return creativePanel.draggedStack()
+        return (creative ? creativePanel.draggedStack() : Optional.<ItemStack>empty())
                 .or(() -> nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack));
     }
 
     public Optional<CreativeItemReference> draggedCreativeItem() {
-        return creativePanel.draggedItem();
+        return creative ? creativePanel.draggedItem() : Optional.empty();
     }
 
     public Optional<NearbyGroundItemView> draggedGroundItem() {
@@ -140,12 +145,16 @@ public final class RightSidebarPanel {
 
     private void renderTabs(GuiGraphics graphics, int mouseX, int mouseY) {
         Font font = Minecraft.getInstance().font;
+        if (!creative) {
+            graphics.fill(left, top, left + width, top + 18, 0xAA44516A);
+            graphics.drawString(font, Component.translatable("screen.df_grid_inventory.nearby_items"), left + 5, top + 5, 0xE6EDF5, false);
+            return;
+        }
         int half = Math.max(1, width / 2);
         graphics.fill(left, top, left + half, top + 18, page == Page.NEARBY ? 0xAA44516A : 0xAA252A34);
         graphics.fill(left + half, top, left + width, top + 18, page == Page.CREATIVE ? 0xAA44516A : 0xAA252A34);
         graphics.drawString(font, Component.translatable("screen.df_grid_inventory.nearby_items"), left + 5, top + 5, 0xE6EDF5, false);
-        int creativeColor = creative ? 0xE6EDF5 : 0x777777;
-        graphics.drawString(font, Component.translatable("container.creative"), left + half + 5, top + 5, creativeColor, false);
+        graphics.drawString(font, Component.translatable("container.creative"), left + half + 5, top + 5, 0xE6EDF5, false);
     }
 
     private enum Page {

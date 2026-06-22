@@ -53,11 +53,13 @@ public final class VanillaCreativeTabsSnapshot implements VanillaCreativeTabProv
     private static List<VanillaCreativeTabView> buildTabs() {
         rebuildVanillaContents();
         List<VanillaCreativeTabView> views = new ArrayList<>();
+        int sourceIndex = 0;
         for (CreativeModeTab tab : CreativeModeTabs.tabs()) {
             if (tab == null || !tab.shouldDisplay() || !tab.hasAnyItems()) {
                 continue;
             }
-            boolean search = tab == CreativeModeTabs.searchTab() || tab.hasSearchBar();
+            boolean vanillaSearch = tab == CreativeModeTabs.searchTab();
+            boolean search = vanillaSearch || tab.hasSearchBar();
             List<ItemStack> items = (search ? tab.getSearchTabDisplayItems() : tab.getDisplayItems())
                     .stream()
                     .filter(stack -> !stack.isEmpty())
@@ -66,9 +68,30 @@ public final class VanillaCreativeTabsSnapshot implements VanillaCreativeTabProv
             if (items.isEmpty()) {
                 continue;
             }
-            views.add(new VanillaCreativeTabView(tabId(tab, views.size()), tab.getDisplayName(), tab.getIconItem(), items, search));
+            VanillaCreativeTabView view = new VanillaCreativeTabView(tabId(tab, sourceIndex), tab.getDisplayName(), tab.getIconItem(), items, search, sourceIndex);
+            if (vanillaSearch) {
+                views.add(0, view);
+            } else {
+                views.add(view);
+            }
+            sourceIndex++;
         }
+        moveVanillaSearchTabFirst(views);
         return List.copyOf(views);
+    }
+
+    private static void moveVanillaSearchTabFirst(List<VanillaCreativeTabView> views) {
+        if (!views.isEmpty() && views.get(0).searchTab()) {
+            return;
+        }
+        for (int index = 0; index < views.size(); index++) {
+            if (views.get(index).searchTab()) {
+                if (index > 0) {
+                    views.add(0, views.remove(index));
+                }
+                return;
+            }
+        }
     }
 
     private static ResourceLocation tabId(CreativeModeTab tab, int index) {
