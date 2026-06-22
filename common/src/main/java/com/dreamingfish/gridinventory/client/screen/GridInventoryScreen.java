@@ -65,6 +65,7 @@ import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.screen.widget.NestedContainerWindowManager;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
+import com.dreamingfish.gridinventory.client.screen.panel.CreativeItemReference;
 import com.dreamingfish.gridinventory.client.screen.panel.RightSidebarPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.SidebarDragKind;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
@@ -75,7 +76,6 @@ import com.dreamingfish.gridinventory.client.sound.GridInventoryUiSounds;
 import com.dreamingfish.gridinventory.client.ui.GridUiLayers;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -1010,18 +1010,18 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void handleCreativeItemRelease(int mouseX, int mouseY) {
-        Optional<ItemStack> dragged = rightSidebarPanel.draggedStack();
+        Optional<CreativeItemReference> dragged = rightSidebarPanel.draggedCreativeItem();
         if (dragged.isEmpty() || !isCreativePlayer()) {
             rotatedPreview = false;
             return;
         }
-        ItemStack stack = dragged.get();
+        CreativeItemReference creativeItem = dragged.get();
+        ItemStack stack = creativeItem.stack();
         Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt(mouseX, mouseY);
         if (nestedTarget.isPresent()) {
             NestedContainerWindowManager.GridHit target = nestedTarget.get();
             GridInventoryServices.network().sendToServer(new CreativeInsertIntoNestedGridMessage(
-                    BuiltInRegistries.ITEM.getKey(stack.getItem()),
-                    stack.getCount(), target.ownerPath(), target.containerId(),
+                    creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(), target.ownerPath(), target.containerId(),
                     target.cellX() - anchorCellX(stack), target.cellY() - anchorCellY(stack), rotatedPreview,
                     GridBackpackItem.isFolded(stack)));
             rotatedPreview = false;
@@ -1032,27 +1032,24 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (equipmentRegion.isPresent()) {
             GridColumnPanel.Region region = equipmentRegion.get();
             GridInventoryServices.network().sendToServer(new CreativeInsertIntoEquipmentStorageMessage(
-                    BuiltInRegistries.ITEM.getKey(stack.getItem()),
-                    stack.getCount(), region.slot(), region.containerId(),
+                    creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(), region.slot(), region.containerId(),
                     targetRegionX(region, stack, mouseX), targetRegionY(region, stack, mouseY), rotatedPreview,
                     GridBackpackItem.isFolded(stack)));
         } else if (inGrid(mouseX, mouseY)) {
             GridInventoryServices.network().sendToServer(new CreativeInsertIntoGridMessage(
-                    BuiltInRegistries.ITEM.getKey(stack.getItem()),
-                    stack.getCount(), targetGridX(stack, mouseX), targetGridY(stack, mouseY), rotatedPreview,
+                    creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(), targetGridX(stack, mouseX), targetGridY(stack, mouseY), rotatedPreview,
                     GridBackpackItem.isFolded(stack)));
         } else {
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
                 GridInventoryServices.network().sendToServer(new CreativeInsertIntoCurioMessage(
-                        BuiltInRegistries.ITEM.getKey(stack.getItem()),
-                        stack.getCount(), curioTarget.get().view().identifier(), curioTarget.get().view().index()));
+                        creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(),
+                        curioTarget.get().view().identifier(), curioTarget.get().view().index()));
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
                     GridInventoryServices.network().sendToServer(new CreativeInsertIntoPlayerSlotMessage(
-                            BuiltInRegistries.ITEM.getKey(stack.getItem()),
-                            stack.getCount(), hovered.getSlotIndex()));
+                            creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(), hovered.getSlotIndex()));
                 }
             }
         }

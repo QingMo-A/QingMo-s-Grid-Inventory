@@ -22,8 +22,6 @@ import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -34,10 +32,12 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
 
 import java.util.UUID;
 import java.util.Optional;
+import java.util.List;
 
 public class GridInventoryMenu extends AbstractContainerMenu {
     private final Inventory playerInventory;
@@ -566,9 +566,9 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return transferGridEntryIntoEquipmentStorage(entryId, equipmentSlot, containerId, targetX, targetY, rotated, false);
     }
 
-    public boolean creativeInsertIntoGrid(ResourceLocation itemId, int count, int targetX, int targetY,
+    public boolean creativeInsertIntoGrid(int tabIndex, int itemIndex, int count, int targetX, int targetY,
                                           boolean rotated, boolean folded) {
-        Optional<ItemStack> stack = creativeStack(itemId, count, folded);
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
         if (stack.isEmpty() || !GridPlacementValidator.canPlace(gridData, stack.get(), targetX, targetY, rotated, null, gridTargetDepth())) {
             return false;
         }
@@ -577,10 +577,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
-    public boolean creativeInsertIntoEquipmentStorage(ResourceLocation itemId, int count, EquipmentSlot equipmentSlot,
+    public boolean creativeInsertIntoEquipmentStorage(int tabIndex, int itemIndex, int count, EquipmentSlot equipmentSlot,
                                                       String containerId, int targetX, int targetY,
                                                       boolean rotated, boolean folded) {
-        Optional<ItemStack> stack = creativeStack(itemId, count, folded);
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
         Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
         if (stack.isEmpty() || target.isEmpty()
                 || !GridPlacementValidator.canPlace(target.get().inventory(), stack.get(), targetX, targetY, rotated, null,
@@ -592,10 +592,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
-    public boolean creativeInsertIntoNestedGrid(ResourceLocation itemId, int count, NestedContainerPath targetOwnerPath,
+    public boolean creativeInsertIntoNestedGrid(int tabIndex, int itemIndex, int count, NestedContainerPath targetOwnerPath,
                                                 String targetContainerId, int targetX, int targetY,
                                                 boolean rotated, boolean folded) {
-        Optional<ItemStack> stack = creativeStack(itemId, count, folded);
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
         Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
         Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
         if (stack.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()
@@ -615,8 +615,8 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
-    public boolean creativeInsertIntoPlayerSlot(ResourceLocation itemId, int count, int playerSlot) {
-        Optional<ItemStack> stack = creativeStack(itemId, count, false);
+    public boolean creativeInsertIntoPlayerSlot(int tabIndex, int itemIndex, int count, int playerSlot) {
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, false);
         if (stack.isEmpty() || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()
                 || !mayInsertIntoVanillaSlot(playerSlot, stack.get())) {
             return false;
@@ -626,8 +626,8 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
-    public boolean creativeInsertIntoCurio(ResourceLocation itemId, int count, String identifier, int index) {
-        Optional<ItemStack> stack = creativeStack(itemId, count, false);
+    public boolean creativeInsertIntoCurio(int tabIndex, int itemIndex, int count, String identifier, int index) {
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, false);
         Optional<ItemStack> current = GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, identifier, index);
         if (stack.isEmpty() || current.isEmpty() || !current.get().isEmpty()
                 || !GridInventoryServices.accessories().canPlaceInCurio(playerInventory.player, identifier, index, stack.get(), true)) {
@@ -639,15 +639,26 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
-    private Optional<ItemStack> creativeStack(ResourceLocation itemId, int count, boolean folded) {
+    private Optional<ItemStack> creativeStack(int tabIndex, int itemIndex, int count, boolean folded) {
         if (!(playerInventory.player instanceof ServerPlayer player) || !player.isCreative() || player.isSpectator()) {
             return Optional.empty();
         }
-        Item item = BuiltInRegistries.ITEM.get(itemId);
-        ItemStack stack = item.getDefaultInstance();
-        if (stack.isEmpty()) {
+        CreativeModeTabs.tryRebuildTabContents(player.level().enabledFeatures(), player.hasPermissions(2),
+                player.server.registryAccess());
+        List<CreativeModeTab> tabs = filteredCreativeTabs();
+        if (tabIndex < 0 || tabIndex >= tabs.size()) {
             return Optional.empty();
         }
+        CreativeModeTab tab = tabs.get(tabIndex);
+        List<ItemStack> items = ((tab == CreativeModeTabs.searchTab() || tab.hasSearchBar())
+                ? tab.getSearchTabDisplayItems()
+                : tab.getDisplayItems()).stream()
+                .filter(stack -> !stack.isEmpty())
+                .toList();
+        if (itemIndex < 0 || itemIndex >= items.size()) {
+            return Optional.empty();
+        }
+        ItemStack stack = items.get(itemIndex).copy();
         int accepted = Math.max(1, Math.min(count, stack.getMaxStackSize()));
         stack.setCount(accepted);
         if (stack.getItem() instanceof GridBackpackItem) {
@@ -657,6 +668,15 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             GridInventoryServices.itemStackData().setBackpackFolded(stack, folded);
         }
         return Optional.of(stack);
+    }
+
+    private static List<CreativeModeTab> filteredCreativeTabs() {
+        return CreativeModeTabs.tabs().stream()
+                .filter(tab -> tab != null && tab.shouldDisplay() && tab.hasAnyItems())
+                .filter(tab -> !((tab == CreativeModeTabs.searchTab() || tab.hasSearchBar())
+                        ? tab.getSearchTabDisplayItems()
+                        : tab.getDisplayItems()).stream().filter(stack -> !stack.isEmpty()).toList().isEmpty())
+                .toList();
     }
 
     public boolean transferGridEntryIntoEquipmentStorage(UUID entryId, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated, boolean targetFolded) {

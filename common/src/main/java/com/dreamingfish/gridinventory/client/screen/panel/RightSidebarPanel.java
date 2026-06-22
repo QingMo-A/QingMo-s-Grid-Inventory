@@ -117,6 +117,10 @@ public final class RightSidebarPanel {
                 .or(() -> nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack));
     }
 
+    public Optional<CreativeItemReference> draggedCreativeItem() {
+        return creativePanel.draggedItem();
+    }
+
     public Optional<NearbyGroundItemView> draggedGroundItem() {
         return nearbyItemsPanel.draggedView();
     }

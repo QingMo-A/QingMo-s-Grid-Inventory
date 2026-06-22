@@ -94,24 +94,24 @@ public final class Forge1201MessageCodecs {
                 buf -> OpenPlayerGridInventoryMessage.INSTANCE
         ));
         register(GridMessages.CREATIVE_INSERT_INTO_GRID, codec(
-                (message, buf) -> { buf.writeResourceLocation(message.itemId()); buf.writeVarInt(message.count()); buf.writeVarInt(message.targetX()); buf.writeVarInt(message.targetY()); buf.writeBoolean(message.rotated()); buf.writeBoolean(message.folded()); },
-                buf -> new CreativeInsertIntoGridMessage(buf.readResourceLocation(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+                (message, buf) -> { buf.writeVarInt(message.tabIndex()); buf.writeVarInt(message.itemIndex()); buf.writeVarInt(message.count()); buf.writeVarInt(message.targetX()); buf.writeVarInt(message.targetY()); buf.writeBoolean(message.rotated()); buf.writeBoolean(message.folded()); },
+                buf -> new CreativeInsertIntoGridMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
         ));
         register(GridMessages.CREATIVE_INSERT_INTO_EQUIPMENT_STORAGE, codec(
-                (message, buf) -> { buf.writeResourceLocation(message.itemId()); buf.writeVarInt(message.count()); buf.writeEnum(message.equipmentSlot()); buf.writeUtf(message.containerId()); buf.writeVarInt(message.targetX()); buf.writeVarInt(message.targetY()); buf.writeBoolean(message.rotated()); buf.writeBoolean(message.folded()); },
-                buf -> new CreativeInsertIntoEquipmentStorageMessage(buf.readResourceLocation(), buf.readVarInt(), buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+                (message, buf) -> { buf.writeVarInt(message.tabIndex()); buf.writeVarInt(message.itemIndex()); buf.writeVarInt(message.count()); buf.writeEnum(message.equipmentSlot()); buf.writeUtf(message.containerId()); buf.writeVarInt(message.targetX()); buf.writeVarInt(message.targetY()); buf.writeBoolean(message.rotated()); buf.writeBoolean(message.folded()); },
+                buf -> new CreativeInsertIntoEquipmentStorageMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readEnum(EquipmentSlot.class), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
         ));
         register(GridMessages.CREATIVE_INSERT_INTO_NESTED_GRID, codec(
-                (message, buf) -> { buf.writeResourceLocation(message.itemId()); buf.writeVarInt(message.count()); writePath(buf, message.targetOwnerPath()); buf.writeUtf(message.targetContainerId()); buf.writeVarInt(message.targetX()); buf.writeVarInt(message.targetY()); buf.writeBoolean(message.rotated()); buf.writeBoolean(message.folded()); },
-                buf -> new CreativeInsertIntoNestedGridMessage(buf.readResourceLocation(), buf.readVarInt(), readPath(buf), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+                (message, buf) -> { buf.writeVarInt(message.tabIndex()); buf.writeVarInt(message.itemIndex()); buf.writeVarInt(message.count()); writePath(buf, message.targetOwnerPath()); buf.writeUtf(message.targetContainerId()); buf.writeVarInt(message.targetX()); buf.writeVarInt(message.targetY()); buf.writeBoolean(message.rotated()); buf.writeBoolean(message.folded()); },
+                buf -> new CreativeInsertIntoNestedGridMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), readPath(buf), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
         ));
         register(GridMessages.CREATIVE_INSERT_INTO_PLAYER_SLOT, codec(
-                (message, buf) -> { buf.writeResourceLocation(message.itemId()); buf.writeVarInt(message.count()); buf.writeVarInt(message.playerSlot()); },
-                buf -> new CreativeInsertIntoPlayerSlotMessage(buf.readResourceLocation(), buf.readVarInt(), buf.readVarInt())
+                (message, buf) -> { buf.writeVarInt(message.tabIndex()); buf.writeVarInt(message.itemIndex()); buf.writeVarInt(message.count()); buf.writeVarInt(message.playerSlot()); },
+                buf -> new CreativeInsertIntoPlayerSlotMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt())
         ));
         register(GridMessages.CREATIVE_INSERT_INTO_CURIO, codec(
-                (message, buf) -> { buf.writeResourceLocation(message.itemId()); buf.writeVarInt(message.count()); buf.writeUtf(message.identifier()); buf.writeVarInt(message.index()); },
-                buf -> new CreativeInsertIntoCurioMessage(buf.readResourceLocation(), buf.readVarInt(), buf.readUtf(), buf.readVarInt())
+                (message, buf) -> { buf.writeVarInt(message.tabIndex()); buf.writeVarInt(message.itemIndex()); buf.writeVarInt(message.count()); buf.writeUtf(message.identifier()); buf.writeVarInt(message.index()); },
+                buf -> new CreativeInsertIntoCurioMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readUtf(), buf.readVarInt())
         ));
         register(GridMessages.MOVE_GRID_ENTRY, codec(
                 (message, buf) -> {

@@ -9,7 +9,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 public final class VanillaCreativeSidebarPanel {
@@ -29,7 +31,7 @@ public final class VanillaCreativeSidebarPanel {
     private int selectedTab;
     private String search = "";
     private boolean searchFocused;
-    private ItemStack draggedStack = ItemStack.EMPTY;
+    private CreativeItemReference draggedItem;
 
     public void setBounds(int left, int top, int width, int height) {
         this.left = left;
@@ -61,7 +63,7 @@ public final class VanillaCreativeSidebarPanel {
         int gridTop = gridTop();
         int columns = columns();
         int rows = visibleRows();
-        List<ItemStack> items = visibleItems();
+        List<CreativeItemReference> items = visibleItems();
         int hoveredIndex = hoveredSlot(mouseX, mouseY).orElse(-1);
         graphics.enableScissor(gridLeft, gridTop, gridLeft + columns * SLOT, gridTop + rows * SLOT);
         for (int index = scrollRows * columns; index < items.size(); index++) {
@@ -73,7 +75,7 @@ public final class VanillaCreativeSidebarPanel {
             int col = local % columns;
             int x = gridLeft + col * SLOT;
             int y = gridTop + row * SLOT;
-            ItemStack stack = items.get(index);
+            ItemStack stack = items.get(index).stack();
             graphics.fill(x, y, x + SLOT, y + SLOT, hoveredIndex == index ? 0x665A6F9A : 0x55333333);
             graphics.renderItem(stack, x + 1, y + 1);
             graphics.renderItemDecorations(font, stack, x + 1, y + 1);
@@ -82,7 +84,7 @@ public final class VanillaCreativeSidebarPanel {
         renderItemScrollbar(graphics);
         if (!suppressTooltip) {
             hoveredTab(mouseX, mouseY).ifPresent(tab -> graphics.renderTooltip(font, tab.title(), mouseX, mouseY));
-            hoveredSlot(mouseX, mouseY).ifPresent(index -> graphics.renderTooltip(font, items.get(index), mouseX, mouseY));
+            hoveredSlot(mouseX, mouseY).ifPresent(index -> graphics.renderTooltip(font, items.get(index).stack(), mouseX, mouseY));
         }
     }
 
@@ -106,18 +108,18 @@ public final class VanillaCreativeSidebarPanel {
         searchFocused = false;
         Optional<Integer> slot = hoveredSlot((int) mouseX, (int) mouseY);
         if (slot.isPresent()) {
-            draggedStack = visibleItems().get(slot.get()).copy();
+            draggedItem = visibleItems().get(slot.get());
             return true;
         }
         return true;
     }
 
     public boolean mouseDragged(double mouseX, double mouseY, int button) {
-        return button == 0 && !draggedStack.isEmpty();
+        return button == 0 && draggedItem != null;
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return button == 0 && !draggedStack.isEmpty();
+        return button == 0 && draggedItem != null;
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaY) {
@@ -158,11 +160,15 @@ public final class VanillaCreativeSidebarPanel {
     }
 
     public Optional<ItemStack> draggedStack() {
-        return draggedStack.isEmpty() ? Optional.empty() : Optional.of(draggedStack.copy());
+        return draggedItem().map(CreativeItemReference::stack);
+    }
+
+    public Optional<CreativeItemReference> draggedItem() {
+        return Optional.ofNullable(draggedItem);
     }
 
     public void clearDrag() {
-        draggedStack = ItemStack.EMPTY;
+        draggedItem = null;
     }
 
     public boolean isSearchFocused() {
@@ -258,12 +264,36 @@ public final class VanillaCreativeSidebarPanel {
         return GridInventoryServices.creativeTabs().tabs();
     }
 
-    private List<ItemStack> visibleItems() {
+    private List<CreativeItemReference> visibleItems() {
         if (!search.isBlank()) {
-            return GridInventoryServices.creativeTabs().search(search);
+            String needle = search.trim().toLowerCase(Locale.ROOT);
+            return allReferences().stream()
+                    .filter(ref -> ref.stack().getHoverName().getString().toLowerCase(Locale.ROOT).contains(needle))
+                    .toList();
         }
         List<VanillaCreativeTabView> tabs = tabs();
-        return tabs.isEmpty() ? List.of() : tabs.get(Math.min(selectedTab, tabs.size() - 1)).displayItems();
+        if (tabs.isEmpty()) {
+            return List.of();
+        }
+        int tab = Math.min(selectedTab, tabs.size() - 1);
+        return referencesForTab(tab, tabs.get(tab).displayItems());
+    }
+
+    private List<CreativeItemReference> allReferences() {
+        ArrayList<CreativeItemReference> references = new ArrayList<>();
+        List<VanillaCreativeTabView> tabs = tabs();
+        for (int tab = 0; tab < tabs.size(); tab++) {
+            references.addAll(referencesForTab(tab, tabs.get(tab).displayItems()));
+        }
+        return references;
+    }
+
+    private static List<CreativeItemReference> referencesForTab(int tabIndex, List<ItemStack> stacks) {
+        ArrayList<CreativeItemReference> references = new ArrayList<>();
+        for (int item = 0; item < stacks.size(); item++) {
+            references.add(new CreativeItemReference(tabIndex, item, stacks.get(item)));
+        }
+        return references;
     }
 
     private int columns() {
