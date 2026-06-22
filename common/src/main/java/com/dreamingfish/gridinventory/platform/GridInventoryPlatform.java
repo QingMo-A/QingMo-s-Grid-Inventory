@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.platform;
 
+import com.dreamingfish.gridinventory.client.creative.VanillaCreativeTabProvider;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
@@ -34,4 +35,8 @@ public interface GridInventoryPlatform {
     GridInventoryConfigAccess config();
 
     GridInventoryClientConfigAccess clientConfig();
+
+    default VanillaCreativeTabProvider creativeTabs() {
+        return VanillaCreativeTabProvider.EMPTY;
+    }
 }

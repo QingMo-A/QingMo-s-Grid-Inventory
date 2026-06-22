@@ -16,7 +16,6 @@ public record OpenPlayerGridInventoryMessage() implements GridMessage {
         if (GridInventoryServices.config().enableGridInventory()
                 && GridInventoryServices.config().replaceSurvivalInventory()
                 && context.player() instanceof ServerPlayer player
-                && !player.isCreative()
                 && !player.isSpectator()) {
             PlayerGridInventoryOpener.open(player);
         }

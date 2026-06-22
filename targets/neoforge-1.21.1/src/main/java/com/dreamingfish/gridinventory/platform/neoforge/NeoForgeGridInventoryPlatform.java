@@ -1,5 +1,7 @@
 package com.dreamingfish.gridinventory.platform.neoforge;
 
+import com.dreamingfish.gridinventory.client.creative.VanillaCreativeTabProvider;
+import com.dreamingfish.gridinventory.client.creative.VanillaCreativeTabsSnapshot;
 import com.dreamingfish.gridinventory.platform.GridInventoryAccessoryBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryItemStackDataBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryNetworkBridge;
@@ -23,6 +25,7 @@ public final class NeoForgeGridInventoryPlatform implements GridInventoryPlatfor
     private final GridInventoryMenuBridge menus = new NeoForgeGridInventoryMenuBridge();
     private final GridInventoryConfigAccess config = new NeoForgeGridInventoryConfigAccess();
     private final GridInventoryClientConfigAccess clientConfig = new NeoForgeGridInventoryClientConfigAccess();
+    private final VanillaCreativeTabProvider creativeTabs = new VanillaCreativeTabsSnapshot();
 
     @Override
     public boolean isModLoaded(String modId) {
@@ -74,4 +77,8 @@ public final class NeoForgeGridInventoryPlatform implements GridInventoryPlatfor
         return clientConfig;
     }
 
+    @Override
+    public VanillaCreativeTabProvider creativeTabs() {
+        return creativeTabs;
+    }
 }

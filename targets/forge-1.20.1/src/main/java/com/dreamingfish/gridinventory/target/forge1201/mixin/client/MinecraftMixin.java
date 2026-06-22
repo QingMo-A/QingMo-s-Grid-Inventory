@@ -35,7 +35,7 @@ public abstract class MinecraftMixin {
         if (player == null || gameMode == null) {
             return;
         }
-        if (player.isCreative() || player.isSpectator() || gameMode.isServerControlledInventory()) {
+        if (player.isSpectator() || gameMode.isServerControlledInventory()) {
             return;
         }
         if (!GridInventoryServices.config().enableGridInventory()

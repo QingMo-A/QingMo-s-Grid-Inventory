@@ -1,5 +1,7 @@
 package com.dreamingfish.gridinventory.target.forge1201;
 
+import com.dreamingfish.gridinventory.client.creative.VanillaCreativeTabProvider;
+import com.dreamingfish.gridinventory.client.creative.VanillaCreativeTabsSnapshot;
 import com.dreamingfish.gridinventory.platform.GridInventoryAccessoryBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryItemStackDataBridge;
 import com.dreamingfish.gridinventory.platform.GridInventoryNetworkBridge;
@@ -27,6 +29,7 @@ public final class Forge1201Platform implements GridInventoryPlatform {
     private final GridInventoryMenuBridge menus = new Forge1201MenuBridge();
     private final GridInventoryConfigAccess config = new Forge1201ServerConfigAccess();
     private final GridInventoryClientConfigAccess clientConfig = new Forge1201ClientConfigAccess();
+    private final VanillaCreativeTabProvider creativeTabs = new VanillaCreativeTabsSnapshot();
 
     @Override
     public boolean isModLoaded(String modId) {
@@ -81,4 +84,8 @@ public final class Forge1201Platform implements GridInventoryPlatform {
         return clientConfig;
     }
 
+    @Override
+    public VanillaCreativeTabProvider creativeTabs() {
+        return creativeTabs;
+    }
 }

@@ -33,7 +33,7 @@ public abstract class MinecraftMixin {
             cancellable = true
     )
     private void df_grid_inventory$openGridInventoryInstead(CallbackInfo ci) {
-        if (player == null || gameMode == null || player.isCreative() || gameMode.isServerControlledInventory()) {
+        if (player == null || gameMode == null || player.isSpectator() || gameMode.isServerControlledInventory()) {
             return;
         }
 

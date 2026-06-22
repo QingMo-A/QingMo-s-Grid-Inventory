@@ -45,6 +45,11 @@ import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntry
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoNestedGridMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoGridMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoNestedGridMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
@@ -57,10 +62,11 @@ import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMe
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
-import com.dreamingfish.gridinventory.client.screen.widget.NearbyItemsPanel;
 import com.dreamingfish.gridinventory.client.screen.widget.NestedContainerWindowManager;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
+import com.dreamingfish.gridinventory.client.screen.panel.RightSidebarPanel;
+import com.dreamingfish.gridinventory.client.screen.panel.SidebarDragKind;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
@@ -69,6 +75,7 @@ import com.dreamingfish.gridinventory.client.sound.GridInventoryUiSounds;
 import com.dreamingfish.gridinventory.client.ui.GridUiLayers;
 import com.dreamingfish.gridinventory.client.ui.animation.HoverAnimationTracker;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -111,7 +118,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private int dragAnchorCellY;
     private int dragAnchorPixelX = CELL / 2;
     private int dragAnchorPixelY = CELL / 2;
-    private final NearbyItemsPanel nearbyItemsPanel = new NearbyItemsPanel();
+    private final RightSidebarPanel rightSidebarPanel = new RightSidebarPanel();
     private final NestedContainerWindowManager nestedWindows = new NestedContainerWindowManager();
     private final EquipmentColumnPanel equipmentColumnPanel = new EquipmentColumnPanel();
     private final GridColumnPanel gridColumnPanel = new GridColumnPanel();
@@ -152,9 +159,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             int contentWidth = Math.max(320, imageWidth - workspacePaddingX * 2);
             int nearbyColumns = Math.max(2, Math.min(
                     GridInventoryServices.clientConfig().nearbyPanelColumns(),
-                    (contentWidth - 204 - 88 - columnGap * 2 - NearbyItemsPanel.CHROME_WIDTH) / NearbyItemsPanel.CELL
+                    (contentWidth - 204 - 88 - columnGap * 2 - 12) / 27
             ));
-            int nearbyWidth = nearbyColumns * NearbyItemsPanel.CELL + NearbyItemsPanel.CHROME_WIDTH;
+            int nearbyWidth = nearbyColumns * 27 + 12;
             equipmentWidth = Math.max(204, Math.min(232, contentWidth - nearbyWidth - columnGap * 2 - 88));
             gridColumnWidth = contentWidth - equipmentWidth - nearbyWidth - columnGap * 2;
             int gridColumnLeft = contentLeft + equipmentWidth + columnGap;
@@ -163,13 +170,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             gridColumnPanel.setBounds(gridColumnLeft, workspaceTop, gridColumnWidth, columnHeight);
             gridLeft = gridColumnPanel.pocketLeft();
             gridTop = gridColumnPanel.pocketTop();
-            nearbyItemsPanel.setBounds(nearbyLeft, workspaceTop, columnHeight, nearbyColumns);
+            rightSidebarPanel.setBounds(nearbyLeft, workspaceTop, columnHeight, nearbyColumns, isCreativePlayer());
             equipmentColumnPanel.layoutSlots(hotbarTop());
             hideVanillaSlots();
         } else {
             gridLeft = leftPos + 16;
             gridTop = topPos + 18;
-            nearbyItemsPanel.setBounds(leftPos + imageWidth + 8, topPos + 16);
+            rightSidebarPanel.setBounds(leftPos + imageWidth + 8, topPos + 16, isCreativePlayer());
         }
     }
 
@@ -242,7 +249,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 && draggingEquipmentEntry == null
                 && draggingNestedEntry == null
                 && draggingCurioSlot == null
-                && !nearbyItemsPanel.isDraggingGroundItem()
+                && !rightSidebarPanel.isDraggingGroundItem()
                 && !hasPendingDrag()
                 && !nestedWindows.isDraggingWindow()
                 && selectedPlayerStack.isEmpty();
@@ -266,7 +273,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
             }
         }
-        nearbyItemsPanel.render(graphics, mouseX, mouseY, draggingAnyItem);
+        rightSidebarPanel.render(graphics, mouseX, mouseY, draggingAnyItem);
         graphics.flush();
         nestedWindows.refresh(this::resolveNestedWindowStack);
         nestedWindows.render(graphics, mouseX, mouseY, hoverAnimationsEnabled(), nestedPlacementPreview());
@@ -383,7 +390,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack()
                 : draggingNestedEntry != null ? draggingNestedEntry.entry().stack()
                 : draggingCurioSlot != null ? draggingCurioSlot.view().stack()
-                : nearbyItemsPanel.draggedView().map(NearbyGroundItemView::stack).orElse(selectedPlayerStack);
+                : rightSidebarPanel.draggedStack().orElse(selectedPlayerStack);
     }
 
     private boolean toggleDraggedBackpackPreview() {
@@ -512,7 +519,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
             return true;
         }
-        if (nearbyItemsPanel.mouseClicked(mouseX, mouseY, button)) {
+        if (rightSidebarPanel.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
         if (menu.isPlayerGrid() && gridColumnPanel.mouseClicked(mouseX, mouseY, button)) {
@@ -596,6 +603,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (rightSidebarPanel.keyPressed(keyCode)) {
+            return true;
+        }
+        if (rightSidebarPanel.isTextInputFocused()) {
+            return true;
+        }
         if (ModKeyMappings.ROTATE_GRID_ITEM.matches(keyCode, scanCode) && !draggedStack().isEmpty()) {
             rotateDraggedPreview();
             return true;
@@ -615,13 +628,21 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
         if (ModKeyMappings.PICKUP_ITEM.matches(keyCode, scanCode)
                 && draggingEntry == null && draggingEquipmentEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()
-                && nearbyItemsPanel.pickupHovered(currentMouseX(), currentMouseY())) {
+                && rightSidebarPanel.pickupHovered(currentMouseX(), currentMouseY())) {
             return true;
         }
         if (ModKeyMappings.DROP_HOVERED_GRID_ITEM.matches(keyCode, scanCode) && draggedStack().isEmpty()) {
             return dropHoveredGridItem();
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (rightSidebarPanel.charTyped(codePoint)) {
+            return true;
+        }
+        return super.charTyped(codePoint, modifiers);
     }
 
     private boolean dropHoveredGridItem() {
@@ -661,14 +682,23 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return (int) (minecraft.mouseHandler.ypos() * height / minecraft.getWindow().getScreenHeight());
     }
 
+    private boolean isCreativePlayer() {
+        return minecraft.player != null && minecraft.player.isCreative();
+    }
+
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (nestedWindows.mouseReleased(button)) {
             return true;
         }
-        if (button == 0 && nearbyItemsPanel.isDraggingGroundItem()) {
+        if (button == 0 && rightSidebarPanel.dragKind() == SidebarDragKind.CREATIVE_ITEM) {
+            handleCreativeItemRelease((int) mouseX, (int) mouseY);
+            rightSidebarPanel.clearDrag();
+            return true;
+        }
+        if (button == 0 && rightSidebarPanel.isDraggingGroundItem()) {
             handleGroundItemRelease((int) mouseX, (int) mouseY);
-            nearbyItemsPanel.clearDrag();
+            rightSidebarPanel.clearDrag();
             return true;
         }
         if (button == 0 && hasPendingDrag()) {
@@ -684,7 +714,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 return true;
             }
         }
-        if (nearbyItemsPanel.mouseReleased(mouseX, mouseY, button)) {
+        if (rightSidebarPanel.mouseReleased(mouseX, mouseY, button)) {
             return true;
         }
         if (button == 0 && draggingCurioSlot != null) {
@@ -950,7 +980,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void handleGroundItemRelease(int mouseX, int mouseY) {
-        Optional<NearbyGroundItemView> dragged = nearbyItemsPanel.draggedView();
+        Optional<NearbyGroundItemView> dragged = rightSidebarPanel.draggedGroundItem();
         if (dragged.isEmpty()) {
             return;
         }
@@ -979,12 +1009,62 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         rotatedPreview = false;
     }
 
+    private void handleCreativeItemRelease(int mouseX, int mouseY) {
+        Optional<ItemStack> dragged = rightSidebarPanel.draggedStack();
+        if (dragged.isEmpty() || !isCreativePlayer()) {
+            rotatedPreview = false;
+            return;
+        }
+        ItemStack stack = dragged.get();
+        Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt(mouseX, mouseY);
+        if (nestedTarget.isPresent()) {
+            NestedContainerWindowManager.GridHit target = nestedTarget.get();
+            GridInventoryServices.network().sendToServer(new CreativeInsertIntoNestedGridMessage(
+                    BuiltInRegistries.ITEM.getKey(stack.getItem()),
+                    stack.getCount(), target.ownerPath(), target.containerId(),
+                    target.cellX() - anchorCellX(stack), target.cellY() - anchorCellY(stack), rotatedPreview,
+                    GridBackpackItem.isFolded(stack)));
+            rotatedPreview = false;
+            return;
+        }
+        Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
+                ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
+        if (equipmentRegion.isPresent()) {
+            GridColumnPanel.Region region = equipmentRegion.get();
+            GridInventoryServices.network().sendToServer(new CreativeInsertIntoEquipmentStorageMessage(
+                    BuiltInRegistries.ITEM.getKey(stack.getItem()),
+                    stack.getCount(), region.slot(), region.containerId(),
+                    targetRegionX(region, stack, mouseX), targetRegionY(region, stack, mouseY), rotatedPreview,
+                    GridBackpackItem.isFolded(stack)));
+        } else if (inGrid(mouseX, mouseY)) {
+            GridInventoryServices.network().sendToServer(new CreativeInsertIntoGridMessage(
+                    BuiltInRegistries.ITEM.getKey(stack.getItem()),
+                    stack.getCount(), targetGridX(stack, mouseX), targetGridY(stack, mouseY), rotatedPreview,
+                    GridBackpackItem.isFolded(stack)));
+        } else {
+            Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
+            if (curioTarget.isPresent()) {
+                GridInventoryServices.network().sendToServer(new CreativeInsertIntoCurioMessage(
+                        BuiltInRegistries.ITEM.getKey(stack.getItem()),
+                        stack.getCount(), curioTarget.get().view().identifier(), curioTarget.get().view().index()));
+            } else {
+                Slot hovered = findHoveredSlot(mouseX, mouseY);
+                if (hovered != null) {
+                    GridInventoryServices.network().sendToServer(new CreativeInsertIntoPlayerSlotMessage(
+                            BuiltInRegistries.ITEM.getKey(stack.getItem()),
+                            stack.getCount(), hovered.getSlotIndex()));
+                }
+            }
+        }
+        rotatedPreview = false;
+    }
+
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (nestedWindows.mouseDragged(mouseX, mouseY, button, width, height)) {
             return true;
         }
-        if (nearbyItemsPanel.mouseDragged(mouseX, mouseY, button)) {
+        if (rightSidebarPanel.mouseDragged(mouseX, mouseY, button)) {
             return true;
         }
         if (button == 0 && activatePendingDragIfMoved((int) mouseX, (int) mouseY)) {
@@ -1015,7 +1095,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             gridTop = gridColumnPanel.pocketTop();
             return true;
         }
-        if (nearbyItemsPanel.mouseScrolled(mouseX, mouseY, scrollY)) {
+        if (rightSidebarPanel.mouseScrolled(mouseX, mouseY, scrollY)) {
             return true;
         }
         return false;

@@ -36,6 +36,26 @@ public final class NeoForge1211MessageCodecs {
     }
 
     public static void registerAll() {
+        register(GridMessages.CREATIVE_INSERT_INTO_GRID, codec(
+                (m, b) -> { b.writeResourceLocation(m.itemId()); b.writeVarInt(m.count()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.folded()); },
+                b -> new CreativeInsertIntoGridMessage(b.readResourceLocation(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.CREATIVE_INSERT_INTO_EQUIPMENT_STORAGE, codec(
+                (m, b) -> { b.writeResourceLocation(m.itemId()); b.writeVarInt(m.count()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.folded()); },
+                b -> new CreativeInsertIntoEquipmentStorageMessage(b.readResourceLocation(), b.readVarInt(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.CREATIVE_INSERT_INTO_NESTED_GRID, codec(
+                (m, b) -> { b.writeResourceLocation(m.itemId()); b.writeVarInt(m.count()); writePath(b, m.targetOwnerPath()); b.writeUtf(m.targetContainerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.folded()); },
+                b -> new CreativeInsertIntoNestedGridMessage(b.readResourceLocation(), b.readVarInt(), readPath(b), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.CREATIVE_INSERT_INTO_PLAYER_SLOT, codec(
+                (m, b) -> { b.writeResourceLocation(m.itemId()); b.writeVarInt(m.count()); b.writeVarInt(m.playerSlot()); },
+                b -> new CreativeInsertIntoPlayerSlotMessage(b.readResourceLocation(), b.readVarInt(), b.readVarInt())
+        ));
+        register(GridMessages.CREATIVE_INSERT_INTO_CURIO, codec(
+                (m, b) -> { b.writeResourceLocation(m.itemId()); b.writeVarInt(m.count()); b.writeUtf(m.identifier()); b.writeVarInt(m.index()); },
+                b -> new CreativeInsertIntoCurioMessage(b.readResourceLocation(), b.readVarInt(), b.readUtf(), b.readVarInt())
+        ));
         register(GridMessages.DROP_EQUIPMENT_STORAGE_ENTRY, codec(
                 (m, b) -> { b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeUUID(m.entryId()); },
                 b -> new DropEquipmentStorageEntryMessage(b.readEnum(EquipmentSlot.class), b.readUtf(), b.readUUID())

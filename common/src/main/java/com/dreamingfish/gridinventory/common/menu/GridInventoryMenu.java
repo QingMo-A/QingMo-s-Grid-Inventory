@@ -22,6 +22,8 @@ import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -32,6 +34,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
 
 import java.util.UUID;
 import java.util.Optional;
@@ -561,6 +564,99 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     public boolean transferGridEntryIntoEquipmentStorage(UUID entryId, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated) {
         return transferGridEntryIntoEquipmentStorage(entryId, equipmentSlot, containerId, targetX, targetY, rotated, false);
+    }
+
+    public boolean creativeInsertIntoGrid(ResourceLocation itemId, int count, int targetX, int targetY,
+                                          boolean rotated, boolean folded) {
+        Optional<ItemStack> stack = creativeStack(itemId, count, folded);
+        if (stack.isEmpty() || !GridPlacementValidator.canPlace(gridData, stack.get(), targetX, targetY, rotated, null, gridTargetDepth())) {
+            return false;
+        }
+        gridData.add(stack.get(), targetX, targetY, rotated);
+        save();
+        return true;
+    }
+
+    public boolean creativeInsertIntoEquipmentStorage(ResourceLocation itemId, int count, EquipmentSlot equipmentSlot,
+                                                      String containerId, int targetX, int targetY,
+                                                      boolean rotated, boolean folded) {
+        Optional<ItemStack> stack = creativeStack(itemId, count, folded);
+        Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
+        if (stack.isEmpty() || target.isEmpty()
+                || !GridPlacementValidator.canPlace(target.get().inventory(), stack.get(), targetX, targetY, rotated, null,
+                equipmentTargetDepth(equipmentSlot))) {
+            return false;
+        }
+        target.get().inventory().add(stack.get(), targetX, targetY, rotated);
+        saveEquipmentStorage(equipmentSlot, target.get().storage());
+        return true;
+    }
+
+    public boolean creativeInsertIntoNestedGrid(ResourceLocation itemId, int count, NestedContainerPath targetOwnerPath,
+                                                String targetContainerId, int targetX, int targetY,
+                                                boolean rotated, boolean folded) {
+        Optional<ItemStack> stack = creativeStack(itemId, count, folded);
+        Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
+        Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
+        if (stack.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()
+                || !GridPlacementValidator.canPlace(targetGrid.get(), stack.get(), targetX, targetY, rotated, null,
+                targetOwnerPath.depth() + 1)) {
+            return false;
+        }
+        GridInventoryData targetCopy = targetGrid.get().copy();
+        targetCopy.add(stack.get(), targetX, targetY, rotated);
+        ItemStack updatedTargetOwner = targetOwner.get().stack().copy();
+        if (!writeNestedGrid(updatedTargetOwner, targetContainerId, targetCopy)
+                || !targetOwner.get().write(updatedTargetOwner)) {
+            return false;
+        }
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
+    public boolean creativeInsertIntoPlayerSlot(ResourceLocation itemId, int count, int playerSlot) {
+        Optional<ItemStack> stack = creativeStack(itemId, count, false);
+        if (stack.isEmpty() || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()
+                || !mayInsertIntoVanillaSlot(playerSlot, stack.get())) {
+            return false;
+        }
+        playerInventory.setItem(playerSlot, stack.get());
+        playerInventory.setChanged();
+        return true;
+    }
+
+    public boolean creativeInsertIntoCurio(ResourceLocation itemId, int count, String identifier, int index) {
+        Optional<ItemStack> stack = creativeStack(itemId, count, false);
+        Optional<ItemStack> current = GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, identifier, index);
+        if (stack.isEmpty() || current.isEmpty() || !current.get().isEmpty()
+                || !GridInventoryServices.accessories().canPlaceInCurio(playerInventory.player, identifier, index, stack.get(), true)) {
+            return false;
+        }
+        GridInventoryServices.accessories().setAccessoryStack(playerInventory.player, identifier, index, stack.get());
+        playerInventory.setChanged();
+        save();
+        return true;
+    }
+
+    private Optional<ItemStack> creativeStack(ResourceLocation itemId, int count, boolean folded) {
+        if (!(playerInventory.player instanceof ServerPlayer player) || !player.isCreative() || player.isSpectator()) {
+            return Optional.empty();
+        }
+        Item item = BuiltInRegistries.ITEM.get(itemId);
+        ItemStack stack = item.getDefaultInstance();
+        if (stack.isEmpty()) {
+            return Optional.empty();
+        }
+        int accepted = Math.max(1, Math.min(count, stack.getMaxStackSize()));
+        stack.setCount(accepted);
+        if (stack.getItem() instanceof GridBackpackItem) {
+            if (folded && !GridBackpackItem.canFold(stack)) {
+                return Optional.empty();
+            }
+            GridInventoryServices.itemStackData().setBackpackFolded(stack, folded);
+        }
+        return Optional.of(stack);
     }
 
     public boolean transferGridEntryIntoEquipmentStorage(UUID entryId, EquipmentSlot equipmentSlot, String containerId, int targetX, int targetY, boolean rotated, boolean targetFolded) {
