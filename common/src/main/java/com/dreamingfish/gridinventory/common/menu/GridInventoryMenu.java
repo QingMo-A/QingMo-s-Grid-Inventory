@@ -688,12 +688,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     public boolean creativeInsertIntoCurio(int tabIndex, int itemIndex, int count, String identifier, int index) {
         Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, false);
-        Optional<ItemStack> current = GridInventoryServices.accessories().getAccessoryStack(playerInventory.player, identifier, index);
-        if (stack.isEmpty() || current.isEmpty() || !current.get().isEmpty()
-                || !GridInventoryServices.accessories().canPlaceInCurio(playerInventory.player, identifier, index, stack.get(), true)) {
+        if (stack.isEmpty()
+                || !GridInventoryServices.accessories().insertStackIntoAccessory(playerInventory.player, stack.get(), identifier, index)) {
             return false;
         }
-        GridInventoryServices.accessories().setAccessoryStack(playerInventory.player, identifier, index, stack.get());
         playerInventory.setChanged();
         save();
         return true;
@@ -722,6 +720,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         int accepted = Math.max(1, Math.min(count, stack.getMaxStackSize()));
         stack.setCount(accepted);
         if (stack.getItem() instanceof GridBackpackItem) {
+            EquipmentStorageManager.initializeStorage(stack, GridEquipmentSlots.back());
             if (folded && !GridBackpackItem.canFold(stack)) {
                 return Optional.empty();
             }
