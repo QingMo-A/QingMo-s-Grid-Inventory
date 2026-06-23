@@ -65,7 +65,7 @@ public final class NestedContainerWindowManager {
             Window window = windows.get(index);
             boolean topHoveredWindow = window == hoveredWindow;
             window.render(graphics, mouseX, mouseY, hoverEnabled && !windowDragging && topHoveredWindow,
-                    topHoveredWindow ? preview : Optional.empty(), entryHoverAnimations,
+                    topHoveredWindow ? preview : Optional.empty(), preview, entryHoverAnimations,
                     GridUiLayers.NESTED_WINDOW_BASE + index * GridUiLayers.NESTED_WINDOW_STEP);
             graphics.flush();
         }
@@ -252,7 +252,7 @@ public final class NestedContainerWindowManager {
         }
 
         private void render(GuiGraphics graphics, int mouseX, int mouseY, boolean hoverEnabled,
-                            Optional<PlacementPreview> preview,
+                            Optional<PlacementPreview> preview, Optional<PlacementPreview> dragContext,
                             HoverAnimationTracker<EntryAnimationKey> hoverAnimations, float z) {
             Font font = Minecraft.getInstance().font;
             graphics.pose().pushPose();
@@ -307,12 +307,15 @@ public final class NestedContainerWindowManager {
                 }
                 graphics.pose().pushPose();
                 graphics.pose().translate(0.0F, 0.0F, z + GridUiLayers.NESTED_WINDOW_ITEM);
+                UUID draggedEntryId = dragContext.flatMap(value -> value.ignoredEntryId(path, view.id()))
+                        .orElse(null);
                 for (EntryView entryView : view.entries()) {
                     GridEntry entry = entryView.entry();
-                    boolean hovered = hoverEnabled && entry.contains(hoverCellX, hoverCellY);
+                    boolean dragged = draggedEntryId != null && draggedEntryId.equals(entry.entryId());
+                    boolean hovered = hoverEnabled && !dragged && entry.contains(hoverCellX, hoverCellY);
                     float hoverProgress = hoverAnimations.update(entryView.key(), hovered);
-                    GridItemRenderer.renderEntry(graphics, entry, inventory, gridX, gridTop, CELL, 1.0F,
-                            hoverProgress);
+                    GridItemRenderer.renderEntry(graphics, entry, inventory, gridX, gridTop, CELL,
+                            dragged ? 0.35F : 1.0F, dragged ? 0.0F : hoverProgress);
                 }
                 graphics.pose().popPose();
                 graphics.pose().pushPose();
