@@ -148,9 +148,15 @@ public final class EquipmentColumnPanel {
         int modelBottom = modelTop + modelHeightTarget;
         int modelHeight = Math.max(1, modelBottom - modelTop);
         int scale = Math.min(68, Math.max(39, Math.round((modelHeight / 2.0F + 8.0F) * 1.3F)));
-        graphics.enableScissor(modelLeft, modelTop, modelRight, modelBottom);
+        int modelScissorPaddingX = Math.max(18, scale / 2);
+        int modelScissorPaddingY = 8;
+        int renderLeft = modelLeft - modelScissorPaddingX;
+        int renderTop = modelTop - modelScissorPaddingY;
+        int renderRight = modelRight + modelScissorPaddingX;
+        int renderBottom = modelBottom + modelScissorPaddingY;
+        graphics.enableScissor(renderLeft, renderTop, renderRight, renderBottom);
         GridInventoryClientServices.bridge().renderEntityInInventoryFollowsMouse(
-                graphics, modelLeft, modelTop, modelRight, modelBottom, scale, modelMouseX, modelMouseY, minecraft.player);
+                graphics, renderLeft, renderTop, renderRight, renderBottom, scale, modelMouseX, modelMouseY, minecraft.player);
         graphics.disableScissor();
 
         FreeSlotWidget offhand = freeSlots.get(4);
