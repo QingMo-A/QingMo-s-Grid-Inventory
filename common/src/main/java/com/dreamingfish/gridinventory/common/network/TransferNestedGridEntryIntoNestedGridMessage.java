@@ -5,7 +5,6 @@ import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
 import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
 import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
-import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
@@ -17,7 +16,7 @@ public record TransferNestedGridEntryIntoNestedGridMessage(NestedContainerPath s
                                                            String targetContainerId, int targetX, int targetY,
                                                            boolean rotated, boolean targetFolded) implements GridMessage {
     public static void handle(TransferNestedGridEntryIntoNestedGridMessage message, GridMessageContext context) {
-        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
+        GridMoveMessageGuards.withGridMenu(context, "TransferNestedGridEntryIntoNestedGridMessage", (player, menu) -> {
             GridItemSource source = message.sourceContainerId().isEmpty()
                     ? new GridItemSource.NestedGridEntry(message.sourceOwnerPath(), message.entryId())
                     : new GridItemSource.NestedEquipmentStorageEntry(message.sourceOwnerPath(),
@@ -31,9 +30,9 @@ public record TransferNestedGridEntryIntoNestedGridMessage(NestedContainerPath s
             if (GridItemMoveService.move(menu, source, target,
                     GridMoveOptions.all(message.rotated(), message.targetFolded()))) {
                 menu.broadcastChanges();
-                ModNetworking.syncMenu(context.player(), menu);
+                ModNetworking.syncMenu(player, menu);
             }
-        }
+        });
     }
 
     @Override

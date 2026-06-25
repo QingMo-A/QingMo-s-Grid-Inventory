@@ -11,8 +11,8 @@ public final class GridItemMoveService {
                                GridMoveOptions options) {
         GridMoveOptions safeOptions = options == null ? GridMoveOptions.all(false, false) : options;
         boolean moved = GridItemTransferService.transfer(menu, source, target);
-        DFGridInventory.LOGGER.debug("Unified grid move source={} target={} options={} result={}",
-                source.getClass().getSimpleName(), target.getClass().getSimpleName(), safeOptions, moved);
+        DFGridInventory.LOGGER.debug("Unified grid move container={} source={} target={} options={} result={}",
+                menu.containerId, source, target, safeOptions, moved);
         return moved;
     }
 }

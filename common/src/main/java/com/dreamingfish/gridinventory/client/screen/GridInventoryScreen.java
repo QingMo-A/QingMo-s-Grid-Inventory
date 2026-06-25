@@ -875,10 +875,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 }
             }
             if (!released && inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new TransferNestedGridEntryIntoGridMessage(
-                        draggingNestedEntry.ownerPath(), draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId(),
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                GridItemSource source = draggingNestedEntry.containerId().isEmpty()
+                        ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
+                        draggingNestedEntry.entry().entryId())
+                        : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
+                        draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
+                GridItemTarget target = new GridItemTarget.MenuGridPlacement(
                         targetGridX(draggedStack(), (int) mouseX),
-                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
+                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target,
+                        GridMoveOptions.all(rotatedPreview, targetFolded)));
                 released = true;
             }
             if (!released) {

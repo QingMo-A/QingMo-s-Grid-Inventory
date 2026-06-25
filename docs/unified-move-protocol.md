@@ -113,6 +113,7 @@ Phase 1:
 
 Phase 2:
 
+- Add a shared server-side move-message guard.
 - Move more client paths to `MoveItemMessage`.
 - Remove duplicated rotated/folded semantics from options or targets once the final shape is chosen.
 - Add more diagnostic failure reasons if needed.
@@ -130,3 +131,32 @@ Phase 3:
 - Never bypass Curios/accessory validation.
 - Never bypass vanilla slot `mayPlace`/`mayPickup` rules.
 - Failed moves must not mutate source or target state.
+
+## Phase 2 Notes
+
+Phase 2 added `GridMoveMessageGuards` as the shared server-side guard for move-style messages. It checks that the packet is handled for a `ServerPlayer`, rejects spectators, and requires the current menu to be `GridInventoryMenu`. Rejections are logged at debug level with the message name, player name when available, and reason.
+
+`MoveItemMessage` now uses this guard. The following legacy adapter handlers also use it:
+
+- `TransferGridEntryIntoNestedGridMessage`
+- `TransferNestedGridEntryIntoGridMessage`
+- `TransferNestedGridEntryIntoNestedGridMessage`
+- `TransferEquipmentStorageEntryIntoNestedGridMessage`
+- `TransferNestedGridEntryIntoEquipmentStorageMessage`
+
+The newly migrated client path is:
+
+- Nested/free-window entry -> main grid placement
+
+The previously migrated client path remains:
+
+- Main grid entry -> nested/free-window grid placement
+
+Legacy packets are still retained for compatibility, fallback, and incremental testing. Their packet ids and wire fields remain unchanged.
+
+`GridItemMoveService` debug logging now includes the menu container id plus full source/target/options values. `GridMoveOptions.count` is still not connected to actual movement quantity control; existing transaction semantics decide the moved amount.
+
+Recommended next phase:
+
+- Migrate Nested -> Nested or Equipment -> Nested to `MoveItemMessage`.
+- Continue keeping GroundItem, CreativeItem, and generic MenuSlot outside the core move protocol until their source/target semantics are designed separately.
