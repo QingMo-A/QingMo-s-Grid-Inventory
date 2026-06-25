@@ -1380,8 +1380,11 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     public boolean movePlayerFreeSlot(int sourcePlayerSlot, int targetPlayerSlot) {
-        if (!playerGrid || sourcePlayerSlot == targetPlayerSlot
-                || !isFreePlayerSlot(sourcePlayerSlot) || !isFreePlayerSlot(targetPlayerSlot)) {
+        return movePlayerFreeSlot(sourcePlayerSlot, targetPlayerSlot, false);
+    }
+
+    public boolean movePlayerFreeSlot(int sourcePlayerSlot, int targetPlayerSlot, boolean targetFolded) {
+        if (!playerGrid || !isFreePlayerSlot(sourcePlayerSlot) || !isFreePlayerSlot(targetPlayerSlot)) {
             return false;
         }
         Optional<Slot> sourceView = findPlayerSlotView(sourcePlayerSlot);
@@ -1394,10 +1397,21 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (source.isEmpty() || !targetView.get().mayPlace(source)) {
             return false;
         }
+        if (sourcePlayerSlot == targetPlayerSlot) {
+            if (!applyBackpackFolded(source, targetFolded)) {
+                return false;
+            }
+            playerInventory.setChanged();
+            return true;
+        }
         int targetLimit = Math.min(targetView.get().getMaxStackSize(), source.getMaxStackSize());
         if (target.isEmpty()) {
             int moved = Math.min(source.getCount(), targetLimit);
-            playerInventory.setItem(targetPlayerSlot, source.copyWithCount(moved));
+            ItemStack movedStack = source.copyWithCount(moved);
+            if (!applyBackpackFolded(movedStack, targetFolded)) {
+                return false;
+            }
+            playerInventory.setItem(targetPlayerSlot, movedStack);
             source.shrink(moved);
             playerInventory.setChanged();
             return true;
@@ -1419,9 +1433,24 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (source.getCount() > targetLimit || target.getCount() > sourceLimit) {
             return false;
         }
+        ItemStack movedSource = source.copy();
+        if (!applyBackpackFolded(movedSource, targetFolded)) {
+            return false;
+        }
         playerInventory.setItem(sourcePlayerSlot, target);
-        playerInventory.setItem(targetPlayerSlot, source);
+        playerInventory.setItem(targetPlayerSlot, movedSource);
         playerInventory.setChanged();
+        return true;
+    }
+
+    private static boolean applyBackpackFolded(ItemStack stack, boolean folded) {
+        if (!(stack.getItem() instanceof GridBackpackItem)) {
+            return true;
+        }
+        if (folded && !GridBackpackItem.canFold(stack)) {
+            return false;
+        }
+        GridInventoryServices.itemStackData().setBackpackFolded(stack, folded);
         return true;
     }
 

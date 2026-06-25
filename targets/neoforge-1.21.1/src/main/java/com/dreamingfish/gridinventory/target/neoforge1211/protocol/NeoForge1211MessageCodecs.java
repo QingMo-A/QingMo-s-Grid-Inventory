@@ -187,8 +187,8 @@ public final class NeoForge1211MessageCodecs {
             }
         });
         register(GridMessages.MOVE_PLAYER_FREE_SLOT, codec(
-                (m, b) -> { b.writeVarInt(m.sourcePlayerSlot()); b.writeVarInt(m.targetPlayerSlot()); },
-                b -> new MovePlayerFreeSlotMessage(b.readVarInt(), b.readVarInt())
+                (m, b) -> { b.writeVarInt(m.sourcePlayerSlot()); b.writeVarInt(m.targetPlayerSlot()); b.writeBoolean(m.targetFolded()); },
+                b -> new MovePlayerFreeSlotMessage(b.readVarInt(), b.readVarInt(), b.readBoolean())
         ));
         register(GridMessages.OPEN_PLAYER_GRID_INVENTORY, new NeoForge1211MessageCodec<>() {
             @Override

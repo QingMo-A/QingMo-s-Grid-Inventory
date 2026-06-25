@@ -982,8 +982,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null && hovered.getSlotIndex() != lastPlayerSlot) {
-                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotMessage(lastPlayerSlot, hovered.getSlotIndex()));
+                if (hovered != null) {
+                    GridInventoryServices.network().sendToServer(new MovePlayerFreeSlotMessage(
+                            lastPlayerSlot, hovered.getSlotIndex(), GridBackpackItem.isFolded(draggedStack())));
                     released = true;
                 }
             }

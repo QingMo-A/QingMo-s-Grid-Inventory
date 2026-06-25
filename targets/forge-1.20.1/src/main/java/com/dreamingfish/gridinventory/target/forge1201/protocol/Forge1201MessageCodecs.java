@@ -355,8 +355,9 @@ public final class Forge1201MessageCodecs {
                 (message, buf) -> {
                     buf.writeVarInt(message.sourcePlayerSlot());
                     buf.writeVarInt(message.targetPlayerSlot());
+                    buf.writeBoolean(message.targetFolded());
                 },
-                buf -> new MovePlayerFreeSlotMessage(buf.readVarInt(), buf.readVarInt())
+                buf -> new MovePlayerFreeSlotMessage(buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
         ));
         register(GridMessages.MANUAL_PICKUP_ITEM, codec(
                 (message, buf) -> buf.writeInt(message.entityId()),

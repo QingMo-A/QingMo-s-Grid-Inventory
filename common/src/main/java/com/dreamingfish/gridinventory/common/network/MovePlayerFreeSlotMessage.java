@@ -6,11 +6,11 @@ import com.dreamingfish.gridinventory.protocol.GridMessageType;
 
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 
-public record MovePlayerFreeSlotMessage(int sourcePlayerSlot, int targetPlayerSlot) implements GridMessage {
+public record MovePlayerFreeSlotMessage(int sourcePlayerSlot, int targetPlayerSlot, boolean targetFolded) implements GridMessage {
 
     public static void handle(MovePlayerFreeSlotMessage packet, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.movePlayerFreeSlot(packet.sourcePlayerSlot(), packet.targetPlayerSlot());
+            menu.movePlayerFreeSlot(packet.sourcePlayerSlot(), packet.targetPlayerSlot(), packet.targetFolded());
             menu.broadcastChanges();
         }
     }
