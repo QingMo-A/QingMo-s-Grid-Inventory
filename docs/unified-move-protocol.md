@@ -1,0 +1,132 @@
+# Unified Move Protocol
+
+DF Grid Inventory historically used one packet per source/target pair. That made every new inventory surface multiply the number of packet handlers and codecs, and it made bugs easy to introduce: missed folded state, inconsistent nested paths, Optional empty-slot mistakes, and parent/child writeback ordering issues.
+
+The unified move protocol keeps the server authoritative while reducing that path explosion.
+
+## Server Authority
+
+The client sends intent only. It never sends a complete edited inventory or container stack as truth.
+
+Flow:
+
+1. Client sends a source, target, and options.
+2. Server verifies the player, menu, source, target, placement, nesting depth, Curios rules, and equipment rules.
+3. Server performs the existing transaction.
+4. Server syncs the final accepted state.
+
+This avoids duplication, item loss, illegal NBT, bypassed slot restrictions, bypassed nested-backpack depth, and client/server divergence.
+
+## MoveItemMessage
+
+`MoveItemMessage` is the first unified client-to-server entry point:
+
+```java
+MoveItemMessage(
+    GridItemSource source,
+    GridItemTarget target,
+    GridMoveOptions options
+)
+```
+
+In phase 1 it is accepted only while the current menu is `GridInventoryMenu`.
+
+## GridMoveOptions
+
+```java
+GridMoveOptions(
+    int count,
+    boolean rotated,
+    boolean targetFolded
+)
+```
+
+`count <= 0` is normalized by `safeCount()` to `Integer.MAX_VALUE`. In phase 1 most migrated paths still move as much as their existing server transaction permits. `rotated` and `targetFolded` are retained for forward compatibility; current placement targets still carry their own rotated/folded fields, and phase 1 treats the target fields as authoritative.
+
+## Source Type IDs
+
+| ID | Source |
+| --- | --- |
+| 0 | `GridItemSource.PlayerSlot` |
+| 1 | `GridItemSource.MenuGridEntry` |
+| 2 | `GridItemSource.EquipmentStorageEntry` |
+| 3 | `GridItemSource.NestedGridEntry` |
+| 4 | `GridItemSource.NestedEquipmentStorageEntry` |
+| 5 | `GridItemSource.AccessorySlot` |
+
+## Target Type IDs
+
+| ID | Target |
+| --- | --- |
+| 0 | `GridItemTarget.PlayerSlot` |
+| 1 | `GridItemTarget.MenuGridPlacement` |
+| 2 | `GridItemTarget.EquipmentStoragePlacement` |
+| 3 | `GridItemTarget.NestedGridPlacement` |
+| 4 | `GridItemTarget.NestedEquipmentStoragePlacement` |
+| 5 | `GridItemTarget.AccessorySlot` |
+
+## NestedContainerPath Codec
+
+`GridMoveCodecs` encodes nested paths with an explicit segment count and segment type IDs. Empty paths are legal. The maximum path depth is 16 segments, and strings are capped at 128 characters.
+
+Segment IDs:
+
+| ID | Segment |
+| --- | --- |
+| 0 | `GridEntrySegment` |
+| 1 | `EquipmentEntrySegment` |
+| 2 | `ContainerEntrySegment` |
+| 3 | `PlayerSlotSegment` |
+| 4 | `AccessorySegment` |
+
+Invalid type IDs or excessive path depth throw `DecoderException`, rejecting the packet before it reaches move execution.
+
+## Old Packet Adapter Strategy
+
+Phase 1 does not remove old packets or change their packet IDs/codecs. Selected high-risk nested handlers now adapt their old fields into `GridItemSource`, `GridItemTarget`, and `GridMoveOptions`, then call `GridItemMoveService`.
+
+Converted adapters:
+
+- `TransferGridEntryIntoNestedGridMessage`
+- `TransferNestedGridEntryIntoGridMessage`
+- `TransferNestedGridEntryIntoNestedGridMessage`
+- `TransferEquipmentStorageEntryIntoNestedGridMessage`
+- `TransferNestedGridEntryIntoEquipmentStorageMessage`
+
+## Migrated Client Path
+
+The first client path migrated to `MoveItemMessage` is:
+
+- Main grid entry -> nested/free-window grid placement
+
+Other UI paths still send their old packets for now.
+
+## Migration Plan
+
+Phase 1:
+
+- Add `MoveItemMessage`.
+- Add stable source/target/options codecs.
+- Add `GridItemMoveService` wrapper.
+- Convert selected old handlers into adapters.
+- Migrate one low-risk client path.
+
+Phase 2:
+
+- Move more client paths to `MoveItemMessage`.
+- Remove duplicated rotated/folded semantics from options or targets once the final shape is chosen.
+- Add more diagnostic failure reasons if needed.
+
+Phase 3:
+
+- Remove obsolete old packets after all clients use the unified protocol.
+- Extend source/target types for `MenuSlot`, `GroundItem`, `CreativeItem`, and carried-stack style interactions.
+
+## Security Principles
+
+- Never trust client-edited inventory data.
+- Never bypass `GridPlacementValidator`.
+- Never bypass `NestedBackpackValidator`.
+- Never bypass Curios/accessory validation.
+- Never bypass vanilla slot `mayPlace`/`mayPickup` rules.
+- Failed moves must not mutate source or target state.

@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.api.GridItemSizeRule;
 import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
+import com.dreamingfish.gridinventory.common.network.GridMoveCodecs;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
@@ -33,6 +34,7 @@ import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoNestedG
 import com.dreamingfish.gridinventory.common.network.ManualPickupItemMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
 import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotMessage;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
@@ -126,6 +128,15 @@ public final class Forge1201MessageCodecs {
                     buf.writeBoolean(message.targetFolded());
                 },
                 buf -> new MoveGridEntryMessage(buf.readUUID(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.MOVE_ITEM, codec(
+                (message, buf) -> {
+                    GridMoveCodecs.writeSource(buf, message.source());
+                    GridMoveCodecs.writeTarget(buf, message.target());
+                    GridMoveCodecs.writeOptions(buf, message.options());
+                },
+                buf -> new MoveItemMessage(GridMoveCodecs.readSource(buf), GridMoveCodecs.readTarget(buf),
+                        GridMoveCodecs.readOptions(buf))
         ));
         register(GridMessages.INSERT_FROM_PLAYER_INVENTORY, codec(
                 (message, buf) -> {

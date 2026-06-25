@@ -15,6 +15,9 @@ import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerAccess;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
@@ -22,6 +25,7 @@ import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlo
 import com.dreamingfish.gridinventory.common.network.ExtractNestedGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
+import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
 import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
@@ -897,10 +901,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
             if (nestedTarget.isPresent()) {
                 NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                GridInventoryServices.network().sendToServer(new TransferGridEntryIntoNestedGridMessage(
-                        draggingEntry.entryId(), target.ownerPath(), target.containerId(),
-                        target.cellX() - anchorCellX(draggedStack()),
-                        target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                int targetX = target.cellX() - anchorCellX(draggedStack());
+                int targetY = target.cellY() - anchorCellY(draggedStack());
+                GridItemTarget moveTarget = target.containerId().isEmpty()
+                        ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY,
+                        rotatedPreview, targetFolded)
+                        : new GridItemTarget.NestedEquipmentStoragePlacement(target.ownerPath(), target.containerId(),
+                        targetX, targetY, rotatedPreview, targetFolded);
+                GridInventoryServices.network().sendToServer(new MoveItemMessage(
+                        new GridItemSource.MenuGridEntry(draggingEntry.entryId()), moveTarget,
+                        GridMoveOptions.all(rotatedPreview, targetFolded)));
                 playReleaseSound(true, false, false);
                 clearDragState();
                 return true;

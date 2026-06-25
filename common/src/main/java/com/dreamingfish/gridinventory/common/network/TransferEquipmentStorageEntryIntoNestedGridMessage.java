@@ -1,5 +1,9 @@
 package com.dreamingfish.gridinventory.common.network;
 
+import com.dreamingfish.gridinventory.common.inventory.GridItemMoveService;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
@@ -15,9 +19,16 @@ public record TransferEquipmentStorageEntryIntoNestedGridMessage(EquipmentSlot s
                                                                  boolean rotated, boolean targetFolded) implements GridMessage {
     public static void handle(TransferEquipmentStorageEntryIntoNestedGridMessage message, GridMessageContext context) {
         if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            if (menu.transferEquipmentEntryIntoNestedGrid(message.sourceSlot(), message.sourceContainerId(), message.entryId(),
-                    message.targetOwnerPath(), message.targetContainerId(), message.targetX(), message.targetY(),
-                    message.rotated(), message.targetFolded())) {
+            GridItemSource source = new GridItemSource.EquipmentStorageEntry(message.sourceSlot(),
+                    message.sourceContainerId(), message.entryId());
+            GridItemTarget target = message.targetContainerId().isEmpty()
+                    ? new GridItemTarget.NestedGridPlacement(message.targetOwnerPath(), message.targetX(),
+                    message.targetY(), message.rotated(), message.targetFolded())
+                    : new GridItemTarget.NestedEquipmentStoragePlacement(message.targetOwnerPath(),
+                    message.targetContainerId(), message.targetX(), message.targetY(), message.rotated(),
+                    message.targetFolded());
+            if (GridItemMoveService.move(menu, source, target,
+                    GridMoveOptions.all(message.rotated(), message.targetFolded()))) {
                 menu.broadcastChanges();
                 ModNetworking.syncMenu(context.player(), menu);
             }
