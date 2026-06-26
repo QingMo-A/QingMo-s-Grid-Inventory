@@ -160,3 +160,31 @@ Recommended next phase:
 
 - Migrate Nested -> Nested or Equipment -> Nested to `MoveItemMessage`.
 - Continue keeping GroundItem, CreativeItem, and generic MenuSlot outside the core move protocol until their source/target semantics are designed separately.
+
+## Phase 3 Notes
+
+Phase 3 migrated the client-side Nested -> Nested path to `MoveItemMessage`. This covers dragging an entry from a free/nested window into another nested window target, including nested equipment-storage containers when a container id is present.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+
+`TransferNestedGridEntryIntoNestedGridMessage` is still retained. Its handler remains an adapter through `GridMoveMessageGuards`, `GridItemSource`, `GridItemTarget`, `GridMoveOptions`, and `GridItemMoveService`. Its packet id, fields, and codecs remain unchanged.
+
+Source dispatch for the migrated path:
+
+- Empty source container id -> `GridItemSource.NestedGridEntry`
+- Non-empty source container id -> `GridItemSource.NestedEquipmentStorageEntry`
+
+Target dispatch for the migrated path:
+
+- Empty target container id -> `GridItemTarget.NestedGridPlacement`
+- Non-empty target container id -> `GridItemTarget.NestedEquipmentStoragePlacement`
+
+`GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate Equipment -> Nested or Nested -> Equipment to `MoveItemMessage`.

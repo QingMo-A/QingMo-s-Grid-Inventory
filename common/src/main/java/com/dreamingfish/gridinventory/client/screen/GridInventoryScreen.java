@@ -851,11 +851,21 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
             if (nestedTarget.isPresent()) {
                 NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                GridInventoryServices.network().sendToServer(new TransferNestedGridEntryIntoNestedGridMessage(
-                        draggingNestedEntry.ownerPath(), draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId(),
-                        target.ownerPath(), target.containerId(),
-                        target.cellX() - anchorCellX(draggedStack()),
-                        target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                int targetX = target.cellX() - anchorCellX(draggedStack());
+                int targetY = target.cellY() - anchorCellY(draggedStack());
+                GridItemSource source = draggingNestedEntry.containerId().isEmpty()
+                        ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
+                        draggingNestedEntry.entry().entryId())
+                        : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
+                        draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
+                GridItemTarget moveTarget = target.containerId().isEmpty()
+                        ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY,
+                        rotatedPreview, targetFolded)
+                        : new GridItemTarget.NestedEquipmentStoragePlacement(target.ownerPath(),
+                        target.containerId(), targetX, targetY, rotatedPreview, targetFolded);
+                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, moveTarget,
+                        GridMoveOptions.all(rotatedPreview, targetFolded)));
                 released = true;
             } else if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
                 clearDragState();
