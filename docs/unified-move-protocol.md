@@ -374,6 +374,14 @@ The PlayerSlot source resolver now checks that the source is a free player slot 
 
 `GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
 
+Phase 10 follow-up fixed PlayerSlot -> Grid behavior parity with the legacy `InsertFromPlayerInventoryMessage` path:
+
+- PlayerSlot -> MenuGridPlacement can merge into an existing same-item grid entry when grid item stacking is enabled.
+- PlayerSlot -> MenuGridPlacement moves only one item when `GridStackMerger.itemsStackableInGrid()` is false.
+- `ResolvedItemRef.removeFromRootCopy(amount)` now shrinks `entryId == null` root stacks by the requested amount instead of always clearing the whole stack.
+- The client still sends `MoveItemMessage` for PlayerSlot -> Grid.
+- `InsertFromPlayerInventoryMessage` remains registered, and `quick=true` still uses `quickInsertFromPlayerInventory`.
+
 Recommended next phase:
 
 - Migrate PlayerSlot -> Nested or PlayerSlot -> Equipment to `MoveItemMessage`.

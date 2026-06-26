@@ -6,6 +6,7 @@ import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
+import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -39,10 +40,19 @@ public final class GridItemTransferService {
             return false;
         }
         ItemStack moved = GridItemTransferRules.prepareForTarget(sourceRef.get().stackCopy(), target);
+        moved = playerSlotMenuGridMovedStack(source, target, moved);
         if (moved.isEmpty()) {
             debug(source, target, sourceRoot, targetRoot, sameRoot, false,
                     targetDepth(target, menu.transactionMenuGridDepth()), false, false, "empty-source");
             return false;
+        }
+        if (source instanceof GridItemSource.PlayerSlot
+                && target instanceof GridItemTarget.MenuGridPlacement placement) {
+            Optional<Boolean> merged = tryMergePlayerSlotIntoMenuGrid(transaction, sourceRef.get(), targetRef.get(),
+                    placement, moved, source, target, sourceRoot, targetRoot, sameRoot);
+            if (merged.isPresent()) {
+                return merged.get();
+            }
         }
         UUID ignoredEntryId = sourceRef.get().sameGrid(targetRef.get()) ? sourceRef.get().entryId() : null;
         GridInventoryData validationGrid = targetRef.get().gridCopy().copy();
@@ -86,6 +96,68 @@ public final class GridItemTransferService {
         debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, committed,
                 committed ? "committed" : "commit-failed");
         return committed;
+    }
+
+    private static ItemStack playerSlotMenuGridMovedStack(GridItemSource source, GridItemTarget target,
+                                                          ItemStack prepared) {
+        if (source instanceof GridItemSource.PlayerSlot
+                && target instanceof GridItemTarget.MenuGridPlacement
+                && !GridStackMerger.itemsStackableInGrid()
+                && prepared.getCount() > 1) {
+            return prepared.copyWithCount(1);
+        }
+        return prepared;
+    }
+
+    private static Optional<Boolean> tryMergePlayerSlotIntoMenuGrid(Transaction transaction, ResolvedItemRef sourceRef,
+                                                                    ResolvedGridRef targetRef,
+                                                                    GridItemTarget.MenuGridPlacement placement,
+                                                                    ItemStack moved, GridItemSource source,
+                                                                    GridItemTarget target, RootKey sourceRoot,
+                                                                    RootKey targetRoot, boolean sameRoot) {
+        int depth = targetDepth(target, transaction.menu.transactionMenuGridDepth());
+        if (!GridStackMerger.itemsStackableInGrid()) {
+            return Optional.empty();
+        }
+        Optional<GridEntry> targetEntry = targetRef.gridCopy().getEntries().stream()
+                .filter(entry -> entry.contains(placement.x(), placement.y()))
+                .findFirst();
+        if (targetEntry.isEmpty()) {
+            return Optional.empty();
+        }
+        ItemStack existing = targetEntry.get().stack();
+        if (!GridItemStacks.sameItemSameData(existing, moved) || existing.getCount() >= existing.getMaxStackSize()) {
+            return Optional.empty();
+        }
+        int moveCount = Math.min(moved.getCount(), existing.getMaxStackSize() - existing.getCount());
+        if (moveCount <= 0) {
+            return Optional.empty();
+        }
+        if (!sourceRef.removeFromRootCopy(moveCount)) {
+            debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, false,
+                    "merge-remove-source-failed");
+            return Optional.of(false);
+        }
+        GridInventoryData targetCopy = targetRef.gridCopy().copy();
+        Optional<GridEntry> copyEntry = targetCopy.getEntries().stream()
+                .filter(entry -> entry.entryId().equals(targetEntry.get().entryId()))
+                .findFirst();
+        if (copyEntry.isEmpty()) {
+            debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, false,
+                    "merge-target-entry-missing");
+            return Optional.of(false);
+        }
+        copyEntry.get().stack().grow(moveCount);
+        targetCopy.setChanged();
+        if (!targetRef.writeGridToRootCopy(targetCopy)) {
+            debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, false,
+                    "merge-write-target-failed");
+            return Optional.of(false);
+        }
+        boolean committed = transaction.commit();
+        debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, committed,
+                committed ? "committed-merge" : "merge-commit-failed");
+        return Optional.of(committed);
     }
 
     public static ItemStack prepareForTarget(ItemStack stack, GridItemTarget target) {
@@ -592,7 +664,20 @@ public final class GridItemTransferService {
                 return true;
             }
             if (entryId == null) {
-                root.stackCopy(ItemStack.EMPTY);
+                if (amount <= 0) {
+                    return false;
+                }
+                Optional<ItemStack> rootStack = root.stackCopy();
+                if (rootStack.isEmpty() || rootStack.get().isEmpty()) {
+                    return false;
+                }
+                ItemStack updated = rootStack.get().copy();
+                int removed = Math.min(amount, updated.getCount());
+                if (removed <= 0) {
+                    return false;
+                }
+                updated.shrink(removed);
+                root.stackCopy(updated.isEmpty() ? ItemStack.EMPTY : updated);
                 return true;
             }
             Optional<ItemStack> rootStack = root.stackCopy();
