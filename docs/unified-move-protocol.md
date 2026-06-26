@@ -214,3 +214,32 @@ The target is always `GridItemTarget.EquipmentStoragePlacement`, built from the 
 Recommended next phase:
 
 - Migrate Equipment -> Nested to `MoveItemMessage`.
+
+## Phase 5 Notes
+
+Phase 5 migrated the client-side Equipment -> Nested path to `MoveItemMessage`. This covers dragging an entry from an equipment-storage region into a free/nested window target, including nested equipment-storage containers when a target container id is present.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+
+`TransferEquipmentStorageEntryIntoNestedGridMessage` is still retained. Its handler remains an adapter through `GridMoveMessageGuards`, `GridItemSource.EquipmentStorageEntry`, `GridItemTarget`, `GridMoveOptions`, and `GridItemMoveService`. Its packet id, fields, and codecs remain unchanged.
+
+The source is always `GridItemSource.EquipmentStorageEntry`, built from the equipment region slot, source container id, and dragged entry id.
+
+Target dispatch for the migrated path:
+
+- Empty target container id -> `GridItemTarget.NestedGridPlacement`
+- Non-empty target container id -> `GridItemTarget.NestedEquipmentStoragePlacement`
+
+The target coordinates still use `target.cellX() - anchorCellX(draggedStack())` and `target.cellY() - anchorCellY(draggedStack())`. `rotatedPreview` and the dragged backpack folded state keep the same semantics as the old packet path.
+
+`GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate Equipment -> Grid or Grid -> Equipment to `MoveItemMessage`.
