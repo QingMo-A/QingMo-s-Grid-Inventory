@@ -783,17 +783,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (nestedTarget.isPresent()) {
                 NestedContainerWindowManager.GridHit target = nestedTarget.get();
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                int targetX = target.cellX() - anchorCellX(draggedStack());
-                int targetY = target.cellY() - anchorCellY(draggedStack());
-                GridItemSource source = new GridItemSource.EquipmentStorageEntry(draggingEquipmentEntry.slot(),
-                        draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId());
-                GridItemTarget moveTarget = target.containerId().isEmpty()
-                        ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY, rotatedPreview,
-                        targetFolded)
-                        : new GridItemTarget.NestedEquipmentStoragePlacement(target.ownerPath(), target.containerId(),
-                        targetX, targetY, rotatedPreview, targetFolded);
-                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, moveTarget,
-                        GridMoveOptions.all(rotatedPreview, targetFolded)));
+                sendMove(equipmentDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
                 playReleaseSound(true, false, false);
                 clearDragState();
                 return true;
@@ -831,13 +821,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 }
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                GridItemSource source = new GridItemSource.EquipmentStorageEntry(draggingEquipmentEntry.slot(),
-                        draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId());
-                GridItemTarget target = new GridItemTarget.MenuGridPlacement(
-                        targetGridX(draggedStack(), (int) mouseX),
-                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
-                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target,
-                        GridMoveOptions.all(rotatedPreview, targetFolded)));
+                sendMove(equipmentDragSource(), menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded),
+                        targetFolded);
                 released = true;
                 unequipped = true;
             } else {
@@ -860,20 +845,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (nestedTarget.isPresent()) {
                 NestedContainerWindowManager.GridHit target = nestedTarget.get();
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                int targetX = target.cellX() - anchorCellX(draggedStack());
-                int targetY = target.cellY() - anchorCellY(draggedStack());
-                GridItemSource source = draggingNestedEntry.containerId().isEmpty()
-                        ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
-                        draggingNestedEntry.entry().entryId())
-                        : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
-                        draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
-                GridItemTarget moveTarget = target.containerId().isEmpty()
-                        ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY,
-                        rotatedPreview, targetFolded)
-                        : new GridItemTarget.NestedEquipmentStoragePlacement(target.ownerPath(),
-                        target.containerId(), targetX, targetY, rotatedPreview, targetFolded);
-                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, moveTarget,
-                        GridMoveOptions.all(rotatedPreview, targetFolded)));
+                sendMove(nestedDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
                 released = true;
             } else if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
                 clearDragState();
@@ -884,31 +856,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 if (equipmentRegion.isPresent()) {
                     GridColumnPanel.Region target = equipmentRegion.get();
                     boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                    GridItemSource source = draggingNestedEntry.containerId().isEmpty()
-                            ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
-                            draggingNestedEntry.entry().entryId())
-                            : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
-                            draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
-                    GridItemTarget moveTarget = new GridItemTarget.EquipmentStoragePlacement(target.slot(),
-                            target.containerId(), targetRegionX(target, draggedStack(), (int) mouseX),
-                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
-                    GridInventoryServices.network().sendToServer(new MoveItemMessage(source, moveTarget,
-                            GridMoveOptions.all(rotatedPreview, targetFolded)));
+                    sendMove(nestedDragSource(), equipmentPlacementTarget(target, (int) mouseX, (int) mouseY,
+                            targetFolded), targetFolded);
                     released = true;
                 }
             }
             if (!released && inGrid((int) mouseX, (int) mouseY)) {
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                GridItemSource source = draggingNestedEntry.containerId().isEmpty()
-                        ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
-                        draggingNestedEntry.entry().entryId())
-                        : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
-                        draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
-                GridItemTarget target = new GridItemTarget.MenuGridPlacement(
-                        targetGridX(draggedStack(), (int) mouseX),
-                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
-                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target,
-                        GridMoveOptions.all(rotatedPreview, targetFolded)));
+                sendMove(nestedDragSource(), menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded),
+                        targetFolded);
                 released = true;
             }
             if (!released) {
@@ -932,16 +888,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (nestedTarget.isPresent()) {
                 NestedContainerWindowManager.GridHit target = nestedTarget.get();
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                int targetX = target.cellX() - anchorCellX(draggedStack());
-                int targetY = target.cellY() - anchorCellY(draggedStack());
-                GridItemTarget moveTarget = target.containerId().isEmpty()
-                        ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY,
-                        rotatedPreview, targetFolded)
-                        : new GridItemTarget.NestedEquipmentStoragePlacement(target.ownerPath(), target.containerId(),
-                        targetX, targetY, rotatedPreview, targetFolded);
-                GridInventoryServices.network().sendToServer(new MoveItemMessage(
-                        new GridItemSource.MenuGridEntry(draggingEntry.entryId()), moveTarget,
-                        GridMoveOptions.all(rotatedPreview, targetFolded)));
+                sendMove(gridDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
                 playReleaseSound(true, false, false);
                 clearDragState();
                 return true;
@@ -962,13 +909,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region target = equipmentRegion.get();
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                GridItemSource source = new GridItemSource.MenuGridEntry(draggingEntry.entryId());
-                GridItemTarget moveTarget = new GridItemTarget.EquipmentStoragePlacement(target.slot(),
-                        target.containerId(),
-                        targetRegionX(target, draggedStack(), (int) mouseX),
-                        targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
-                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, moveTarget,
-                        GridMoveOptions.all(rotatedPreview, targetFolded)));
+                sendMove(gridDragSource(), equipmentPlacementTarget(target, (int) mouseX, (int) mouseY,
+                        targetFolded), targetFolded);
                 released = true;
                 equipped = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
@@ -1038,6 +980,53 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    private GridItemSource nestedDragSource() {
+        return draggingNestedEntry.containerId().isEmpty()
+                ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
+                draggingNestedEntry.entry().entryId())
+                : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
+                draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
+    }
+
+    private GridItemSource equipmentDragSource() {
+        return new GridItemSource.EquipmentStorageEntry(draggingEquipmentEntry.slot(),
+                draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId());
+    }
+
+    private GridItemSource gridDragSource() {
+        return new GridItemSource.MenuGridEntry(draggingEntry.entryId());
+    }
+
+    private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target, boolean targetFolded) {
+        int targetX = target.cellX() - anchorCellX(draggedStack());
+        int targetY = target.cellY() - anchorCellY(draggedStack());
+        return target.containerId().isEmpty()
+                ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY, rotatedPreview,
+                targetFolded)
+                : new GridItemTarget.NestedEquipmentStoragePlacement(target.ownerPath(), target.containerId(),
+                targetX, targetY, rotatedPreview, targetFolded);
+    }
+
+    private GridItemTarget equipmentPlacementTarget(GridColumnPanel.Region target, int mouseX, int mouseY,
+                                                   boolean targetFolded) {
+        return new GridItemTarget.EquipmentStoragePlacement(target.slot(), target.containerId(),
+                targetRegionX(target, draggedStack(), mouseX), targetRegionY(target, draggedStack(), mouseY),
+                rotatedPreview, targetFolded);
+    }
+
+    private GridItemTarget menuGridPlacementTarget(int mouseX, int mouseY, boolean targetFolded) {
+        return new GridItemTarget.MenuGridPlacement(targetGridX(draggedStack(), mouseX),
+                targetGridY(draggedStack(), mouseY), rotatedPreview, targetFolded);
+    }
+
+    private GridMoveOptions moveOptions(boolean targetFolded) {
+        return GridMoveOptions.all(rotatedPreview, targetFolded);
+    }
+
+    private void sendMove(GridItemSource source, GridItemTarget target, boolean targetFolded) {
+        GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target, moveOptions(targetFolded)));
     }
 
     private void handleGroundItemRelease(int mouseX, int mouseY) {

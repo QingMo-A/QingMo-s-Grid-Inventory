@@ -294,3 +294,25 @@ The target is always `GridItemTarget.MenuGridPlacement`, built from `targetGridX
 Recommended next phase:
 
 - Migrate Equipment -> Equipment to `MoveItemMessage`.
+
+## Phase 8 Notes
+
+Phase 8 did not migrate any new client path and did not change the unified move protocol. It only extracted `GridInventoryScreen` helper methods for constructing client-side `GridItemSource`, `GridItemTarget`, `GridMoveOptions`, and `MoveItemMessage` sends.
+
+`MoveItemMessage` coverage remains unchanged:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+- Equipment-storage entry -> main grid placement
+
+The refactored client paths now use helper methods for menu grid, nested/free-window, and equipment-storage source/target construction. Behavior should be equivalent: branch order, release flags, sound calls, drag cleanup, and early returns remain unchanged.
+
+`GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate Equipment -> Equipment to `MoveItemMessage`, or start PlayerSlot -> Grid / PlayerSlot -> Nested after defining their source and target semantics.
