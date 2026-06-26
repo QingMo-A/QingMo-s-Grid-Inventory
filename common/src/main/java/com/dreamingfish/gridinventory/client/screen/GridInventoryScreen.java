@@ -30,7 +30,6 @@ import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageM
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
-import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
@@ -959,10 +958,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region target = equipmentRegion.get();
-                GridInventoryServices.network().sendToServer(new TransferGridEntryIntoEquipmentStorageMessage(
-                        draggingEntry.entryId(), target.slot(), target.containerId(),
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                GridItemSource source = new GridItemSource.MenuGridEntry(draggingEntry.entryId());
+                GridItemTarget moveTarget = new GridItemTarget.EquipmentStoragePlacement(target.slot(),
+                        target.containerId(),
                         targetRegionX(target, draggedStack(), (int) mouseX),
-                        targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                        targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
+                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, moveTarget,
+                        GridMoveOptions.all(rotatedPreview, targetFolded)));
                 released = true;
                 equipped = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {

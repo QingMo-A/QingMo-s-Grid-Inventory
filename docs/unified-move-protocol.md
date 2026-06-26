@@ -243,3 +243,28 @@ The target coordinates still use `target.cellX() - anchorCellX(draggedStack())` 
 Recommended next phase:
 
 - Migrate Equipment -> Grid or Grid -> Equipment to `MoveItemMessage`.
+
+## Phase 6 Notes
+
+Phase 6 migrated the client-side Grid -> Equipment path to `MoveItemMessage`. This covers dragging an entry from the main grid into an equipment-storage region.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+
+`TransferGridEntryIntoEquipmentStorageMessage` is still retained. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.MenuGridEntry`, `GridItemTarget.EquipmentStoragePlacement`, `GridMoveOptions`, and `GridItemMoveService`. Its packet id, fields, and codecs remain unchanged.
+
+The source is always `GridItemSource.MenuGridEntry`, built from the dragged grid entry id.
+
+The target is always `GridItemTarget.EquipmentStoragePlacement`, built from the equipment region slot, container id, `targetRegionX`, `targetRegionY`, `rotatedPreview`, and the dragged backpack folded state.
+
+`GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate Equipment -> Grid or Equipment -> Equipment to `MoveItemMessage`.
