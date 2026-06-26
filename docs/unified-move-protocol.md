@@ -344,3 +344,36 @@ The client no longer chooses between same-storage and cross-storage packets for 
 Recommended next phase:
 
 - Start PlayerSlot -> Grid / PlayerSlot -> Equipment / PlayerSlot -> Nested, or first document regression tests for the unified move protocol.
+
+## Phase 10 Notes
+
+Phase 10 migrated the client-side PlayerSlot -> Grid path to `MoveItemMessage`. This covers dragging an item from the vanilla player inventory or hotbar into the main grid.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+- Equipment-storage entry -> main grid placement
+- Equipment-storage entry -> equipment-storage placement
+- Player slot -> main grid placement
+
+The migrated client path uses:
+
+- `GridItemSource.PlayerSlot`
+- `GridItemTarget.MenuGridPlacement`
+
+`InsertFromPlayerInventoryMessage` is still retained. Its normal drag handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.PlayerSlot`, `GridItemTarget.MenuGridPlacement`, `GridMoveOptions`, and `GridItemMoveService`. Its quick-insert branch remains on the legacy quick path because that extra semantic is not represented by `GridMoveOptions` yet.
+
+PlayerSlot -> Nested, PlayerSlot -> Equipment, PlayerSlot -> Curio, and PlayerSlot -> PlayerSlot still use their old packets.
+
+The PlayerSlot source resolver now checks that the source is a free player slot and that the backing slot view allows `mayPickup`.
+
+`GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate PlayerSlot -> Nested or PlayerSlot -> Equipment to `MoveItemMessage`.

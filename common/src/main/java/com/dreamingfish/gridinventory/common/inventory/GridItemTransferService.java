@@ -409,7 +409,7 @@ public final class GridItemTransferService {
             if (source instanceof GridItemSource.PlayerSlot slot) {
                 RootState root = root(RootKey.playerSlot(slot.slot()));
                 return root.stackCopy()
-                        .filter(stack -> !stack.isEmpty() && menu.transactionIsFreePlayerSlot(slot.slot()))
+                        .filter(stack -> !stack.isEmpty() && menu.transactionMayPickupFreePlayerSlot(slot.slot()))
                         .map(stack -> new ResolvedItemRef(root, NestedContainerPath.root(), "", null, stack.copy()));
             }
             if (source instanceof GridItemSource.AccessorySlot slot) {

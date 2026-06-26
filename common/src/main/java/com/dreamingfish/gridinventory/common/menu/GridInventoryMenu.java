@@ -128,6 +128,15 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return isFreePlayerSlot(playerSlot);
     }
 
+    public boolean transactionMayPickupFreePlayerSlot(int playerSlot) {
+        if (!isFreePlayerSlot(playerSlot)) {
+            return false;
+        }
+        return findPlayerSlotView(playerSlot)
+                .map(slot -> slot.mayPickup(playerInventory.player))
+                .orElse(false);
+    }
+
     public ItemStack transactionPlayerSlotStack(int playerSlot) {
         if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
             return ItemStack.EMPTY;

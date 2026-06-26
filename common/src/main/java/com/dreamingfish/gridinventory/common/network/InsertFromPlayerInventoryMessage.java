@@ -1,22 +1,31 @@
 package com.dreamingfish.gridinventory.common.network;
 
+import com.dreamingfish.gridinventory.common.inventory.GridItemMoveService;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
 
-import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
-
 public record InsertFromPlayerInventoryMessage(int playerSlot, int targetX, int targetY, boolean rotated, boolean quick, boolean targetFolded) implements GridMessage {
 
     public static void handle(InsertFromPlayerInventoryMessage packet, GridMessageContext context) {
-        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
+        GridMoveMessageGuards.withGridMenu(context, "InsertFromPlayerInventoryMessage", (player, menu) -> {
             if (packet.quick()) {
                 menu.quickInsertFromPlayerInventory(packet.playerSlot());
+                ModNetworking.syncMenu(player, menu);
             } else {
-                menu.insertFromPlayerInventory(packet.playerSlot(), packet.targetX(), packet.targetY(), packet.rotated(), packet.targetFolded());
+                GridItemSource source = new GridItemSource.PlayerSlot(packet.playerSlot());
+                GridItemTarget target = new GridItemTarget.MenuGridPlacement(packet.targetX(), packet.targetY(),
+                        packet.rotated(), packet.targetFolded());
+                if (GridItemMoveService.move(menu, source, target,
+                        GridMoveOptions.all(packet.rotated(), packet.targetFolded()))) {
+                    menu.broadcastChanges();
+                    ModNetworking.syncMenu(player, menu);
+                }
             }
-            ModNetworking.syncMenu(context.player(), menu);
-        }
+        });
     }
 
     @Override

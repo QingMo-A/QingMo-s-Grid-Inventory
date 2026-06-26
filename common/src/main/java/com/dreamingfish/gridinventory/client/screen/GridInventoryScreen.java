@@ -951,8 +951,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 released = true;
                 equipped = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryMessage(lastPlayerSlot,
-                        targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, false, GridBackpackItem.isFolded(draggedStack())));
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(playerSlotSource(lastPlayerSlot),
+                        menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded), targetFolded);
                 released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
@@ -984,6 +985,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private GridItemSource gridDragSource() {
         return new GridItemSource.MenuGridEntry(draggingEntry.entryId());
+    }
+
+    private static GridItemSource playerSlotSource(int slot) {
+        return new GridItemSource.PlayerSlot(slot);
     }
 
     private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target, boolean targetFolded) {
