@@ -30,7 +30,6 @@ import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageM
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
-import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
@@ -831,10 +830,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     released = true;
                 }
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryIntoGridMessage(
-                        draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                GridItemSource source = new GridItemSource.EquipmentStorageEntry(draggingEquipmentEntry.slot(),
+                        draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId());
+                GridItemTarget target = new GridItemTarget.MenuGridPlacement(
                         targetGridX(draggedStack(), (int) mouseX),
-                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
+                GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target,
+                        GridMoveOptions.all(rotatedPreview, targetFolded)));
                 released = true;
                 unequipped = true;
             } else {
