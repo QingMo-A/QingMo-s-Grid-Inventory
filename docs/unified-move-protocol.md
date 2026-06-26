@@ -316,3 +316,31 @@ The refactored client paths now use helper methods for menu grid, nested/free-wi
 Recommended next phase:
 
 - Migrate Equipment -> Equipment to `MoveItemMessage`, or start PlayerSlot -> Grid / PlayerSlot -> Nested after defining their source and target semantics.
+
+## Phase 9 Notes
+
+Phase 9 migrated the client-side Equipment -> Equipment path to `MoveItemMessage`. This covers both moving inside the same equipment-storage container and transferring between different equipment-storage containers.
+
+The client no longer chooses between same-storage and cross-storage packets for this path. It now sends one intent:
+
+- `GridItemSource.EquipmentStorageEntry`
+- `GridItemTarget.EquipmentStoragePlacement`
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+- Equipment-storage entry -> main grid placement
+- Equipment-storage entry -> equipment-storage placement
+
+`MoveEquipmentStorageEntryMessage` and `TransferEquipmentStorageEntryMessage` are still retained. Their handlers remain adapters through `GridMoveMessageGuards`, `GridItemSource.EquipmentStorageEntry`, `GridItemTarget.EquipmentStoragePlacement`, `GridMoveOptions`, and `GridItemMoveService`. Their packet ids, fields, and codecs remain unchanged.
+
+`GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
+
+Recommended next phase:
+
+- Start PlayerSlot -> Grid / PlayerSlot -> Equipment / PlayerSlot -> Nested, or first document regression tests for the unified move protocol.

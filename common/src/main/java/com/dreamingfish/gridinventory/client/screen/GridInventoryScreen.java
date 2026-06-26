@@ -28,9 +28,7 @@ import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
 import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoNestedGridMessage;
-import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
-import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoGridMessage;
@@ -804,21 +802,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.Region> region = gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY);
             if (region.isPresent()) {
                 GridColumnPanel.Region target = region.get();
-                if (target.slot() == draggingEquipmentEntry.slot()
-                        && target.containerId().equals(draggingEquipmentEntry.containerId())) {
-                    GridInventoryServices.network().sendToServer(new MoveEquipmentStorageEntryMessage(
-                            draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
-                            targetRegionX(target, draggedStack(), (int) mouseX),
-                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
-                    released = true;
-                } else {
-                    GridInventoryServices.network().sendToServer(new TransferEquipmentStorageEntryMessage(
-                            draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
-                            target.slot(), target.containerId(),
-                            targetRegionX(target, draggedStack(), (int) mouseX),
-                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
-                    released = true;
-                }
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(equipmentDragSource(), equipmentPlacementTarget(target, (int) mouseX, (int) mouseY,
+                        targetFolded), targetFolded);
+                released = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
                 sendMove(equipmentDragSource(), menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded),

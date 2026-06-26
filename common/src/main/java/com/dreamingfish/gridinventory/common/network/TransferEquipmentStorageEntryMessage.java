@@ -1,10 +1,12 @@
 package com.dreamingfish.gridinventory.common.network;
 
+import com.dreamingfish.gridinventory.common.inventory.GridItemMoveService;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
-
-import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import net.minecraft.world.entity.EquipmentSlot;
 
 import java.util.UUID;
@@ -15,11 +17,18 @@ public record TransferEquipmentStorageEntryMessage(EquipmentSlot sourceSlot, Str
                                                   boolean targetFolded) implements GridMessage {
 
     public static void handle(TransferEquipmentStorageEntryMessage packet, GridMessageContext context) {
-        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.transferEquipmentEntryBetweenStorages(packet.sourceSlot(), packet.sourceContainerId(), packet.entryId(),
-                    packet.targetSlot(), packet.targetContainerId(), packet.targetX(), packet.targetY(), packet.rotated(), packet.targetFolded());
-            menu.broadcastChanges();
-        }
+        GridMoveMessageGuards.withGridMenu(context, "TransferEquipmentStorageEntryMessage", (player, menu) -> {
+            GridItemSource source = new GridItemSource.EquipmentStorageEntry(packet.sourceSlot(),
+                    packet.sourceContainerId(), packet.entryId());
+            GridItemTarget target = new GridItemTarget.EquipmentStoragePlacement(packet.targetSlot(),
+                    packet.targetContainerId(), packet.targetX(), packet.targetY(), packet.rotated(),
+                    packet.targetFolded());
+            if (GridItemMoveService.move(menu, source, target,
+                    GridMoveOptions.all(packet.rotated(), packet.targetFolded()))) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(player, menu);
+            }
+        });
     }
 
     @Override
