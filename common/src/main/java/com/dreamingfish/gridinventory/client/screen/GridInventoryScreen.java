@@ -875,12 +875,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
                 if (equipmentRegion.isPresent()) {
                     GridColumnPanel.Region target = equipmentRegion.get();
-                    GridInventoryServices.network().sendToServer(new TransferNestedGridEntryIntoEquipmentStorageMessage(
-                            draggingNestedEntry.ownerPath(), draggingNestedEntry.containerId(),
-                            draggingNestedEntry.entry().entryId(), target.slot(), target.containerId(),
-                            targetRegionX(target, draggedStack(), (int) mouseX),
-                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview,
-                            GridBackpackItem.isFolded(draggedStack())));
+                    boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                    GridItemSource source = draggingNestedEntry.containerId().isEmpty()
+                            ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
+                            draggingNestedEntry.entry().entryId())
+                            : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
+                            draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
+                    GridItemTarget moveTarget = new GridItemTarget.EquipmentStoragePlacement(target.slot(),
+                            target.containerId(), targetRegionX(target, draggedStack(), (int) mouseX),
+                            targetRegionY(target, draggedStack(), (int) mouseY), rotatedPreview, targetFolded);
+                    GridInventoryServices.network().sendToServer(new MoveItemMessage(source, moveTarget,
+                            GridMoveOptions.all(rotatedPreview, targetFolded)));
                     released = true;
                 }
             }

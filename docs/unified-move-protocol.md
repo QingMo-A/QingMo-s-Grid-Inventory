@@ -188,3 +188,29 @@ Target dispatch for the migrated path:
 Recommended next phase:
 
 - Migrate Equipment -> Nested or Nested -> Equipment to `MoveItemMessage`.
+
+## Phase 4 Notes
+
+Phase 4 migrated the client-side Nested -> Equipment path to `MoveItemMessage`. This covers dragging an entry from a free/nested window into the main UI equipment-storage region.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+
+`TransferNestedGridEntryIntoEquipmentStorageMessage` is still retained. Its handler remains an adapter through `GridMoveMessageGuards`, `GridItemSource`, `GridItemTarget.EquipmentStoragePlacement`, `GridMoveOptions`, and `GridItemMoveService`. Its packet id, fields, and codecs remain unchanged.
+
+Source dispatch for the migrated path:
+
+- Empty source container id -> `GridItemSource.NestedGridEntry`
+- Non-empty source container id -> `GridItemSource.NestedEquipmentStorageEntry`
+
+The target is always `GridItemTarget.EquipmentStoragePlacement`, built from the equipment region slot, container id, `targetRegionX`, `targetRegionY`, `rotatedPreview`, and the dragged backpack folded state. `targetRegionX` and `targetRegionY` still use the existing anchor calculation.
+
+`GridMoveOptions.count` is still reserved for later phases and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate Equipment -> Nested to `MoveItemMessage`.
