@@ -54,7 +54,6 @@ import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMess
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
-import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
@@ -755,8 +754,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractCurioToPlayerSlotMessage(
-                            draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), hovered.getSlotIndex()));
+                    sendMove(curioDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
+                            GridBackpackItem.isFolded(draggedStack()));
                     released = true;
                 }
             }

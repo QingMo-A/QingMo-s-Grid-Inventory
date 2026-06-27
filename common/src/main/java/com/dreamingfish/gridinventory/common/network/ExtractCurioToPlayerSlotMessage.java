@@ -1,19 +1,24 @@
 package com.dreamingfish.gridinventory.common.network;
 
+import com.dreamingfish.gridinventory.common.inventory.GridItemMoveService;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
 
-import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
-
 public record ExtractCurioToPlayerSlotMessage(String identifier, int index, int targetPlayerSlot) implements GridMessage {
 
     public static void handle(ExtractCurioToPlayerSlotMessage packet, GridMessageContext context) {
-        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.extractCurioToPlayerSlot(packet.identifier(), packet.index(), packet.targetPlayerSlot());
-            menu.broadcastChanges();
-            ModNetworking.syncMenu(context.player(), menu);
-        }
+        GridMoveMessageGuards.withGridMenu(context, "ExtractCurioToPlayerSlotMessage", (player, menu) -> {
+            GridItemSource source = new GridItemSource.AccessorySlot(packet.identifier(), packet.index());
+            GridItemTarget target = new GridItemTarget.PlayerSlot(packet.targetPlayerSlot());
+            if (GridItemMoveService.move(menu, source, target, GridMoveOptions.all(false, false))) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(player, menu);
+            }
+        });
     }
 
     @Override
