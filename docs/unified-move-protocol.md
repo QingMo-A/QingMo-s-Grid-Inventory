@@ -718,3 +718,46 @@ PlayerSlot -> AccessorySlot uses a minimal early branch in `GridItemTransferServ
 Recommended next phase:
 
 - Begin GroundItem, CreativeItem, or MenuSlot migration, or first consolidate unified-move regression tests.
+
+## Phase 20 Notes
+
+Phase 20 migrated the client-side PlayerSlot -> PlayerSlot path to `MoveItemMessage`. When a vanilla player-slot item is released over another player slot, the client now sends:
+
+- `GridItemSource.PlayerSlot`
+- `GridItemTarget.PlayerSlot`
+
+The existing `playerSlotSource` helper constructs the source, and the hovered slot index constructs the target. The original release flag, release sound, drag cleanup, and return timing remain unchanged.
+
+`MovePlayerFreeSlotMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.PlayerSlot`, `GridItemTarget.PlayerSlot`, `GridMoveOptions`, and `GridItemMoveService`.
+
+`GridItemMoveService` now passes its normalized `GridMoveOptions` into a new four-argument `GridItemTransferService.transfer` overload. The existing three-argument overload remains and delegates with default options.
+
+PlayerSlot -> PlayerSlot uses a minimal early branch in `GridItemTransferService`. It requires a player-grid menu and delegates to `GridInventoryMenu.movePlayerFreeSlot`, passing `options.targetFolded()`. This preserves the legacy free-slot, slot-view, `mayPickup`, `mayPlace`, folding, stacking, and swapping behavior without extending `ResolvedGridRef`.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+- Equipment-storage entry -> main grid placement
+- Equipment-storage entry -> equipment-storage placement
+- Player slot -> main grid placement
+- Player slot -> nested/free-window placement
+- Player slot -> equipment-storage placement
+- Player slot -> player slot
+- Curio/accessory slot -> main grid placement
+- Curio/accessory slot -> nested/free-window placement
+- Curio/accessory slot -> equipment-storage placement
+- Curio/accessory slot -> player slot
+- Main grid entry -> Curio/accessory slot
+- Equipment-storage entry -> Curio/accessory slot
+- Player slot -> Curio/accessory slot
+
+`GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Begin GroundItem, CreativeItem, or MenuSlot migration, or first consolidate unified-move regression tests.

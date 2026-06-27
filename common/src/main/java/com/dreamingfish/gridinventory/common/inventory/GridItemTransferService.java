@@ -24,6 +24,12 @@ public final class GridItemTransferService {
     }
 
     public static boolean transfer(GridInventoryMenu menu, GridItemSource source, GridItemTarget target) {
+        return transfer(menu, source, target, GridMoveOptions.all(false, false));
+    }
+
+    public static boolean transfer(GridInventoryMenu menu, GridItemSource source, GridItemTarget target,
+                                   GridMoveOptions options) {
+        GridMoveOptions safeOptions = options == null ? GridMoveOptions.all(false, false) : options;
         if (source instanceof GridItemSource.AccessorySlot
                 && (target instanceof GridItemTarget.MenuGridPlacement
                 || target instanceof GridItemTarget.NestedGridPlacement
@@ -79,6 +85,18 @@ public final class GridItemTransferService {
                     accessory.index());
             debug(source, target, null, null, false, false, -1, moved, moved,
                     moved ? "committed-player-slot-accessory" : "player-slot-accessory-failed");
+            return moved;
+        }
+        if (source instanceof GridItemSource.PlayerSlot sourceSlot
+                && target instanceof GridItemTarget.PlayerSlot targetSlot) {
+            if (!menu.isPlayerGrid()) {
+                debug(source, target, null, null, false, false, -1, false, false, "not-player-grid");
+                return false;
+            }
+            boolean moved = menu.movePlayerFreeSlot(sourceSlot.slot(), targetSlot.slot(),
+                    safeOptions.targetFolded());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-player-slot-player-slot" : "player-slot-player-slot-failed");
             return moved;
         }
         Transaction transaction = new Transaction(menu);
