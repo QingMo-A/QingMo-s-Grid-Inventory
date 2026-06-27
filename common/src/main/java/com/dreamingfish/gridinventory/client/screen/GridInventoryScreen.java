@@ -55,7 +55,6 @@ import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMe
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMessage;
-import com.dreamingfish.gridinventory.common.network.ExtractCurioToGridMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
@@ -754,10 +753,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                         targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
                 released = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new ExtractCurioToGridMessage(
-                        draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(),
-                        targetGridX(draggedStack(), (int) mouseX),
-                        targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(curioDragSource(),
+                        menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded), targetFolded);
                 released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
@@ -984,6 +982,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private static GridItemSource playerSlotSource(int slot) {
         return new GridItemSource.PlayerSlot(slot);
+    }
+
+    private GridItemSource curioDragSource() {
+        return new GridItemSource.AccessorySlot(draggingCurioSlot.view().identifier(),
+                draggingCurioSlot.view().index());
     }
 
     private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target, boolean targetFolded) {

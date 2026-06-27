@@ -23,6 +23,12 @@ public final class GridItemTransferService {
     }
 
     public static boolean transfer(GridInventoryMenu menu, GridItemSource source, GridItemTarget target) {
+        if (source instanceof GridItemSource.AccessorySlot
+                && target instanceof GridItemTarget.MenuGridPlacement
+                && !menu.isPlayerGrid()) {
+            debug(source, target, null, null, false, false, -1, false, false, "not-player-grid");
+            return false;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);
