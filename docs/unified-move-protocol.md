@@ -1092,3 +1092,109 @@ The common-side transfer, codec, message, guard, source, target, and menu classe
 Recommended next phase:
 
 - Do not begin a broad MenuSlot migration until MenuSlot and Container Sidecar source/target representations, any required new codec ids, and old-semantics adapter behavior are designed explicitly.
+
+## Phase 32 Notes
+
+Phase 32 is a design audit only. It migrates no packet and changes only this document. `GridItemSource`, `GridItemTarget`, `GridMoveCodecs`, `GridMoveOptions`, `MoveItemMessage`, transfer logic, menu logic, and old handlers remain unchanged.
+
+### Remaining Packet Classification
+
+| Packet or family | Fields / behavior | Current state | Future direction |
+|---|---|---|---|
+| `ExtractToPlayerInventoryMessage` | `entryId`, `amount`; grid entry to automatic player-inventory merge/add | Direct menu call; no equivalent target | Keep dedicated until auto-placement and count semantics are designed |
+| `ExtractGridEntryToPlayerSlotMessage` | `entryId`, `playerSlot`, `amount` | Direct menu call | Migrate after count semantics, using existing source/target plus a temporary delegating branch |
+| `ExtractNestedGridEntryToPlayerSlotMessage` | owner path, container id, entry id, player slot, amount | Direct menu call with nested writeback | Migrate after count semantics and explicit empty/non-empty container-id mapping |
+| `ExtractEquipmentStorageEntryMessage` | equipment slot, container id, entry id, player slot, amount | Direct menu call | Same amount-path family; migrate only after count semantics |
+| `InsertFromPlayerInventoryMessage` | player slot, coordinates, rotated, quick, folded | `quick=false` is an adapter; `quick=true` directly invokes automatic insertion | Keep quick mode dedicated for now |
+| `MoveGridEntryMessage` | entry id, coordinates, rotated, folded | Direct same-grid reposition | Can use existing `MenuGridEntry -> MenuGridPlacement` after same-root semantics are verified |
+| Grid / Equipment / Nested transfer packets | source identity, explicit placement, rotated, folded | Already adapters to `GridItemMoveService` | Retain as compatibility adapters |
+| `QuickEquip*Message` | source identity; server chooses equipment target | Direct quick action | Keep dedicated or later use a separate quick-action protocol |
+| `Drop*Message` | source identity; creates a world drop | Direct action | Keep dedicated; drop is not a placement target |
+| `Toggle*BackpackFoldMessage` | source identity plus placement state | Direct state transition | Keep dedicated; folding is not movement |
+| `ManualPickupItemMessage` | world pickup action | Dedicated action | Keep dedicated; it is not an explicit source-to-target placement |
+| Open and sync messages | menu opening or state synchronization | Dedicated protocol | Outside movement protocol |
+
+The already migrated Curio extraction/insertion, equipment/grid/nested transfer, PlayerSlot transfer, GroundItem, and CreativeItem packets are compatibility adapters and require no further migration.
+
+### Player Inventory Auto-Placement
+
+`ExtractToPlayerInventoryMessage` cannot be represented faithfully as `PlayerSlot`: it relies on player-inventory merge/add rules, has no explicit destination slot, and carries `amount`.
+
+Two designs were considered:
+
+- Add `GridItemTarget.PlayerInventoryAutoPlacement`, with quantity supplied by `GridMoveOptions.count`.
+- Keep the dedicated packet and its `extractToPlayerInventory` menu method.
+
+Recommendation: keep the dedicated packet through the count work. If automatic destinations later become a shared protocol concept, add an explicit auto-placement target rather than overloading `PlayerSlot`. The target should not contain amount; quantity belongs in options. This would require a new target codec id and must therefore be a deliberate compatibility change.
+
+### Explicit PlayerSlot Amount Paths
+
+`ExtractGridEntryToPlayerSlotMessage` already maps structurally to:
+
+`MenuGridEntry(entryId) -> PlayerSlot(playerSlot)`
+
+No new source or target is needed. Migration should first define `GridMoveOptions.count`, including positive-value validation, maximum clamping, whole-stack/default behavior, partial extraction, target merge capacity, and rollback. The first migration should use a narrow pre-transaction branch delegating to `extractToPlayerSlot` so old partial-stack behavior is preserved before any generic transaction implementation is attempted.
+
+`ExtractNestedGridEntryToPlayerSlotMessage` maps to:
+
+- Empty `sourceContainerId`: `NestedGridEntry(ownerPath, entryId) -> PlayerSlot`.
+- Non-empty `sourceContainerId`: `NestedEquipmentStorageEntry(ownerPath, containerId, entryId) -> PlayerSlot`.
+
+It needs no new source or target, but should follow the main-grid amount path. A narrow branch should initially delegate to `extractNestedGridEntryToPlayerSlot`, preserving owner resolution, partial extraction, nested writeback, and save semantics. The container-id split must happen in both the client path and old-packet adapter.
+
+`ExtractEquipmentStorageEntryMessage` similarly maps from the existing `EquipmentStorageEntry` to `PlayerSlot` and should be handled in the same count-enabled family.
+
+Count on these explicit PlayerSlot paths must not silently change the existing whole-item semantics of Grid, Nested, or Equipment moves to Curio or grid placements.
+
+### Quick Insert and Same-Grid Reposition
+
+For `InsertFromPlayerInventoryMessage`, `quick=false` is already an adapter for `PlayerSlot -> MenuGridPlacement`. `quick=true` asks the server to find the best available grid location and can insert according to grid merge rules. It should remain a dedicated packet for now.
+
+Possible future targets include `MenuGridAutoPlacement` or a broader quick-action protocol. A vague `QuickInsertTarget` should be avoided because it hides destination ownership and policy. Quick behavior should not share ordinary drag-placement semantics until automatic target selection has a stable contract.
+
+`MoveGridEntryMessage` is same-root `MenuGridEntry -> MenuGridPlacement` repositioning. Existing source and target types can express it, including rotated and folded state. Before migration, verify that the generic transaction handles identical roots without duplicate extraction/writeback and preserves `moveEntry` validation and rollback. Toggle-fold remains a separate action and must not be folded into repositioning. The safest first implementation is an adapter plus a narrow delegation branch to `moveEntry`.
+
+### Quick Equip, Drop, and Fold
+
+- Quick equip performs server-side target selection across armor/accessory rules. It is an action, not an explicit placement. Keep `QuickEquip*Message`, or later design a separate `QuickMoveMessage`.
+- Drop turns a source into a world entity and has no inventory placement target. Keep `Drop*Message`.
+- Toggle fold changes item state and may validate a resulting footprint, but it is not movement. Keep `Toggle*BackpackFoldMessage`.
+
+These actions should not be forced into `MoveItemMessage`.
+
+### Container Sidecar and MenuSlot
+
+The repository contains `docs/container-sidecar-design.md`, which proposes sidecar-to-menu-slot and menu-slot-to-sidecar packets and client-side abstractions. No stable runtime Sidecar source/target classes or corresponding transfer packets were found in `common`.
+
+A future MenuSlot identity must not reuse `PlayerSlot`. `PlayerSlot` is a player inventory index; a menu slot is a container-menu index whose ownership, backing container, permissions, and `mayPlace`/`mayPickup` rules must be revalidated by the server against the active menu. Sidecar support may therefore need new `MenuSlot` source and target types and new codec ids, but those additions are not recommended until runtime ownership and synchronization are implemented. No client object or `ItemStack` should be serialized as slot identity.
+
+### Protocol Decisions
+
+- Add no source type now. Existing types cover all currently implemented amount paths.
+- Add no target type now. An auto-placement target is justified only if automatic inventory insertion becomes part of the unified protocol.
+- Enable `GridMoveOptions.count` before migrating amount packets. Define a clear sentinel/default, reject non-positive requests, clamp to authoritative source and destination capacity, and make partial extraction transactional.
+- Do not conflate PlayerSlot, MenuSlot, automatic placement, and quick actions.
+- Old packet ids, codecs, and handlers must remain as compatibility adapters when each path is eventually migrated.
+
+### Recommended Sequence
+
+Phase 33:
+
+- Only design and enable server-side `GridMoveOptions.count` semantics, or migrate one minimal amount path as the proof.
+- Do not also migrate auto-placement, quick actions, or drop.
+
+Phase 34:
+
+- Migrate GridEntry -> PlayerSlot amount paths after count semantics are explicit.
+
+Phase 35:
+
+- Migrate NestedGridEntry -> PlayerSlot amount paths after the `sourceContainerId` mapping is explicit.
+
+Phase 36:
+
+- Design `PlayerInventoryAutoPlacement`, or formally retain `ExtractToPlayerInventoryMessage`.
+
+Phase 37:
+
+- Decide whether quick insert belongs in a separate `QuickMoveMessage` or remains a dedicated packet.
