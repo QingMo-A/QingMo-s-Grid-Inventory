@@ -40,7 +40,6 @@ import com.dreamingfish.gridinventory.common.network.DropCurioMessage;
 import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
-import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoNestedGridMessage;
@@ -1041,8 +1040,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (menu.isPlayerGrid()) {
             Optional<CuriosSlotWidget> curioHit = equipmentColumnPanel.curioSlotAt(mouseX, mouseY);
             if (curioHit.isPresent()) {
-                GridInventoryServices.network().sendToServer(new PickupGroundItemIntoCurioMessage(
-                        view.entityId(), curioHit.get().view().identifier(), curioHit.get().view().index()));
+                sendMove(new GridItemSource.GroundItem(view.entityId()), new GridItemTarget.AccessorySlot(
+                        curioHit.get().view().identifier(), curioHit.get().view().index()), false);
                 rotatedPreview = false;
                 return;
             }

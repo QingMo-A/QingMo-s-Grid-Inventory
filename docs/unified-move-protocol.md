@@ -858,3 +858,27 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Migrate GroundItem -> Curio or begin CreativeItem paths.
+
+## Phase 25 Notes
+
+Phase 25 migrated the client-side GroundItem -> Curio path to `MoveItemMessage`, reusing the existing `GridItemSource.GroundItem(entityId)` without changing codec ids.
+
+The client constructs `GridItemTarget.AccessorySlot` from the hovered Curio view. The existing player-grid restriction, Curio hit test, `rotatedPreview` reset, and immediate return timing remain unchanged.
+
+`PickupGroundItemIntoCurioMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.GroundItem`, `GridItemTarget.AccessorySlot`, default `GridMoveOptions`, and `GridItemMoveService`.
+
+GroundItem -> AccessorySlot uses a minimal early branch in `GridItemTransferService` and delegates to `GridInventoryMenu.pickupGroundItemIntoCurio`. This preserves authoritative reachable-entity lookup, player-grid checks, accessories bridge insertion, actual moved-count calculation, and ground-entity updates.
+
+All GroundItem client paths now use `MoveItemMessage`:
+
+- GroundItem -> Grid
+- GroundItem -> Nested
+- GroundItem -> Equipment
+- GroundItem -> PlayerSlot
+- GroundItem -> Curio
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Begin CreativeItem -> Grid / Nested / Equipment / PlayerSlot / Curio migration.

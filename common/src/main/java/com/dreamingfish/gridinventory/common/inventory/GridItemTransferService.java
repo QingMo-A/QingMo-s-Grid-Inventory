@@ -140,6 +140,14 @@ public final class GridItemTransferService {
                     moved ? "committed-ground-item-player-slot" : "ground-item-player-slot-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.GroundItem ground
+                && target instanceof GridItemTarget.AccessorySlot accessory) {
+            boolean moved = menu.pickupGroundItemIntoCurio(ground.entityId(), accessory.identifier(),
+                    accessory.index());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-ground-item-accessory" : "ground-item-accessory-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);
