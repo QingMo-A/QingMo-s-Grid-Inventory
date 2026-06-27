@@ -1003,3 +1003,92 @@ All GroundItem paths and all previously migrated PlayerSlot, Curio, Grid, and Eq
 Recommended next phase:
 
 - Perform a regression audit of old packet adapters, the source/target matrix, special-branch delegation, count/folded/rotated semantics, and dedicated-server client-only risks before migrating MenuSlot paths.
+
+## Phase 31 Notes
+
+Phase 31 is a regression audit and protocol-matrix freeze. It adds no migration path and makes no code change. The audit found no issue that requires a fix.
+
+### Codec Matrix
+
+Source ids remain:
+
+| Id | Source |
+|---:|---|
+| 0 | `PlayerSlot` |
+| 1 | `MenuGridEntry` |
+| 2 | `EquipmentStorageEntry` |
+| 3 | `NestedGridEntry` |
+| 4 | `NestedEquipmentStorageEntry` |
+| 5 | `AccessorySlot` |
+| 6 | `GroundItem` |
+| 7 | `CreativeItem` |
+
+Target ids remain:
+
+| Id | Target |
+|---:|---|
+| 0 | `PlayerSlot` |
+| 1 | `MenuGridPlacement` |
+| 2 | `EquipmentStoragePlacement` |
+| 3 | `NestedGridPlacement` |
+| 4 | `NestedEquipmentStoragePlacement` |
+| 5 | `AccessorySlot` |
+
+Nested path segment ids and their read/write order remain unchanged.
+
+### MoveItemMessage Coverage
+
+| Source | Covered targets |
+|---|---|
+| Grid | Nested, Equipment, Curio |
+| Nested | Grid, Nested, Equipment |
+| Equipment | Grid, Nested, Equipment, Curio |
+| PlayerSlot | Grid, Nested, Equipment, PlayerSlot, Curio |
+| Curio | Grid, Nested, Equipment, PlayerSlot |
+| GroundItem | Grid, Nested, Equipment, PlayerSlot, Curio |
+| CreativeItem | Grid, Nested, Equipment, PlayerSlot, Curio |
+
+All five GroundItem paths and all five CreativeItem paths are migrated. MenuSlot and Container Sidecar paths remain outside this matrix.
+
+### Old Packet Adapters
+
+The audit confirmed adapters for all migrated GroundItem and CreativeItem packets:
+
+- `PickupGroundItemIntoGridMessage`, `PickupGroundItemIntoNestedGridMessage`, `PickupGroundItemIntoEquipmentStorageMessage`, `PickupGroundItemIntoPlayerSlotMessage`, and `PickupGroundItemIntoCurioMessage`.
+- `CreativeInsertIntoGridMessage`, `CreativeInsertIntoNestedGridMessage`, `CreativeInsertIntoEquipmentStorageMessage`, `CreativeInsertIntoPlayerSlotMessage`, and `CreativeInsertIntoCurioMessage`.
+
+The previously migrated PlayerSlot, Curio, Grid, Equipment, and Nested movement packets were also checked. Each migrated adapter uses `GridMoveMessageGuards.withGridMenu`, constructs the appropriate source, target, and options, calls `GridItemMoveService.move`, and on success calls both `menu.broadcastChanges()` and `ModNetworking.syncMenu(player, menu)`. Old packet registrations, ids, fields, and codecs remain intact.
+
+### Special Branch Delegation
+
+The pre-transaction branches in `GridItemTransferService` remain limited to old menu-method delegation:
+
+| Source | Target | Delegated menu method |
+|---|---|---|
+| GroundItem | Grid | `pickupGroundItemIntoGrid` |
+| GroundItem | Nested / nested equipment | `pickupGroundItemIntoNestedGrid` |
+| GroundItem | Equipment | `pickupGroundItemIntoEquipmentStorage` |
+| GroundItem | PlayerSlot | `pickupGroundItemIntoPlayerSlot` |
+| GroundItem | Curio | `pickupGroundItemIntoCurio` |
+| CreativeItem | Grid | `creativeInsertIntoGrid` |
+| CreativeItem | Nested / nested equipment | `creativeInsertIntoNestedGrid` |
+| CreativeItem | Equipment | `creativeInsertIntoEquipmentStorage` |
+| CreativeItem | PlayerSlot | `creativeInsertIntoPlayerSlot` |
+| CreativeItem | Curio | `creativeInsertIntoCurio` |
+| PlayerSlot | PlayerSlot | `movePlayerFreeSlot` |
+
+Every branch logs through `debug`, returns the delegated result, and appears before transaction construction. None duplicates entity, creative-tab, placement, nested-writeback, inventory-write, save, or accessory-write logic.
+
+### Option Semantics
+
+- `GridMoveOptions.count` remains reserved and does not yet control transfer quantity.
+- GroundItem quantity remains controlled by the delegated menu methods. Grid, Nested, and Equipment branches do not apply folded state; PlayerSlot and Curio use `false`.
+- CreativeItem carries count in `GridItemSource.CreativeItem`. Grid, Nested, and Equipment preserve folded state; PlayerSlot and Curio use `folded=false`.
+- Grid, Nested, and Equipment placements use `target.rotated()`. PlayerSlot and AccessorySlot do not use rotation.
+- PlayerSlot -> PlayerSlot passes target folded state to `movePlayerFreeSlot`.
+
+The common-side transfer, codec, message, guard, source, target, and menu classes contain no imports from client, GUI, screen, `net.minecraft.client`, or Blaze3D packages. No dedicated-server client-only loading risk was found in the audited unified protocol path.
+
+Recommended next phase:
+
+- Do not begin a broad MenuSlot migration until MenuSlot and Container Sidecar source/target representations, any required new codec ids, and old-semantics adapter behavior are designed explicitly.
