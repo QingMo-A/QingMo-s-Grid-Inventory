@@ -45,6 +45,18 @@ public final class GridItemTransferService {
                     moved ? "committed-accessory-player-slot" : "accessory-player-slot-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.MenuGridEntry entry
+                && target instanceof GridItemTarget.AccessorySlot accessory) {
+            if (!menu.isPlayerGrid()) {
+                debug(source, target, null, null, false, false, -1, false, false, "not-player-grid");
+                return false;
+            }
+            boolean moved = menu.insertGridEntryIntoCurio(entry.entryId(), accessory.identifier(),
+                    accessory.index());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-grid-entry-accessory" : "grid-entry-accessory-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);

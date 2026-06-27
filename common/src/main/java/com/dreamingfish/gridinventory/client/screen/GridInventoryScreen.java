@@ -52,7 +52,6 @@ import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoNestedGri
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMessage;
-import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
@@ -876,8 +875,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             }
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
-                GridInventoryServices.network().sendToServer(new InsertGridEntryIntoCurioMessage(
-                        draggingEntry.entryId(), curioTarget.get().view().identifier(), curioTarget.get().view().index()));
+                sendMove(gridDragSource(), new GridItemTarget.AccessorySlot(
+                                curioTarget.get().view().identifier(), curioTarget.get().view().index()),
+                        GridBackpackItem.isFolded(draggedStack()));
                 GridInventoryUiSounds.equip();
                 clearDragState();
                 return true;

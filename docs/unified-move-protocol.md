@@ -601,3 +601,41 @@ Grid -> Curio, Equipment -> Curio, and PlayerSlot -> Curio still use their old p
 Recommended next phase:
 
 - Begin the reverse Curio insertion paths: Grid -> Curio, Equipment -> Curio, or PlayerSlot -> Curio.
+
+## Phase 17 Notes
+
+Phase 17 migrated the client-side Grid -> Curio path to `MoveItemMessage`. When a main-grid entry is released over an accessory slot, the client now sends:
+
+- `GridItemSource.MenuGridEntry`
+- `GridItemTarget.AccessorySlot`
+
+The existing `gridDragSource` helper constructs the source, and the hovered accessory view supplies the identifier and index for the target. The original equip sound, drag cleanup, and immediate return timing remain unchanged.
+
+`InsertGridEntryIntoCurioMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.MenuGridEntry`, `GridItemTarget.AccessorySlot`, default `GridMoveOptions`, and `GridItemMoveService`.
+
+Because the general transaction flow resolves grid-placement targets, MenuGridEntry -> AccessorySlot uses a minimal early branch in `GridItemTransferService`. That branch requires a player-grid menu and delegates to `GridInventoryMenu.insertGridEntryIntoCurio`, preserving the legacy accessory bridge movement and menu-grid save behavior without extending `ResolvedGridRef`.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+- Equipment-storage entry -> main grid placement
+- Equipment-storage entry -> equipment-storage placement
+- Player slot -> main grid placement
+- Player slot -> nested/free-window placement
+- Player slot -> equipment-storage placement
+- Curio/accessory slot -> main grid placement
+- Curio/accessory slot -> nested/free-window placement
+- Curio/accessory slot -> equipment-storage placement
+- Curio/accessory slot -> player slot
+- Main grid entry -> Curio/accessory slot
+
+Equipment -> Curio and PlayerSlot -> Curio still use their old packets. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate Equipment -> Curio or PlayerSlot -> Curio to `MoveItemMessage`.
