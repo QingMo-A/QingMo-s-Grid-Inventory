@@ -40,7 +40,6 @@ import com.dreamingfish.gridinventory.common.network.DropCurioMessage;
 import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
-import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
@@ -1094,10 +1093,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
         if (equipmentRegion.isPresent()) {
             GridColumnPanel.Region region = equipmentRegion.get();
-            GridInventoryServices.network().sendToServer(new CreativeInsertIntoEquipmentStorageMessage(
-                    creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(), region.slot(), region.containerId(),
-                    targetRegionX(region, stack, mouseX), targetRegionY(region, stack, mouseY), rotatedPreview,
-                    GridBackpackItem.isFolded(stack)));
+            boolean targetFolded = GridBackpackItem.isFolded(stack);
+            sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
+                            stack.getCount()),
+                    equipmentPlacementTarget(region, stack, mouseX, mouseY, targetFolded), targetFolded);
         } else if (inGrid(mouseX, mouseY)) {
             boolean targetFolded = GridBackpackItem.isFolded(stack);
             sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),

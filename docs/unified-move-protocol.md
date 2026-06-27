@@ -935,3 +935,25 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Migrate CreativeItem -> Equipment or CreativeItem -> PlayerSlot to `MoveItemMessage`.
+
+## Phase 28 Notes
+
+Phase 28 migrated the client-side CreativeItem -> Equipment path to `MoveItemMessage`, reusing the existing `GridItemSource.CreativeItem(tabIndex, itemIndex, count)` without changing codec ids.
+
+The client constructs `GridItemTarget.EquipmentStoragePlacement` after hitting an equipment storage region. Placement coordinates are still calculated from the creative item's own stack through the existing stack-aware equipment target helper. Rotation and folded state are preserved in both the target and `GridMoveOptions`; the existing creative-player check, player-grid restriction, equipment-region hit test, and `rotatedPreview` reset timing remain unchanged.
+
+`CreativeInsertIntoEquipmentStorageMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.CreativeItem`, `GridItemTarget.EquipmentStoragePlacement`, `GridMoveOptions`, and `GridItemMoveService`.
+
+CreativeItem -> EquipmentStoragePlacement uses a minimal early branch in `GridItemTransferService` and delegates to `GridInventoryMenu.creativeInsertIntoEquipmentStorage`. This preserves authoritative creative stack reconstruction, creative and spectator checks, tab/item index and count semantics, folded state, equipment storage resolution, placement validation, writeback, saving, and synchronization.
+
+CreativeItem -> PlayerSlot and Curio still use their old packets. CreativeItem -> Grid and Nested, all GroundItem paths, and all previously migrated PlayerSlot, Curio, Grid, and Equipment paths remain unchanged.
+
+`MoveItemMessage` now additionally covers:
+
+- Creative item -> equipment storage placement
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate CreativeItem -> PlayerSlot or CreativeItem -> Curio to `MoveItemMessage`.
