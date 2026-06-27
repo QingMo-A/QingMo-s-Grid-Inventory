@@ -33,6 +33,13 @@ public final class GridItemTransferService {
         RootKey sourceRoot = sourceRef.get().root.key();
         RootKey targetRoot = targetRef.get().root.key();
         boolean sameRoot = sourceRoot.equals(targetRoot);
+        if (source instanceof GridItemSource.PlayerSlot
+                && target instanceof GridItemTarget.EquipmentStoragePlacement
+                && sameRoot) {
+            debug(source, target, sourceRoot, targetRoot, true, false,
+                    targetDepth(target, menu.transactionMenuGridDepth()), false, false, "same-equipment-slot");
+            return false;
+        }
         boolean ancestorMove = isSelfOrDescendantMove(source, target);
         if (ancestorMove) {
             debug(source, target, sourceRoot, targetRoot, sameRoot, true,
@@ -40,7 +47,7 @@ public final class GridItemTransferService {
             return false;
         }
         ItemStack moved = GridItemTransferRules.prepareForTarget(sourceRef.get().stackCopy(), target);
-        moved = playerSlotMenuGridMovedStack(source, target, moved);
+        moved = playerSlotPlacementMovedStack(source, target, moved);
         if (moved.isEmpty()) {
             debug(source, target, sourceRoot, targetRoot, sameRoot, false,
                     targetDepth(target, menu.transactionMenuGridDepth()), false, false, "empty-source");
@@ -98,10 +105,11 @@ public final class GridItemTransferService {
         return committed;
     }
 
-    private static ItemStack playerSlotMenuGridMovedStack(GridItemSource source, GridItemTarget target,
+    private static ItemStack playerSlotPlacementMovedStack(GridItemSource source, GridItemTarget target,
                                                           ItemStack prepared) {
         if (source instanceof GridItemSource.PlayerSlot
-                && target instanceof GridItemTarget.MenuGridPlacement
+                && (target instanceof GridItemTarget.MenuGridPlacement
+                || target instanceof GridItemTarget.EquipmentStoragePlacement)
                 && !GridStackMerger.itemsStackableInGrid()
                 && prepared.getCount() > 1) {
             return prepared.copyWithCount(1);

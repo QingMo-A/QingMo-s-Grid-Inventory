@@ -416,3 +416,36 @@ PlayerSlot -> Equipment, PlayerSlot -> Curio, and PlayerSlot -> PlayerSlot still
 Recommended next phase:
 
 - Migrate PlayerSlot -> Equipment to `MoveItemMessage`.
+
+## Phase 12 Notes
+
+Phase 12 migrated the client-side PlayerSlot -> Equipment path to `MoveItemMessage`. When a player inventory or hotbar item is released over an equipment-storage region, the client now sends:
+
+- `GridItemSource.PlayerSlot`
+- `GridItemTarget.EquipmentStoragePlacement`
+
+The existing `playerSlotSource` and `equipmentPlacementTarget` helpers construct the source and target. The target helper preserves the original `targetRegionX` / `targetRegionY` anchor calculations, equipment slot, container id, rotation, and folded state. The original `released = true`, `equipped = true`, release sound, drag cleanup, and return timing remain unchanged.
+
+`InsertIntoEquipmentStorageMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.PlayerSlot`, `GridItemTarget.EquipmentStoragePlacement`, `GridMoveOptions`, and `GridItemMoveService`.
+
+The unified transaction preserves the legacy PlayerSlot -> Equipment behavior: when grid item stacking is disabled, only one item is moved; the path does not merge into an existing entry; and moving an equipment slot into that same equipment slot's storage is rejected. Missing equipment storage is not initialized.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+- Equipment-storage entry -> main grid placement
+- Equipment-storage entry -> equipment-storage placement
+- Player slot -> main grid placement
+- Player slot -> nested/free-window placement
+- Player slot -> equipment-storage placement
+
+PlayerSlot -> Curio and PlayerSlot -> PlayerSlot still use their old packets. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Start Curio -> Grid / Nested / Equipment migration, or first consolidate PlayerSlot migration regression tests.

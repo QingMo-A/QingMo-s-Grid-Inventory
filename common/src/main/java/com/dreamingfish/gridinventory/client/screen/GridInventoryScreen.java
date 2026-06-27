@@ -26,7 +26,6 @@ import com.dreamingfish.gridinventory.common.network.ExtractNestedGridEntryToPla
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
-import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
@@ -940,10 +939,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             }
             Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
-                GridColumnPanel.Region region = equipmentRegion.get();
-                GridInventoryServices.network().sendToServer(new InsertIntoEquipmentStorageMessage(lastPlayerSlot, region.slot(), region.containerId(),
-                        targetRegionX(region, draggedStack(), (int) mouseX),
-                        targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                GridColumnPanel.Region target = equipmentRegion.get();
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(playerSlotSource(lastPlayerSlot),
+                        equipmentPlacementTarget(target, (int) mouseX, (int) mouseY, targetFolded), targetFolded);
                 released = true;
                 equipped = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
