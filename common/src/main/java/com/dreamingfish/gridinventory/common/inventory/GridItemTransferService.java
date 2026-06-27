@@ -148,6 +148,14 @@ public final class GridItemTransferService {
                     moved ? "committed-ground-item-accessory" : "ground-item-accessory-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.CreativeItem creative
+                && target instanceof GridItemTarget.MenuGridPlacement placement) {
+            boolean moved = menu.creativeInsertIntoGrid(creative.tabIndex(), creative.itemIndex(),
+                    creative.count(), placement.x(), placement.y(), placement.rotated(), placement.folded());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-creative-item-grid" : "creative-item-grid-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);

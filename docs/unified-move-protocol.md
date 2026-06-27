@@ -882,3 +882,29 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Begin CreativeItem -> Grid / Nested / Equipment / PlayerSlot / Curio migration.
+
+## Phase 26 Notes
+
+Phase 26 migrated the client-side CreativeItem -> Grid path to `MoveItemMessage`.
+
+- Added `GridItemSource.CreativeItem(tabIndex, itemIndex, count)`.
+- Appended source codec type id `7`; existing source, target, and nested-path ids are unchanged.
+- CreativeItem uses `GridItemTarget.MenuGridPlacement`.
+
+The client calculates placement coordinates from the creative item's own stack using the stack-aware grid target helper. Rotation and folded state are preserved in both the target and `GridMoveOptions`; the existing creative-player check, grid hit test, and `rotatedPreview` reset timing remain unchanged.
+
+`CreativeInsertIntoGridMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.CreativeItem`, `GridItemTarget.MenuGridPlacement`, `GridMoveOptions`, and `GridItemMoveService`.
+
+CreativeItem -> MenuGridPlacement uses a minimal early branch in `GridItemTransferService` and delegates to `GridInventoryMenu.creativeInsertIntoGrid`. The server therefore still verifies creative permissions, rejects spectators, rebuilds creative-tab contents, validates tab/item indices, reconstructs the authoritative stack with its data, applies count and folded semantics, validates placement, and saves.
+
+CreativeItem -> Nested, Equipment, PlayerSlot, and Curio still use their old packets. All GroundItem paths remain unchanged.
+
+`MoveItemMessage` now additionally covers:
+
+- Creative item -> main grid placement
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate CreativeItem -> Nested or CreativeItem -> Equipment to `MoveItemMessage`.

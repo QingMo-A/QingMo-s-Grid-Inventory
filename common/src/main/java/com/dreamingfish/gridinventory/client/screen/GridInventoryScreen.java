@@ -41,7 +41,6 @@ import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
-import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMessage;
@@ -1101,9 +1100,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     targetRegionX(region, stack, mouseX), targetRegionY(region, stack, mouseY), rotatedPreview,
                     GridBackpackItem.isFolded(stack)));
         } else if (inGrid(mouseX, mouseY)) {
-            GridInventoryServices.network().sendToServer(new CreativeInsertIntoGridMessage(
-                    creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(), targetGridX(stack, mouseX), targetGridY(stack, mouseY), rotatedPreview,
-                    GridBackpackItem.isFolded(stack)));
+            boolean targetFolded = GridBackpackItem.isFolded(stack);
+            sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
+                            stack.getCount()),
+                    menuGridPlacementTarget(stack, mouseX, mouseY, targetFolded), targetFolded);
         } else {
             Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
             if (curioTarget.isPresent()) {
