@@ -385,3 +385,34 @@ Phase 10 follow-up fixed PlayerSlot -> Grid behavior parity with the legacy `Ins
 Recommended next phase:
 
 - Migrate PlayerSlot -> Nested or PlayerSlot -> Equipment to `MoveItemMessage`.
+
+## Phase 11 Notes
+
+Phase 11 migrated the client-side PlayerSlot -> Nested path to `MoveItemMessage`. When a player inventory or hotbar item is released over a nested/free-window grid, the client now sends:
+
+- `GridItemSource.PlayerSlot`
+- `GridItemTarget.NestedGridPlacement` when the target container id is empty
+- `GridItemTarget.NestedEquipmentStoragePlacement` when the target container id is non-empty
+
+The existing `playerSlotSource` and `nestedPlacementTarget` helpers construct the source and target. The latter preserves the original anchor-cell offset, rotation, folded state, owner path, and equipment-storage container routing. The nested-target branch also preserves its immediate release sound, drag-state cleanup, and early return.
+
+`InsertPlayerSlotIntoNestedGridMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.PlayerSlot`, the appropriate nested target type, `GridMoveOptions`, and `GridItemMoveService`.
+
+`MoveItemMessage` now covers these client paths:
+
+- Main grid entry -> nested/free-window placement
+- Nested/free-window entry -> main grid placement
+- Nested/free-window entry -> nested/free-window placement
+- Nested/free-window entry -> equipment-storage placement
+- Equipment-storage entry -> nested/free-window placement
+- Main grid entry -> equipment-storage placement
+- Equipment-storage entry -> main grid placement
+- Equipment-storage entry -> equipment-storage placement
+- Player slot -> main grid placement
+- Player slot -> nested/free-window placement
+
+PlayerSlot -> Equipment, PlayerSlot -> Curio, and PlayerSlot -> PlayerSlot still use their old packets. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate PlayerSlot -> Equipment to `MoveItemMessage`.

@@ -27,7 +27,6 @@ import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMe
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
 import com.dreamingfish.gridinventory.common.network.InsertIntoEquipmentStorageMessage;
-import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
@@ -921,11 +920,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
             if (nestedTarget.isPresent()) {
                 NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                GridInventoryServices.network().sendToServer(new InsertPlayerSlotIntoNestedGridMessage(
-                        lastPlayerSlot, target.ownerPath(), target.containerId(),
-                        target.cellX() - anchorCellX(draggedStack()),
-                        target.cellY() - anchorCellY(draggedStack()), rotatedPreview,
-                        GridBackpackItem.isFolded(draggedStack())));
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(playerSlotSource(lastPlayerSlot), nestedPlacementTarget(target, targetFolded), targetFolded);
                 playReleaseSound(true, false, false);
                 clearDragState();
                 return true;
