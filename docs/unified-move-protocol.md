@@ -979,3 +979,27 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Migrate CreativeItem -> Curio to `MoveItemMessage`.
+
+## Phase 30 Notes
+
+Phase 30 migrated the client-side CreativeItem -> Curio path to `MoveItemMessage`, reusing the existing `GridItemSource.CreativeItem(tabIndex, itemIndex, count)` without changing codec ids.
+
+After hitting a Curio slot in the player-grid menu, the client constructs `GridItemTarget.AccessorySlot`. The existing player-grid restriction, Curio hit test, creative-player check, and `rotatedPreview` reset timing remain unchanged. This path uses `false` for folded state, preserving the old behavior.
+
+`CreativeInsertIntoCurioMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.CreativeItem`, `GridItemTarget.AccessorySlot`, `GridMoveOptions.all(false, false)`, and `GridItemMoveService`.
+
+CreativeItem -> AccessorySlot uses a minimal early branch in `GridItemTransferService` and delegates to `GridInventoryMenu.creativeInsertIntoCurio`. This preserves authoritative creative stack reconstruction, creative and spectator checks, tab/item index and count semantics, fixed `folded=false`, accessories bridge insertion, inventory updates, saving, and failure behavior.
+
+All CreativeItem client paths now use `MoveItemMessage`:
+
+- CreativeItem -> Grid
+- CreativeItem -> Nested
+- CreativeItem -> Equipment
+- CreativeItem -> PlayerSlot
+- CreativeItem -> Curio
+
+All GroundItem paths and all previously migrated PlayerSlot, Curio, Grid, and Equipment paths remain unchanged. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Perform a regression audit of old packet adapters, the source/target matrix, special-branch delegation, count/folded/rotated semantics, and dedicated-server client-only risks before migrating MenuSlot paths.
