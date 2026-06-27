@@ -185,6 +185,14 @@ public final class GridItemTransferService {
                             : "creative-item-equipment-storage-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.CreativeItem creative
+                && target instanceof GridItemTarget.PlayerSlot playerSlot) {
+            boolean moved = menu.creativeInsertIntoPlayerSlot(
+                    creative.tabIndex(), creative.itemIndex(), creative.count(), playerSlot.slot());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-creative-item-player-slot" : "creative-item-player-slot-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);
