@@ -33,11 +33,12 @@ public final class GridItemTransferService {
         RootKey sourceRoot = sourceRef.get().root.key();
         RootKey targetRoot = targetRef.get().root.key();
         boolean sameRoot = sourceRoot.equals(targetRoot);
-        if (source instanceof GridItemSource.PlayerSlot
-                && target instanceof GridItemTarget.EquipmentStoragePlacement
-                && sameRoot) {
-            debug(source, target, sourceRoot, targetRoot, true, false,
-                    targetDepth(target, menu.transactionMenuGridDepth()), false, false, "same-equipment-slot");
+        if (source instanceof GridItemSource.PlayerSlot playerSlot
+                && target instanceof GridItemTarget.EquipmentStoragePlacement placement
+                && menu.transactionIsEquipmentPlayerSlot(playerSlot.slot(), placement.slot())) {
+            debug(source, target, sourceRoot, targetRoot, sameRoot, false,
+                    targetDepth(target, menu.transactionMenuGridDepth()), false, false,
+                    "same-equipment-player-slot");
             return false;
         }
         boolean ancestorMove = isSelfOrDescendantMove(source, target);

@@ -446,6 +446,15 @@ The unified transaction preserves the legacy PlayerSlot -> Equipment behavior: w
 
 PlayerSlot -> Curio and PlayerSlot -> PlayerSlot still use their old packets. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
 
+Phase 12 follow-up fixed the PlayerSlot -> Equipment self-storage guard. The guard no longer relies on `sameRoot`, because player-slot and equipment-slot roots use different root kinds. `GridInventoryMenu.transactionIsEquipmentPlayerSlot` now reuses the existing equipment-slot mapping to reject:
+
+- Player slot 39 -> HEAD storage
+- Player slot 38 -> CHEST storage
+- Player slot 37 -> LEGS storage
+- Player slot 36 -> FEET storage
+
+The client continues to use `MoveItemMessage`, and `InsertIntoEquipmentStorageMessage` remains an adapter. Packet ids, codecs, and save formats are unchanged.
+
 Recommended next phase:
 
 - Start Curio -> Grid / Nested / Equipment migration, or first consolidate PlayerSlot migration regression tests.

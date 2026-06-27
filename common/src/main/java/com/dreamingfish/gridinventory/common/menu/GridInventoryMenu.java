@@ -137,6 +137,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
                 .orElse(false);
     }
 
+    public boolean transactionIsEquipmentPlayerSlot(int playerSlot, EquipmentSlot equipmentSlot) {
+        return equipmentPlayerSlotOrInvalid(equipmentSlot) == playerSlot;
+    }
+
     public ItemStack transactionPlayerSlotStack(int playerSlot) {
         if (playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
             return ItemStack.EMPTY;
