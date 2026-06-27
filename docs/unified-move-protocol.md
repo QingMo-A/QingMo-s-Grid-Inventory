@@ -836,3 +836,25 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Migrate GroundItem -> PlayerSlot or GroundItem -> Curio to `MoveItemMessage`.
+
+## Phase 24 Notes
+
+Phase 24 migrated the client-side GroundItem -> PlayerSlot path to `MoveItemMessage`, reusing the existing `GridItemSource.GroundItem(entityId)` without changing codec ids.
+
+The client constructs `GridItemTarget.PlayerSlot` only when the hovered player slot exists and is empty. The existing player-grid restriction, empty-slot check, `rotatedPreview` reset, and immediate return timing remain unchanged.
+
+`PickupGroundItemIntoPlayerSlotMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.GroundItem`, `GridItemTarget.PlayerSlot`, default `GridMoveOptions`, and `GridItemMoveService`.
+
+GroundItem -> PlayerSlot uses a minimal early branch in `GridItemTransferService` and delegates to `GridInventoryMenu.pickupGroundItemIntoPlayerSlot`. This preserves authoritative reachable-entity lookup, player-grid and free-slot checks, empty-target semantics, vanilla slot placement rules, moved-count limits, player inventory updates, and ground-entity updates. Existing-item merging and folded behavior are intentionally not added.
+
+GroundItem -> Curio still uses its old packet. GroundItem -> Grid, Nested, Equipment, and PlayerSlot now use `MoveItemMessage`.
+
+`MoveItemMessage` now additionally covers:
+
+- Ground item -> player slot
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate GroundItem -> Curio or begin CreativeItem paths.

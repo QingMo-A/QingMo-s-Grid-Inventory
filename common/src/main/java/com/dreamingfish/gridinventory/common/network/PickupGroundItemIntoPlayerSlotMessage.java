@@ -1,16 +1,23 @@
 package com.dreamingfish.gridinventory.common.network;
 
-import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
+import com.dreamingfish.gridinventory.common.inventory.GridItemMoveService;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
 
 public record PickupGroundItemIntoPlayerSlotMessage(int entityId, int playerSlot) implements GridMessage {
     public static void handle(PickupGroundItemIntoPlayerSlotMessage message, GridMessageContext context) {
-        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.pickupGroundItemIntoPlayerSlot(message.entityId(), message.playerSlot());
-            menu.broadcastChanges();
-        }
+        GridMoveMessageGuards.withGridMenu(context, "PickupGroundItemIntoPlayerSlotMessage", (player, menu) -> {
+            GridItemSource source = new GridItemSource.GroundItem(message.entityId());
+            GridItemTarget target = new GridItemTarget.PlayerSlot(message.playerSlot());
+            if (GridItemMoveService.move(menu, source, target, GridMoveOptions.all(false, false))) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(player, menu);
+            }
+        });
     }
 
     @Override
