@@ -787,3 +787,30 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Migrate GroundItem -> Nested or GroundItem -> Equipment to `MoveItemMessage`.
+
+## Phase 22 Notes
+
+Phase 22 migrated the client-side GroundItem -> Nested path to `MoveItemMessage`, reusing the existing `GridItemSource.GroundItem(entityId)` without changing source or target codec ids.
+
+The client now constructs:
+
+- `GridItemTarget.NestedGridPlacement` when the target container id is empty.
+- `GridItemTarget.NestedEquipmentStoragePlacement` when the target container id is non-empty.
+
+A stack-aware `nestedPlacementTarget` overload preserves anchor calculations based on the nearby ground item's `view.stack()`. The existing helper delegates with the normal dragged stack, so previously migrated paths remain unchanged. Nested-window hit testing, rotation state, `rotatedPreview` reset, and return timing are preserved.
+
+`PickupGroundItemIntoNestedGridMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.GroundItem`, the corresponding nested target, `GridMoveOptions`, and `GridItemMoveService`.
+
+GroundItem -> NestedGridPlacement and GroundItem -> NestedEquipmentStoragePlacement use minimal early branches in `GridItemTransferService`. Both delegate to `GridInventoryMenu.pickupGroundItemIntoNestedGrid`, preserving authoritative reachable-entity lookup, placement validation, stacking behavior, nested owner writeback, entity updates, and saving. Folded options remain intentionally unused to preserve legacy behavior.
+
+GroundItem -> Equipment, PlayerSlot, and Curio still use their old packets. GroundItem -> Grid remains on `MoveItemMessage`.
+
+`MoveItemMessage` now additionally covers:
+
+- Ground item -> nested/free-window placement
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate GroundItem -> Equipment or GroundItem -> PlayerSlot to `MoveItemMessage`.

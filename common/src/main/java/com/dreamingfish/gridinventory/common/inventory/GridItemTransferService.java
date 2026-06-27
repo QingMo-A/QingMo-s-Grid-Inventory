@@ -107,6 +107,23 @@ public final class GridItemTransferService {
                     moved ? "committed-ground-item-grid" : "ground-item-grid-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.GroundItem ground
+                && target instanceof GridItemTarget.NestedGridPlacement placement) {
+            boolean moved = menu.pickupGroundItemIntoNestedGrid(ground.entityId(), placement.ownerPath(), "",
+                    placement.x(), placement.y(), placement.rotated());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-ground-item-nested-grid" : "ground-item-nested-grid-failed");
+            return moved;
+        }
+        if (source instanceof GridItemSource.GroundItem ground
+                && target instanceof GridItemTarget.NestedEquipmentStoragePlacement placement) {
+            boolean moved = menu.pickupGroundItemIntoNestedGrid(ground.entityId(), placement.ownerPath(),
+                    placement.containerId(), placement.x(), placement.y(), placement.rotated());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-ground-item-nested-equipment-storage"
+                            : "ground-item-nested-equipment-storage-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);

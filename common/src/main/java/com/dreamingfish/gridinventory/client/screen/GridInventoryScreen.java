@@ -42,7 +42,6 @@ import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFold
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
-import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoGridMessage;
@@ -982,8 +981,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target, boolean targetFolded) {
-        int targetX = target.cellX() - anchorCellX(draggedStack());
-        int targetY = target.cellY() - anchorCellY(draggedStack());
+        return nestedPlacementTarget(target, draggedStack(), targetFolded);
+    }
+
+    private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target, ItemStack stack,
+                                                 boolean targetFolded) {
+        int targetX = target.cellX() - anchorCellX(stack);
+        int targetY = target.cellY() - anchorCellY(stack);
         return target.containerId().isEmpty()
                 ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY, rotatedPreview,
                 targetFolded)
@@ -1025,10 +1029,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt(mouseX, mouseY);
         if (nestedTarget.isPresent()) {
             NestedContainerWindowManager.GridHit target = nestedTarget.get();
-            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoNestedGridMessage(
-                    view.entityId(), target.ownerPath(), target.containerId(),
-                    target.cellX() - anchorCellX(view.stack()), target.cellY() - anchorCellY(view.stack()),
-                    rotatedPreview));
+            boolean targetFolded = GridBackpackItem.isFolded(view.stack());
+            sendMove(new GridItemSource.GroundItem(view.entityId()),
+                    nestedPlacementTarget(target, view.stack(), targetFolded), targetFolded);
             rotatedPreview = false;
             return;
         }
