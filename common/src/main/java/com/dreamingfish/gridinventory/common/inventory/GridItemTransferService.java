@@ -5,6 +5,7 @@ import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
+import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
@@ -26,7 +27,8 @@ public final class GridItemTransferService {
         if (source instanceof GridItemSource.AccessorySlot
                 && (target instanceof GridItemTarget.MenuGridPlacement
                 || target instanceof GridItemTarget.NestedGridPlacement
-                || target instanceof GridItemTarget.NestedEquipmentStoragePlacement)
+                || target instanceof GridItemTarget.NestedEquipmentStoragePlacement
+                || target instanceof GridItemTarget.EquipmentStoragePlacement)
                 && !menu.isPlayerGrid()) {
             debug(source, target, null, null, false, false, -1, false, false, "not-player-grid");
             return false;
@@ -41,6 +43,15 @@ public final class GridItemTransferService {
         RootKey sourceRoot = sourceRef.get().root.key();
         RootKey targetRoot = targetRef.get().root.key();
         boolean sameRoot = sourceRoot.equals(targetRoot);
+        if (source instanceof GridItemSource.AccessorySlot accessory
+                && target instanceof GridItemTarget.EquipmentStoragePlacement placement
+                && GridEquipmentSlots.isBack(placement.slot())
+                && "back".equals(accessory.identifier()) && accessory.index() == 0) {
+            debug(source, target, sourceRoot, targetRoot, sameRoot, false,
+                    targetDepth(target, menu.transactionMenuGridDepth()), false, false,
+                    "same-back-accessory-equipment");
+            return false;
+        }
         if (source instanceof GridItemSource.PlayerSlot playerSlot
                 && target instanceof GridItemTarget.EquipmentStoragePlacement placement
                 && menu.transactionIsEquipmentPlayerSlot(playerSlot.slot(), placement.slot())) {

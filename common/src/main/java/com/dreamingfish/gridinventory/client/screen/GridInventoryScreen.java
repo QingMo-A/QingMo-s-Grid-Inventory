@@ -55,7 +55,6 @@ import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMe
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMessage;
-import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
@@ -743,11 +742,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             }
             Optional<GridColumnPanel.Region> equipmentRegion = !released && menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
             if (equipmentRegion.isPresent()) {
-                GridColumnPanel.Region region = equipmentRegion.get();
-                GridInventoryServices.network().sendToServer(new ExtractCurioToEquipmentStorageMessage(
-                        draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), region.slot(), region.containerId(),
-                        targetRegionX(region, draggedStack(), (int) mouseX),
-                        targetRegionY(region, draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                GridColumnPanel.Region target = equipmentRegion.get();
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(curioDragSource(),
+                        equipmentPlacementTarget(target, (int) mouseX, (int) mouseY, targetFolded), targetFolded);
                 released = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
                 boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
