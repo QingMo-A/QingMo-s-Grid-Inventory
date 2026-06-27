@@ -814,3 +814,25 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Migrate GroundItem -> Equipment or GroundItem -> PlayerSlot to `MoveItemMessage`.
+
+## Phase 23 Notes
+
+Phase 23 migrated the client-side GroundItem -> Equipment path to `MoveItemMessage`, reusing the existing `GridItemSource.GroundItem(entityId)` without changing codec ids.
+
+The client constructs `GridItemTarget.EquipmentStoragePlacement`. A stack-aware `equipmentPlacementTarget` overload preserves `targetRegionX` / `targetRegionY` calculations based on the nearby ground item's `view.stack()`. The existing helper delegates with the normal dragged stack, so previously migrated paths remain unchanged. The player-grid equipment-region restriction and `rotatedPreview` reset timing are preserved.
+
+`PickupGroundItemIntoEquipmentStorageMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.GroundItem`, `GridItemTarget.EquipmentStoragePlacement`, `GridMoveOptions`, and `GridItemMoveService`.
+
+GroundItem -> EquipmentStoragePlacement uses a minimal early branch in `GridItemTransferService` and delegates to `GridInventoryMenu.pickupGroundItemIntoEquipmentStorage`. This preserves authoritative reachable-entity lookup, equipment-storage resolution, placement validation, stacking behavior, entity updates, storage writeback, and synchronization. Folded options remain intentionally unused to preserve legacy behavior.
+
+GroundItem -> PlayerSlot and Curio still use their old packets. GroundItem -> Grid and Nested remain on `MoveItemMessage`.
+
+`MoveItemMessage` now additionally covers:
+
+- Ground item -> equipment-storage placement
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate GroundItem -> PlayerSlot or GroundItem -> Curio to `MoveItemMessage`.

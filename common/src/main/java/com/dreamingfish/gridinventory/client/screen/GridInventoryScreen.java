@@ -41,7 +41,6 @@ import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMessage;
-import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoGridMessage;
@@ -997,8 +996,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
 
     private GridItemTarget equipmentPlacementTarget(GridColumnPanel.Region target, int mouseX, int mouseY,
                                                    boolean targetFolded) {
+        return equipmentPlacementTarget(target, draggedStack(), mouseX, mouseY, targetFolded);
+    }
+
+    private GridItemTarget equipmentPlacementTarget(GridColumnPanel.Region target, ItemStack stack,
+                                                    int mouseX, int mouseY, boolean targetFolded) {
         return new GridItemTarget.EquipmentStoragePlacement(target.slot(), target.containerId(),
-                targetRegionX(target, draggedStack(), mouseX), targetRegionY(target, draggedStack(), mouseY),
+                targetRegionX(target, stack, mouseX), targetRegionY(target, stack, mouseY),
                 rotatedPreview, targetFolded);
     }
 
@@ -1055,9 +1059,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
         if (equipmentRegion.isPresent()) {
             GridColumnPanel.Region region = equipmentRegion.get();
-            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoEquipmentStorageMessage(
-                    view.entityId(), region.slot(), region.containerId(),
-                    targetRegionX(region, view.stack(), mouseX), targetRegionY(region, view.stack(), mouseY), rotatedPreview));
+            boolean targetFolded = GridBackpackItem.isFolded(view.stack());
+            sendMove(new GridItemSource.GroundItem(view.entityId()),
+                    equipmentPlacementTarget(region, view.stack(), mouseX, mouseY, targetFolded), targetFolded);
         } else if (menu.isPlayerGrid()) {
             if (inGrid(mouseX, mouseY)) {
                 boolean targetFolded = GridBackpackItem.isFolded(view.stack());
