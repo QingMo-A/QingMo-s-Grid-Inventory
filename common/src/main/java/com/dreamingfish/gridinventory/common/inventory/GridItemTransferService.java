@@ -24,7 +24,9 @@ public final class GridItemTransferService {
 
     public static boolean transfer(GridInventoryMenu menu, GridItemSource source, GridItemTarget target) {
         if (source instanceof GridItemSource.AccessorySlot
-                && target instanceof GridItemTarget.MenuGridPlacement
+                && (target instanceof GridItemTarget.MenuGridPlacement
+                || target instanceof GridItemTarget.NestedGridPlacement
+                || target instanceof GridItemTarget.NestedEquipmentStoragePlacement)
                 && !menu.isPlayerGrid()) {
             debug(source, target, null, null, false, false, -1, false, false, "not-player-grid");
             return false;

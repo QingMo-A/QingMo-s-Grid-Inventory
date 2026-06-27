@@ -55,7 +55,6 @@ import com.dreamingfish.gridinventory.common.network.InsertPlayerSlotIntoCurioMe
 import com.dreamingfish.gridinventory.common.network.InsertGridEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.InsertEquipmentStorageEntryIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToPlayerSlotMessage;
-import com.dreamingfish.gridinventory.common.network.ExtractCurioToNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractCurioToEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
@@ -734,10 +733,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
             if (nestedTarget.isPresent()) {
                 NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                GridInventoryServices.network().sendToServer(new ExtractCurioToNestedGridMessage(
-                        draggingCurioSlot.view().identifier(), draggingCurioSlot.view().index(), target.ownerPath(),
-                        target.containerId(), target.cellX() - anchorCellX(draggedStack()),
-                        target.cellY() - anchorCellY(draggedStack()), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(curioDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
                 released = true;
             }
             if (!released && nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
