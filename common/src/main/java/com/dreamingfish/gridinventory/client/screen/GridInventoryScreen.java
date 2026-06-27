@@ -41,7 +41,6 @@ import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMessage;
-import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoPlayerSlotMessage;
@@ -1000,8 +999,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private GridItemTarget menuGridPlacementTarget(int mouseX, int mouseY, boolean targetFolded) {
-        return new GridItemTarget.MenuGridPlacement(targetGridX(draggedStack(), mouseX),
-                targetGridY(draggedStack(), mouseY), rotatedPreview, targetFolded);
+        return menuGridPlacementTarget(draggedStack(), mouseX, mouseY, targetFolded);
+    }
+
+    private GridItemTarget menuGridPlacementTarget(ItemStack stack, int mouseX, int mouseY,
+                                                   boolean targetFolded) {
+        return new GridItemTarget.MenuGridPlacement(targetGridX(stack, mouseX),
+                targetGridY(stack, mouseY), rotatedPreview, targetFolded);
     }
 
     private GridMoveOptions moveOptions(boolean targetFolded) {
@@ -1053,12 +1057,14 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                     targetRegionX(region, view.stack(), mouseX), targetRegionY(region, view.stack(), mouseY), rotatedPreview));
         } else if (menu.isPlayerGrid()) {
             if (inGrid(mouseX, mouseY)) {
-                GridInventoryServices.network().sendToServer(new PickupGroundItemIntoGridMessage(
-                        view.entityId(), targetGridX(view.stack(), mouseX), targetGridY(view.stack(), mouseY), rotatedPreview));
+                boolean targetFolded = GridBackpackItem.isFolded(view.stack());
+                sendMove(new GridItemSource.GroundItem(view.entityId()),
+                        menuGridPlacementTarget(view.stack(), mouseX, mouseY, targetFolded), targetFolded);
             }
         } else if (inGrid(mouseX, mouseY)) {
-            GridInventoryServices.network().sendToServer(new PickupGroundItemIntoGridMessage(
-                    view.entityId(), targetGridX(view.stack(), mouseX), targetGridY(view.stack(), mouseY), rotatedPreview));
+            boolean targetFolded = GridBackpackItem.isFolded(view.stack());
+            sendMove(new GridItemSource.GroundItem(view.entityId()),
+                    menuGridPlacementTarget(view.stack(), mouseX, mouseY, targetFolded), targetFolded);
         }
         rotatedPreview = false;
     }

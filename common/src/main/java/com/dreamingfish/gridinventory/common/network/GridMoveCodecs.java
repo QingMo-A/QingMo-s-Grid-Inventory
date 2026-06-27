@@ -52,6 +52,9 @@ public final class GridMoveCodecs {
             buf.writeVarInt(5);
             buf.writeUtf(value.identifier(), MAX_STRING_LENGTH);
             buf.writeVarInt(value.index());
+        } else if (source instanceof GridItemSource.GroundItem value) {
+            buf.writeVarInt(6);
+            buf.writeVarInt(value.entityId());
         } else {
             throw new DecoderException("Unsupported grid item source: " + source);
         }
@@ -68,6 +71,7 @@ public final class GridMoveCodecs {
             case 4 -> new GridItemSource.NestedEquipmentStorageEntry(readNestedPath(buf),
                     buf.readUtf(MAX_STRING_LENGTH), buf.readUUID());
             case 5 -> new GridItemSource.AccessorySlot(buf.readUtf(MAX_STRING_LENGTH), buf.readVarInt());
+            case 6 -> new GridItemSource.GroundItem(buf.readVarInt());
             default -> throw new DecoderException("Invalid grid item source type: " + type);
         };
     }

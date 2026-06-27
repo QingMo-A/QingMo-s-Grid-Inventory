@@ -10,7 +10,8 @@ public sealed interface GridItemSource permits
         GridItemSource.EquipmentStorageEntry,
         GridItemSource.NestedGridEntry,
         GridItemSource.NestedEquipmentStorageEntry,
-        GridItemSource.AccessorySlot {
+        GridItemSource.AccessorySlot,
+        GridItemSource.GroundItem {
 
     record PlayerSlot(int slot) implements GridItemSource {
     }
@@ -28,5 +29,8 @@ public sealed interface GridItemSource permits
     }
 
     record AccessorySlot(String identifier, int index) implements GridItemSource {
+    }
+
+    record GroundItem(int entityId) implements GridItemSource {
     }
 }

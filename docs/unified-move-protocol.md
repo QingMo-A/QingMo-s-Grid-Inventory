@@ -761,3 +761,29 @@ PlayerSlot -> PlayerSlot uses a minimal early branch in `GridItemTransferService
 Recommended next phase:
 
 - Begin GroundItem, CreativeItem, or MenuSlot migration, or first consolidate unified-move regression tests.
+
+## Phase 21 Notes
+
+Phase 21 migrated the client-side GroundItem -> Grid path to `MoveItemMessage`.
+
+- Added `GridItemSource.GroundItem(entityId)`.
+- Appended source codec type id `6`; existing source, target, and nested-path ids are unchanged.
+- GroundItem uses `GridItemTarget.MenuGridPlacement`.
+
+Both player-grid and non-player-grid main-grid release branches now send the unified message. Placement coordinates are still calculated from the nearby ground item's `view.stack()` rather than the general dragged stack. The original `inGrid` checks, menu branching, rotation state, and `rotatedPreview` reset timing remain unchanged.
+
+`PickupGroundItemIntoGridMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.GroundItem`, `GridItemTarget.MenuGridPlacement`, `GridMoveOptions`, and `GridItemMoveService`.
+
+GroundItem -> MenuGridPlacement uses a minimal early branch in `GridItemTransferService` and delegates to `GridInventoryMenu.pickupGroundItemIntoGrid`. The server therefore still resolves a reachable `ItemEntity` from the entity id, uses its authoritative stack, applies the legacy stacking rule, updates or discards the entity, saves, and synchronizes the menu. The unified target's folded option is intentionally ignored for this path to preserve legacy behavior.
+
+GroundItem -> Nested, Equipment, PlayerSlot, and Curio still use their old packets.
+
+`MoveItemMessage` now additionally covers:
+
+- Ground item -> main grid placement
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate GroundItem -> Nested or GroundItem -> Equipment to `MoveItemMessage`.
