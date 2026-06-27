@@ -156,6 +156,25 @@ public final class GridItemTransferService {
                     moved ? "committed-creative-item-grid" : "creative-item-grid-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.CreativeItem creative
+                && target instanceof GridItemTarget.NestedGridPlacement placement) {
+            boolean moved = menu.creativeInsertIntoNestedGrid(creative.tabIndex(), creative.itemIndex(),
+                    creative.count(), placement.ownerPath(), "", placement.x(), placement.y(),
+                    placement.rotated(), placement.folded());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-creative-item-nested-grid" : "creative-item-nested-grid-failed");
+            return moved;
+        }
+        if (source instanceof GridItemSource.CreativeItem creative
+                && target instanceof GridItemTarget.NestedEquipmentStoragePlacement placement) {
+            boolean moved = menu.creativeInsertIntoNestedGrid(creative.tabIndex(), creative.itemIndex(),
+                    creative.count(), placement.ownerPath(), placement.containerId(), placement.x(),
+                    placement.y(), placement.rotated(), placement.folded());
+            debug(source, target, null, null, false, false, -1, moved, moved,
+                    moved ? "committed-creative-item-nested-equipment-storage"
+                            : "creative-item-nested-equipment-storage-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);

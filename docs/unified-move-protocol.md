@@ -908,3 +908,30 @@ All previously documented unified paths remain covered. `GridMoveOptions.count` 
 Recommended next phase:
 
 - Migrate CreativeItem -> Nested or CreativeItem -> Equipment to `MoveItemMessage`.
+
+## Phase 27 Notes
+
+Phase 27 migrated the client-side CreativeItem -> Nested path to `MoveItemMessage`, reusing the existing `GridItemSource.CreativeItem(tabIndex, itemIndex, count)` without changing codec ids.
+
+The client constructs:
+
+- `GridItemTarget.NestedGridPlacement` when the target container id is empty.
+- `GridItemTarget.NestedEquipmentStoragePlacement` when the target container id is non-empty.
+
+Placement coordinates are calculated from the creative item's own stack through the existing stack-aware nested target helper. Rotation and folded state are preserved in both the target and options; creative checks, nested-window hit testing, `rotatedPreview` reset, and return timing remain unchanged.
+
+`CreativeInsertIntoNestedGridMessage` remains registered with unchanged fields, packet id, and codecs. Its handler is now an adapter through `GridMoveMessageGuards`, `GridItemSource.CreativeItem`, the corresponding nested target, `GridMoveOptions`, and `GridItemMoveService`.
+
+CreativeItem -> NestedGridPlacement and CreativeItem -> NestedEquipmentStoragePlacement use minimal early branches in `GridItemTransferService`. Both delegate to `GridInventoryMenu.creativeInsertIntoNestedGrid`, preserving server-side creative stack reconstruction, path and target-grid resolution, folded semantics, placement validation, nested owner writeback, and saving.
+
+CreativeItem -> Equipment, PlayerSlot, and Curio still use their old packets. CreativeItem -> Grid and all GroundItem paths remain unchanged.
+
+`MoveItemMessage` now additionally covers:
+
+- Creative item -> nested/free-window placement
+
+All previously documented unified paths remain covered. `GridMoveOptions.count` is still reserved for a later phase and does not yet control move quantity.
+
+Recommended next phase:
+
+- Migrate CreativeItem -> Equipment or CreativeItem -> PlayerSlot to `MoveItemMessage`.

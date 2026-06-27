@@ -41,7 +41,6 @@ import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
-import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
@@ -1084,10 +1083,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt(mouseX, mouseY);
         if (nestedTarget.isPresent()) {
             NestedContainerWindowManager.GridHit target = nestedTarget.get();
-            GridInventoryServices.network().sendToServer(new CreativeInsertIntoNestedGridMessage(
-                    creativeItem.tabIndex(), creativeItem.itemIndex(), stack.getCount(), target.ownerPath(), target.containerId(),
-                    target.cellX() - anchorCellX(stack), target.cellY() - anchorCellY(stack), rotatedPreview,
-                    GridBackpackItem.isFolded(stack)));
+            boolean targetFolded = GridBackpackItem.isFolded(stack);
+            sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
+                            stack.getCount()),
+                    nestedPlacementTarget(target, stack, targetFolded), targetFolded);
             rotatedPreview = false;
             return;
         }
