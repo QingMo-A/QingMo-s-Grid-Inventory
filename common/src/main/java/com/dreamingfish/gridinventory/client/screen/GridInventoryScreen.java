@@ -1040,7 +1040,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 return;
             }
             Slot hovered = findHoveredSlot(mouseX, mouseY);
-            if (hovered != null && !hovered.hasItem()) {
+            if (hovered != null) {
                 sendMove(new GridItemSource.GroundItem(view.entityId()),
                         new GridItemTarget.PlayerSlot(hovered.getSlotIndex()), false);
                 rotatedPreview = false;
