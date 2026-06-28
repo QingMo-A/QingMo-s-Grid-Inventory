@@ -21,7 +21,6 @@ import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
-import com.dreamingfish.gridinventory.common.network.ExtractGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.ExtractNestedGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
@@ -884,7 +883,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractGridEntryToPlayerSlotMessage(draggingEntry.entryId(), hovered.getSlotIndex(), draggingEntry.stack().getCount()));
+                    sendMove(gridDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
+                            new GridMoveOptions(draggingEntry.stack().getCount(), false, false));
                     released = true;
                 }
             }
@@ -1014,7 +1014,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void sendMove(GridItemSource source, GridItemTarget target, boolean targetFolded) {
-        GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target, moveOptions(targetFolded)));
+        sendMove(source, target, moveOptions(targetFolded));
+    }
+
+    private void sendMove(GridItemSource source, GridItemTarget target, GridMoveOptions options) {
+        GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target, options));
     }
 
     private void handleGroundItemRelease(int mouseX, int mouseY) {

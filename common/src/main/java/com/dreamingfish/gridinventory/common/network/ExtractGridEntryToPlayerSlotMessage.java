@@ -1,20 +1,27 @@
 package com.dreamingfish.gridinventory.common.network;
 
+import com.dreamingfish.gridinventory.common.inventory.GridItemMoveService;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
-
-import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 
 import java.util.UUID;
 
 public record ExtractGridEntryToPlayerSlotMessage(UUID entryId, int playerSlot, int amount) implements GridMessage {
 
     public static void handle(ExtractGridEntryToPlayerSlotMessage packet, GridMessageContext context) {
-        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.extractToPlayerSlot(packet.entryId(), packet.playerSlot(), packet.amount());
-            ModNetworking.syncMenu(context.player(), menu);
-        }
+        GridMoveMessageGuards.withGridMenu(context, "ExtractGridEntryToPlayerSlotMessage", (player, menu) -> {
+            GridItemSource source = new GridItemSource.MenuGridEntry(packet.entryId());
+            GridItemTarget target = new GridItemTarget.PlayerSlot(packet.playerSlot());
+            GridMoveOptions options = new GridMoveOptions(packet.amount(), false, false);
+            if (GridItemMoveService.move(menu, source, target, options)) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(player, menu);
+            }
+        });
     }
 
     @Override

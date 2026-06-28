@@ -1198,3 +1198,31 @@ Phase 36:
 Phase 37:
 
 - Decide whether quick insert belongs in a separate `QuickMoveMessage` or remains a dedicated packet.
+
+## Phase 33 Notes
+
+Phase 33 migrated `ExtractGridEntryToPlayerSlotMessage`, establishing the first minimal amount proof path in the unified movement protocol.
+
+The client now sends `MoveItemMessage` for GridEntry -> PlayerSlot using:
+
+- Source: `GridItemSource.MenuGridEntry(entryId)`.
+- Target: `GridItemTarget.PlayerSlot(playerSlot)`.
+- Options: `new GridMoveOptions(amount, false, false)`.
+
+The requested amount is the client-observed entry stack count at release time and is carried in `GridMoveOptions.count`; rotation and target folded state are both false. The server still resolves the authoritative entry by id and treats count only as a requested upper bound.
+
+`ExtractGridEntryToPlayerSlotMessage` remains registered with unchanged fields, packet id, and codec. Its handler is now an adapter through `GridMoveMessageGuards`, the same source and target types, count-preserving options, and `GridItemMoveService`. Successful legacy requests broadcast and synchronize the menu.
+
+`GridItemTransferService` now has a pre-transaction `MenuGridEntry -> PlayerSlot` branch. It normalizes count through `safeOptions.safeCount()` and delegates to `GridInventoryMenu.extractToPlayerSlot`, preserving entry and slot validation, vanilla-slot restrictions, empty-slot insertion, compatible-stack merging, capacity clamping, partial extraction, inventory updates, and saving. Generic transaction count handling remains unchanged.
+
+No source, target, or codec type was added or modified. NestedGridEntry -> PlayerSlot, EquipmentStorageEntry -> PlayerSlot, player-inventory auto-placement, quick actions, drop, fold toggles, MenuSlot, and Container Sidecar remain on their previous paths.
+
+`GridMoveOptions.count` is currently consumed only by:
+
+- `MenuGridEntry -> PlayerSlot` amount transfer.
+
+It still does not control ordinary Grid, Nested, or Equipment placements, GroundItem, CreativeItem, quick actions, auto-placement, or drop.
+
+Recommended next phase:
+
+- Migrate either EquipmentStorageEntry -> PlayerSlot or NestedGridEntry -> PlayerSlot as a separate amount path. Prefer the simpler EquipmentStorageEntry path and do not migrate both in one phase.
