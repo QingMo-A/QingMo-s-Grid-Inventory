@@ -1563,3 +1563,210 @@ Recommended next phase:
 - Do not represent `ExtractToPlayerInventoryMessage` as a `PlayerSlot` target.
 - If protocol design continues, Phase 40 should document `PlayerInventoryAutoPlacement` before any code change.
 - Alternatively, freeze this stable baseline and move into in-game regression testing and focused bug fixing.
+
+## Phase 40 Notes
+
+### Stable Baseline Declaration
+
+The current unified movement protocol is now frozen as the stable baseline. Stable does not mean bug-free. It means ordinary explicit-target movement, explicit PlayerSlot amount movement, and GroundItem/CreativeItem compatibility movement have completed protocol consolidation.
+
+Further work should move from broad packet migration to in-game regression testing and focused bug fixing. Protocol boundaries, codec ids, and compatibility adapters should remain unchanged unless a separately designed phase explicitly revises them.
+
+### Included in Stable Baseline
+
+The baseline includes:
+
+- `MoveItemMessage` as the unified ordinary movement entry point.
+- `GridMoveMessageGuards` for server-side menu validation.
+- `GridMoveOptions.count`, `rotated`, and `targetFolded`.
+- Source codec ids `0-7`, target codec ids `0-5`, and the existing nested path segment ids.
+- Old packet compatibility: registrations, record fields, packet ids, and codecs remain; migrated handlers act as adapters.
+
+Ordinary explicit-target movement:
+
+| Source | Targets |
+|---|---|
+| `MenuGridEntry` | Main grid, nested grid, nested equipment container, equipment storage, Curio |
+| `EquipmentStorageEntry` | Main grid, nested grid, nested equipment container, equipment storage, Curio |
+| `NestedGridEntry` | Main grid, nested grid, nested equipment container, equipment storage |
+| `NestedEquipmentStorageEntry` | Main grid, nested grid, nested equipment container, equipment storage |
+| `PlayerSlot` | Main grid, nested grid, nested equipment container, equipment storage, PlayerSlot, Curio |
+| `AccessorySlot` | Main grid, nested grid, nested equipment container, equipment storage, PlayerSlot |
+
+Explicit PlayerSlot amount movement:
+
+- `MenuGridEntry -> PlayerSlot`.
+- `EquipmentStorageEntry -> PlayerSlot`.
+- `NestedGridEntry -> PlayerSlot`.
+- `NestedEquipmentStorageEntry -> PlayerSlot`.
+
+GroundItem compatibility movement:
+
+- GroundItem to main grid, nested grid, equipment storage, PlayerSlot, and Curio.
+
+CreativeItem compatibility movement:
+
+- CreativeItem to main grid, nested grid, equipment storage, PlayerSlot, and Curio.
+
+### Excluded from Stable Baseline
+
+The following are intentionally outside unified ordinary movement:
+
+- `ExtractToPlayerInventoryMessage` auto-placement.
+- `InsertFromPlayerInventoryMessage` with `quick=true`.
+- `QuickEquip*Message`.
+- `Drop*Message`.
+- `Toggle*BackpackFoldMessage`.
+- `ManualPickupItemMessage`.
+- MenuSlot and Container Sidecar.
+- Open, sync, UI lifecycle, config, and rule-sync packets.
+- Future `PlayerInventoryAutoPlacement` and `GridAutoPlacement` targets.
+- Future `QuickMoveMessage` and `ActionMessage`.
+
+These are not missed migrations. They lack an explicit placement target, perform server-selected quick behavior, create world entities, change state, or manage lifecycle rather than ordinary movement.
+
+### In-Game Regression Test Matrix
+
+#### A. Ordinary Movement
+
+1. Main grid -> main grid reposition.
+2. Main grid -> nested grid.
+3. Main grid -> nested equipment container.
+4. Main grid -> equipment storage.
+5. Main grid -> Curio.
+6. Equipment storage -> main grid.
+7. Equipment storage -> nested grid.
+8. Equipment storage -> nested equipment container.
+9. Equipment storage -> equipment storage.
+10. Equipment storage -> Curio.
+11. Nested grid -> main grid.
+12. Nested grid -> nested grid.
+13. Nested grid -> nested equipment container.
+14. Nested grid -> equipment storage.
+15. Nested equipment container -> main grid.
+16. Nested equipment container -> nested grid.
+17. Nested equipment container -> nested equipment container.
+18. Nested equipment container -> equipment storage.
+19. PlayerSlot -> main grid.
+20. PlayerSlot -> nested grid.
+21. PlayerSlot -> nested equipment container.
+22. PlayerSlot -> equipment storage.
+23. PlayerSlot -> PlayerSlot.
+24. PlayerSlot -> Curio.
+25. Curio -> main grid.
+26. Curio -> nested grid.
+27. Curio -> nested equipment container.
+28. Curio -> equipment storage.
+29. Curio -> PlayerSlot.
+
+#### B. Amount Movement
+
+1. Main grid entry -> empty PlayerSlot.
+2. Main grid entry -> compatible partial PlayerSlot stack.
+3. Main grid entry -> different item PlayerSlot; must fail.
+4. Equipment storage entry -> empty PlayerSlot.
+5. Equipment storage entry -> compatible partial PlayerSlot stack.
+6. Equipment storage entry -> different item PlayerSlot; must fail.
+7. Nested grid entry -> empty PlayerSlot.
+8. Nested grid entry -> compatible partial PlayerSlot stack.
+9. Nested equipment entry -> empty PlayerSlot.
+10. Nested equipment entry -> compatible partial PlayerSlot stack.
+11. Non-positive amount compatibility request.
+12. Large-stack destination-capacity clamp.
+13. Failure does not delete the source.
+14. Failure does not duplicate the source.
+
+#### C. GroundItem
+
+1. GroundItem -> main grid.
+2. GroundItem -> nested grid.
+3. GroundItem -> equipment storage.
+4. GroundItem -> PlayerSlot.
+5. GroundItem -> Curio.
+6. Invalid entity id fails.
+7. Full target fails.
+8. Failure does not duplicate.
+
+#### D. CreativeItem
+
+1. CreativeItem -> main grid.
+2. CreativeItem -> nested grid.
+3. CreativeItem -> equipment storage.
+4. CreativeItem -> PlayerSlot.
+5. CreativeItem -> Curio.
+6. Invalid tab or item index fails.
+7. Count compatibility remains authoritative on the server.
+
+#### E. Backpack, Fold, and Rotation
+
+1. Move an unfolded backpack.
+2. Move a folded backpack.
+3. Place using the smaller folded footprint.
+4. Unfolded footprint collision fails.
+5. Rotated placement succeeds where valid.
+6. Rotated collision fails.
+7. Nested backpack cycle prevention.
+8. Self or descendant move fails.
+
+#### F. Failure and Rollback
+
+1. Occupied target fails.
+2. Invalid entry id fails.
+3. Invalid owner path fails.
+4. Invalid container id fails.
+5. Invalid player slot fails.
+6. Missing Curio support or invalid accessory fails.
+7. Invalid equipment slot fails.
+8. Failure does not remove the source.
+9. Failure does not create a duplicate.
+10. Failure does not corrupt a nested owner.
+11. Failure does not corrupt equipment storage.
+12. Failure does not leave the client desynchronized after sync.
+
+#### G. Dedicated Packet Smoke Tests
+
+1. `ExtractToPlayerInventoryMessage`.
+2. `InsertFromPlayerInventoryMessage` with `quick=true`.
+3. `QuickEquip*Message`.
+4. `Drop*Message`.
+5. `Toggle*BackpackFoldMessage`.
+6. `ManualPickupItemMessage`.
+7. Open and synchronization lifecycle packets.
+
+For each movement test, verify source identity, destination contents, item count and data, folded/rotated state, menu synchronization, reopening persistence, and failure rollback. Run representative cases on both supported game targets and a dedicated server.
+
+### Bugfix Rules
+
+1. For ordinary explicit-target bugs, fix `GridItemTransferService` generic transaction logic or its focused helper.
+2. For PlayerSlot amount bugs, fix the four pre-transaction amount branches or their delegated extraction menu methods.
+3. For GroundItem or CreativeItem bugs, fix the corresponding special branch or delegated authoritative menu method.
+4. Do not migrate a dedicated action into `MoveItemMessage` while fixing its bug.
+5. For auto-placement bugs, fix the dedicated packet; do not disguise auto-placement as `PlayerSlot`.
+6. Stop and report codec or id problems before changing any id.
+7. Handle save-format problems in a separate phase.
+8. For dedicated-server client-only crashes, inspect common network and inventory imports first.
+9. Keep fixes narrow, preserve old packet adapters, and add focused regression coverage for the failed source-target pair.
+
+### Failure Triage and Rollback Priority
+
+1. Stop testing immediately for duplication, deletion, save corruption, or server crashes.
+2. Capture source/target/options, root identities, nested paths, item data, and server logs.
+3. Reproduce with the old compatibility packet and `MoveItemMessage` path where both are available.
+4. Determine whether the failure belongs to an adapter, special branch, amount delegate, or generic transaction.
+5. Prefer reverting the smallest offending phase or path over changing codec ids or save formats.
+6. Re-run the affected matrix row plus neighboring source-target paths after a fix.
+
+### Future Protocol Work
+
+1. Write a `PlayerInventoryAutoPlacement` design document.
+2. Write a `GridAutoPlacement` and quick-insert design document.
+3. Design `QuickMoveMessage`.
+4. Design an `ActionMessage` model for drop, fold, and manual pickup only if unification has clear value.
+5. Design MenuSlot and Container Sidecar source/target identities and ownership validation.
+6. Add any new source or target only in a dedicated codec-id design phase.
+
+No future auto-placement or action work should begin as an incidental code change.
+
+### Build and Test Note
+
+Phase 40 changes documentation only, so it does not require Java compilation. Documentation review is not equivalent to in-game validation. This stable baseline is considered behaviorally proven only after the regression matrix is exercised in game, including dedicated-server and both supported target versions.
