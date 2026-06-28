@@ -1478,3 +1478,88 @@ Recommended next phase:
 - Do not immediately migrate `ExtractToPlayerInventoryMessage`. First design `PlayerInventoryAutoPlacement` or formally retain the dedicated packet.
 - Keep quick, drop, and fold actions dedicated.
 - Before further ordinary movement migration, audit the remaining old movement packets and identify whether any non-action path is not yet adapterized.
+
+## Phase 39 Notes
+
+Phase 39 audits the remaining old movement packets and makes protocol closure decisions. It migrates no packet and changes only this document. No issue requiring a code fix was found.
+
+### Adapterized Movement Packets
+
+All packets below retain their old fields, ids, and codecs. Their migrated paths construct a source, explicit target, and options and call `GridItemMoveService`; they no longer directly implement ordinary movement:
+
+| Category | Adapterized packets |
+|---|---|
+| Unified entry point | `MoveItemMessage` |
+| Same-root / direct moves | `MoveGridEntryMessage`, `MoveEquipmentStorageEntryMessage`, `MovePlayerFreeSlotMessage` |
+| Grid / Equipment / Nested transfers | `TransferGridEntryIntoEquipmentStorageMessage`, `TransferGridEntryIntoNestedGridMessage`, `TransferEquipmentStorageEntryIntoGridMessage`, `TransferEquipmentStorageEntryIntoNestedGridMessage`, `TransferEquipmentStorageEntryMessage`, `TransferNestedGridEntryIntoGridMessage`, `TransferNestedGridEntryIntoEquipmentStorageMessage`, `TransferNestedGridEntryIntoNestedGridMessage` |
+| PlayerSlot placement | `InsertFromPlayerInventoryMessage` when `quick=false`, `InsertIntoEquipmentStorageMessage`, `InsertPlayerSlotIntoNestedGridMessage`, `InsertPlayerSlotIntoCurioMessage` |
+| Curio movement | `ExtractCurioToGridMessage`, `ExtractCurioToNestedGridMessage`, `ExtractCurioToEquipmentStorageMessage`, `ExtractCurioToPlayerSlotMessage`, `InsertGridEntryIntoCurioMessage`, `InsertEquipmentStorageEntryIntoCurioMessage` |
+| Explicit amount movement | `ExtractGridEntryToPlayerSlotMessage`, `ExtractEquipmentStorageEntryMessage`, `ExtractNestedGridEntryToPlayerSlotMessage` |
+| GroundItem compatibility | `PickupGroundItemIntoGridMessage`, `PickupGroundItemIntoNestedGridMessage`, `PickupGroundItemIntoEquipmentStorageMessage`, `PickupGroundItemIntoPlayerSlotMessage`, `PickupGroundItemIntoCurioMessage` |
+| CreativeItem compatibility | `CreativeInsertIntoGridMessage`, `CreativeInsertIntoNestedGridMessage`, `CreativeInsertIntoEquipmentStorageMessage`, `CreativeInsertIntoPlayerSlotMessage`, `CreativeInsertIntoCurioMessage` |
+
+GroundItem and CreativeItem packets use existing source identities and narrow server-side delegation branches. The three amount packets preserve amount in `GridMoveOptions.count`. `InsertFromPlayerInventoryMessage` remains intentionally mixed: only its explicit `quick=false` placement path is adapterized.
+
+No further work is needed for these compatibility packets unless a behavioral bug is found.
+
+### Dedicated Action Packets
+
+| Packet family | Classification | Decision |
+|---|---|---|
+| `QuickEquipGridEntryMessage`, `QuickEquipEquipmentStorageEntryMessage`, `QuickEquipNestedGridEntryMessage`, `QuickEquipPlayerSlotMessage` | Quick action; server selects armor/accessory destination | Keep dedicated; a future shared abstraction should be `QuickMoveMessage`, not ordinary `MoveItemMessage` |
+| `DropGridEntryMessage`, `DropEquipmentStorageEntryMessage`, `DropNestedGridEntryMessage`, `DropCurioMessage`, `DropPlayerSlotMessage` | Drop action producing a world item | Keep dedicated; a world drop is not an inventory placement target |
+| `ToggleGridEntryBackpackFoldMessage`, `ToggleEquipmentStorageEntryBackpackFoldMessage` | Item-state transition with footprint validation | Keep dedicated; folding is not movement |
+| `ManualPickupItemMessage` | Manual world interaction using an entity id and pickup handler | Keep dedicated; it does not express an explicit inventory target |
+
+There is no registered `ToggleNestedGridEntryBackpackFoldMessage`.
+
+If action handlers are unified later, quick equip is a candidate for `QuickMoveMessage`, while drop, fold, and manual pickup would require an explicit action protocol. They should not be encoded as placement targets.
+
+### Auto-Placement Packets
+
+| Packet / path | Current semantics | Explicit target | Decision |
+|---|---|---:|---|
+| `ExtractToPlayerInventoryMessage(entryId, amount)` | Extracts from the main grid and asks the server to merge/add into player inventory | No | Keep dedicated until `PlayerInventoryAutoPlacement` is designed |
+| `InsertFromPlayerInventoryMessage` with `quick=true` | Asks the server to select a grid position and insert according to grid merge rules | No | Keep the quick branch dedicated; a future design may use `GridAutoPlacement` or `QuickMoveMessage` |
+
+`ExtractToPlayerInventoryMessage` must not be disguised as `PlayerSlot`: doing so would lose automatic merge/add semantics. If auto-placement joins the unified protocol, quantity should remain in options and a new explicit target type and codec id would be required.
+
+### MenuSlot and Container Sidecar
+
+No runtime MenuSlot or Container Sidecar message, source, or target is registered in `common/network`. The repository currently has only `docs/container-sidecar-design.md`, which proposes future sidecar/menu-slot transfers.
+
+A future menu-slot identity must remain distinct from `PlayerSlot` and requires server validation against the active menu, backing container ownership, `mayPickup`, `mayPlace`, and vanilla carried-stack behavior. Runtime Sidecar work is therefore a candidate for new `MenuSlot` source and target types and new codec ids, but only after a separate protocol design phase. No new type is justified by the current implementation.
+
+### Non-Movement and Lifecycle Packets
+
+| Packet family | Classification |
+|---|---|
+| `OpenPlayerGridInventoryMessage` | UI/menu lifecycle; not movement |
+| `SyncGridInventoryMessage`, `SyncEquipmentStorageMessage` | State synchronization; not movement |
+| `SyncBackpackFoldingRulesMessage`, `SyncItemSizeRulesMessage` | Rule/config synchronization; not movement |
+
+`GridMessages`, `GridMoveCodecs`, `GridMoveMessageGuards`, and `ModNetworking` are protocol infrastructure rather than movement messages.
+
+### Closure Decisions
+
+No remaining packet represents an unadapterized ordinary source-to-explicit-target movement path. The remaining candidates are deliberately outside ordinary movement:
+
+- Auto-placement: design `PlayerInventoryAutoPlacement` or retain its dedicated packet.
+- Quick equip/insert: retain dedicated packets or design `QuickMoveMessage`.
+- Drop, fold, and manual pickup: retain dedicated action packets or design a separate action protocol.
+- MenuSlot/Sidecar: requires new identities, ownership validation, and a dedicated compatibility design.
+
+The current unified movement protocol is suitable as a stable baseline:
+
+- Ordinary explicit-target movement is covered.
+- Explicit PlayerSlot amount movement is covered.
+- GroundItem and CreativeItem compatibility paths are covered.
+- Auto-target and non-movement actions remain intentionally dedicated.
+- Old packet compatibility, codec ids, and save formats remain stable.
+
+Recommended next phase:
+
+- Do not immediately migrate quick, drop, or fold actions.
+- Do not represent `ExtractToPlayerInventoryMessage` as a `PlayerSlot` target.
+- If protocol design continues, Phase 40 should document `PlayerInventoryAutoPlacement` before any code change.
+- Alternatively, freeze this stable baseline and move into in-game regression testing and focused bug fixing.
