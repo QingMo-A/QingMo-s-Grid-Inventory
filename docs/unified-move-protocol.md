@@ -1292,3 +1292,78 @@ It still does not control ordinary Grid, Nested, or Equipment placements, Ground
 Recommended next phase:
 
 - Perform an amount-path regression audit. Do not immediately migrate `ExtractToPlayerInventoryMessage` until automatic placement has a stable target design, and keep quick, drop, and fold actions dedicated.
+
+## Phase 36 Notes
+
+Phase 36 is an amount-path regression audit. It migrates no new path and changes only this document. The audit found no issue that requires a code fix.
+
+### Count-Enabled Matrix
+
+`GridMoveOptions.count` is consumed only by these explicit PlayerSlot amount paths:
+
+| Source | Target | Delegated menu method |
+|---|---|---|
+| `MenuGridEntry` | `PlayerSlot` | `extractToPlayerSlot` |
+| `EquipmentStorageEntry` | `PlayerSlot` | `extractEquipmentEntryToPlayerSlot` |
+| `NestedGridEntry` | `PlayerSlot` | `extractNestedGridEntryToPlayerSlot` with an empty container id |
+| `NestedEquipmentStorageEntry` | `PlayerSlot` | `extractNestedGridEntryToPlayerSlot` with the source container id |
+
+All four paths use a server-authoritative entry identity and an explicit player slot. Count is only a requested upper bound. `safeOptions.safeCount()` maps non-positive values to `Integer.MAX_VALUE`, and the delegated menu method limits the move by the authoritative source count, destination capacity, and slot rules.
+
+### Client Path Audit
+
+The three client release paths all send `MoveItemMessage` with `new GridMoveOptions(entryCount, false, false)`:
+
+- Main grid entries use `MenuGridEntry -> PlayerSlot`.
+- Equipment storage entries use `EquipmentStorageEntry -> PlayerSlot`; existing `released` and `unequipped` timing is preserved.
+- Nested entries reuse `nestedDragSource()`, which maps empty and non-empty container ids to `NestedGridEntry` and `NestedEquipmentStorageEntry`.
+
+All retain the `hovered != null` check without adding an empty-slot restriction. The client no longer sends the three old amount packets on these drag paths.
+
+`ExtractToPlayerInventoryMessage`, `InsertFromPlayerInventoryMessage` quick mode, `MoveGridEntryMessage`, QuickEquip, Drop, and ToggleFold remain on their dedicated paths.
+
+### Compatibility Adapter Audit
+
+`ExtractGridEntryToPlayerSlotMessage`, `ExtractEquipmentStorageEntryMessage`, and `ExtractNestedGridEntryToPlayerSlotMessage` remain registered with unchanged record fields, packet ids, and codecs. Each handler:
+
+- Uses `GridMoveMessageGuards.withGridMenu`.
+- Constructs the corresponding authoritative source identity and `GridItemTarget.PlayerSlot`.
+- Preserves amount in `new GridMoveOptions(amount, false, false)`.
+- Calls `GridItemMoveService.move`.
+- Calls both `menu.broadcastChanges()` and `ModNetworking.syncMenu(player, menu)` after success.
+
+None directly calls an extraction menu method or writes inventory/storage state.
+
+### Transfer Branch Audit
+
+All four amount branches are before `Transaction transaction = new Transaction(menu)`. Each obtains `requestedCount` through `safeOptions.safeCount()`, passes it to the matching old menu method, logs that count through `debug`, and returns the delegated result.
+
+The branches do not implement extraction, merging, inventory writes, equipment saving, nested writeback, or rollback themselves. The generic transaction flow does not read or apply `GridMoveOptions.count`.
+
+### Count Boundary
+
+Count does not control:
+
+- Ordinary Grid, Nested, or Equipment placement.
+- Grid, Nested, or Equipment to Curio.
+- Curio to PlayerSlot.
+- PlayerSlot to Grid, Nested, Equipment, Curio, or PlayerSlot.
+- GroundItem or CreativeItem paths.
+- Player-inventory auto-placement.
+- Quick insertion, QuickEquip, Drop, or ToggleFold.
+- Same-grid reposition.
+- MenuSlot or Container Sidecar.
+
+Old packet adapters and new `MoveItemMessage` paths share the same four server-side delegating branches, so validation, capacity clamping, saving, and failure behavior remain centralized. No client `ItemStack` is trusted or serialized.
+
+### Compatibility and Server Audit
+
+Source ids remain `0-7`, target ids remain `0-5`, and nested path segment ids remain unchanged. `MoveItemMessage`, the three old amount packet codecs and record fields, packet ids, and save codecs are unchanged.
+
+The audited common-side transfer, move service, amount messages, options, source, target, and codec classes contain no imports from client, GUI, screen, `net.minecraft.client`, or Blaze3D packages. No dedicated-server client-only loading risk was found.
+
+Recommended next phase:
+
+- Do not immediately migrate `ExtractToPlayerInventoryMessage`. First design a stable `PlayerInventoryAutoPlacement` target or formally retain the dedicated packet.
+- Keep quick, drop, and fold actions dedicated.
+- If ordinary movement migration continues, consider `MoveGridEntryMessage` same-grid reposition only after verifying same-root transaction behavior.
