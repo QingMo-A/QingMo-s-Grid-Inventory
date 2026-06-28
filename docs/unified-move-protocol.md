@@ -1367,3 +1367,33 @@ Recommended next phase:
 - Do not immediately migrate `ExtractToPlayerInventoryMessage`. First design a stable `PlayerInventoryAutoPlacement` target or formally retain the dedicated packet.
 - Keep quick, drop, and fold actions dedicated.
 - If ordinary movement migration continues, consider `MoveGridEntryMessage` same-grid reposition only after verifying same-root transaction behavior.
+
+## Phase 37 Notes
+
+Phase 37 migrated `MoveGridEntryMessage`, the main-grid same-grid reposition path, to `MoveItemMessage`.
+
+The client now represents main-grid reposition as:
+
+- Source: `GridItemSource.MenuGridEntry(entryId)`.
+- Target: `GridItemTarget.MenuGridPlacement(targetX, targetY, rotated, targetFolded)`.
+- Options: `GridMoveOptions.all(rotated, targetFolded)`.
+
+The existing `gridDragSource()` and `menuGridPlacementTarget()` helpers preserve server-authoritative entry identity, target coordinates, rotation, and folded state. This path does not use amount semantics; its option count remains `Integer.MAX_VALUE`.
+
+`MoveGridEntryMessage` remains registered with unchanged fields, packet id, and codec. Its handler is now an adapter through `GridMoveMessageGuards`, the same source and target types, rotation/fold-preserving options, and `GridItemMoveService`. Successful legacy requests broadcast and synchronize the menu.
+
+No `GridItemTransferService` special branch was added. The path uses the generic same-grid transaction flow: it resolves source and target copies, identifies the source entry as ignored, removes that entry from the validation copy, validates and adds the prepared stack at the target placement, writes the grid to the root copy, and commits. Failed validation or writeback does not modify live data.
+
+No source, target, codec, or `GridMoveOptions` definition was modified. `ExtractToPlayerInventoryMessage`, quick actions, drop, fold toggles, MenuSlot, and Container Sidecar remain on their previous paths.
+
+`GridMoveOptions.count` remains limited to the explicit PlayerSlot amount paths:
+
+- `MenuGridEntry -> PlayerSlot`.
+- `EquipmentStorageEntry -> PlayerSlot`.
+- `NestedGridEntry -> PlayerSlot`.
+- `NestedEquipmentStorageEntry -> PlayerSlot`.
+
+Recommended next phase:
+
+- Perform an ordinary movement and same-root regression audit.
+- Do not immediately migrate `ExtractToPlayerInventoryMessage`; first design `PlayerInventoryAutoPlacement` or formally retain its dedicated packet.

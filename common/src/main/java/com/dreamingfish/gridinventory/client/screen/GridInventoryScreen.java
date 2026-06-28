@@ -22,7 +22,6 @@ import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
-import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
@@ -872,8 +871,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 released = true;
                 equipped = true;
             } else if (inGrid((int) mouseX, (int) mouseY)) {
-                GridInventoryServices.network().sendToServer(new MoveGridEntryMessage(draggingEntry.entryId(),
-                        targetGridX(draggedStack(), (int) mouseX), targetGridY(draggedStack(), (int) mouseY), rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
+                sendMove(gridDragSource(),
+                        menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded), targetFolded);
                 released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
