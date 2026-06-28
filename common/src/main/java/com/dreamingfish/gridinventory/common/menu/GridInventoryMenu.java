@@ -531,11 +531,26 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         }
         ItemStack groundStack = itemEntity.get().getItem();
         ItemStack current = playerInventory.getItem(playerSlot);
-        if (groundStack.isEmpty() || !current.isEmpty() || !mayInsertIntoVanillaSlot(playerSlot, groundStack)) {
+        if (groundStack.isEmpty() || !mayInsertIntoVanillaSlot(playerSlot, groundStack)) {
             return false;
         }
-        int moved = Math.min(groundStack.getCount(), Math.min(groundStack.getMaxStackSize(), playerInventory.getMaxStackSize()));
-        playerInventory.setItem(playerSlot, groundStack.copyWithCount(moved));
+        int effectiveMax = playerSlotStackLimit(playerSlot, current.isEmpty() ? groundStack : current);
+        int moved;
+        if (current.isEmpty()) {
+            moved = Math.min(groundStack.getCount(), effectiveMax);
+            if (moved <= 0) {
+                return false;
+            }
+            playerInventory.setItem(playerSlot, groundStack.copyWithCount(moved));
+        } else if (GridItemStacks.sameItemSameData(current, groundStack)) {
+            moved = Math.min(groundStack.getCount(), effectiveMax - current.getCount());
+            if (moved <= 0) {
+                return false;
+            }
+            current.grow(moved);
+        } else {
+            return false;
+        }
         playerInventory.setChanged();
         finishGroundPickup(itemEntity.get(), moved);
         return true;
@@ -708,6 +723,17 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         if (stack.isEmpty() || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()
                 || !mayInsertIntoVanillaSlot(playerSlot, stack.get())) {
             return false;
+        }
+        ItemStack current = playerInventory.getItem(playerSlot);
+        if (!current.isEmpty() && GridItemStacks.sameItemSameData(current, stack.get())) {
+            int effectiveMax = playerSlotStackLimit(playerSlot, current);
+            int moved = Math.min(stack.get().getCount(), effectiveMax - current.getCount());
+            if (moved <= 0) {
+                return false;
+            }
+            current.grow(moved);
+            playerInventory.setChanged();
+            return true;
         }
         playerInventory.setItem(playerSlot, stack.get());
         playerInventory.setChanged();
@@ -1575,6 +1601,13 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     private Optional<Slot> findPlayerSlotView(int playerSlot) {
         return slots.stream().filter(slot -> slot.getSlotIndex() == playerSlot).findFirst();
+    }
+
+    private int playerSlotStackLimit(int playerSlot, ItemStack stack) {
+        int slotLimit = findPlayerSlotView(playerSlot)
+                .map(Slot::getMaxStackSize)
+                .orElse(playerInventory.getMaxStackSize());
+        return Math.min(slotLimit, Math.min(stack.getMaxStackSize(), playerInventory.getMaxStackSize()));
     }
 
     private Optional<EquipmentSlot> findEmptyArmorSlot(ItemStack stack) {
