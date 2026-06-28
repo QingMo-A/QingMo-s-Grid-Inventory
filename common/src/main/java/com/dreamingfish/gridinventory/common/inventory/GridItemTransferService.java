@@ -211,6 +211,16 @@ public final class GridItemTransferService {
                             : "grid-entry-player-slot-count-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.EquipmentStorageEntry entry
+                && target instanceof GridItemTarget.PlayerSlot playerSlot) {
+            int requestedCount = safeOptions.safeCount();
+            boolean moved = menu.extractEquipmentEntryToPlayerSlot(
+                    entry.slot(), entry.containerId(), entry.entryId(), playerSlot.slot(), requestedCount);
+            debug(source, target, null, null, false, false, requestedCount, moved, moved,
+                    moved ? "committed-equipment-entry-player-slot-count"
+                            : "equipment-entry-player-slot-count-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);

@@ -25,7 +25,6 @@ import com.dreamingfish.gridinventory.common.network.ExtractNestedGridEntryToPla
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
-import com.dreamingfish.gridinventory.common.network.ExtractEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoGridMessage;
@@ -790,9 +789,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractEquipmentStorageEntryMessage(
-                            draggingEquipmentEntry.slot(), draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId(),
-                            hovered.getSlotIndex(), draggingEquipmentEntry.entry().stack().getCount()));
+                    sendMove(equipmentDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
+                            new GridMoveOptions(draggingEquipmentEntry.entry().stack().getCount(), false, false));
                     released = true;
                     unequipped = true;
                 }
