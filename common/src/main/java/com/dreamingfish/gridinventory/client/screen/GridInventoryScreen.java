@@ -21,7 +21,6 @@ import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
-import com.dreamingfish.gridinventory.common.network.ExtractNestedGridEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
@@ -830,10 +829,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             if (!released) {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
                 if (hovered != null) {
-                    GridInventoryServices.network().sendToServer(new ExtractNestedGridEntryToPlayerSlotMessage(
-                            draggingNestedEntry.ownerPath(), draggingNestedEntry.containerId(),
-                            draggingNestedEntry.entry().entryId(), hovered.getSlotIndex(),
-                            draggingNestedEntry.entry().stack().getCount()));
+                    sendMove(nestedDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
+                            new GridMoveOptions(draggingNestedEntry.entry().stack().getCount(), false, false));
                     released = true;
                 }
             }

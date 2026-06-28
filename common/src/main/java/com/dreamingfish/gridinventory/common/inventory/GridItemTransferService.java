@@ -221,6 +221,26 @@ public final class GridItemTransferService {
                             : "equipment-entry-player-slot-count-failed");
             return moved;
         }
+        if (source instanceof GridItemSource.NestedGridEntry entry
+                && target instanceof GridItemTarget.PlayerSlot playerSlot) {
+            int requestedCount = safeOptions.safeCount();
+            boolean moved = menu.extractNestedGridEntryToPlayerSlot(
+                    entry.ownerPath(), "", entry.entryId(), playerSlot.slot(), requestedCount);
+            debug(source, target, null, null, false, false, requestedCount, moved, moved,
+                    moved ? "committed-nested-grid-entry-player-slot-count"
+                            : "nested-grid-entry-player-slot-count-failed");
+            return moved;
+        }
+        if (source instanceof GridItemSource.NestedEquipmentStorageEntry entry
+                && target instanceof GridItemTarget.PlayerSlot playerSlot) {
+            int requestedCount = safeOptions.safeCount();
+            boolean moved = menu.extractNestedGridEntryToPlayerSlot(
+                    entry.ownerPath(), entry.containerId(), entry.entryId(), playerSlot.slot(), requestedCount);
+            debug(source, target, null, null, false, false, requestedCount, moved, moved,
+                    moved ? "committed-nested-equipment-entry-player-slot-count"
+                            : "nested-equipment-entry-player-slot-count-failed");
+            return moved;
+        }
         Transaction transaction = new Transaction(menu);
         Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
         Optional<ResolvedGridRef> targetRef = transaction.resolveTarget(target);

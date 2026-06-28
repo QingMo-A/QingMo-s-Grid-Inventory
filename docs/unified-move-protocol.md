@@ -1255,3 +1255,40 @@ It still does not control ordinary Grid, Nested, or Equipment placements, Ground
 Recommended next phase:
 
 - Migrate NestedGridEntry -> PlayerSlot as a separate amount path, explicitly mapping empty and non-empty `sourceContainerId` values to the corresponding nested source type.
+
+## Phase 35 Notes
+
+Phase 35 migrated `ExtractNestedGridEntryToPlayerSlotMessage`, establishing the third minimal amount proof-path family.
+
+The client now sends `MoveItemMessage` for nested entry -> PlayerSlot and reuses `nestedDragSource()`:
+
+- Empty `sourceContainerId`: `GridItemSource.NestedGridEntry(ownerPath, entryId)`.
+- Non-empty `sourceContainerId`: `GridItemSource.NestedEquipmentStorageEntry(ownerPath, containerId, entryId)`.
+- Target: `GridItemTarget.PlayerSlot(playerSlot)`.
+- Options: `new GridMoveOptions(amount, false, false)`.
+
+The requested amount is carried in `GridMoveOptions.count`; rotation and target folded state are both false. The server resolves the authoritative owner, nested grid, and entry and treats count only as a requested upper bound.
+
+`ExtractNestedGridEntryToPlayerSlotMessage` remains registered with unchanged fields, packet id, and codec. Its handler is now an adapter through `GridMoveMessageGuards`, maps the container id to the corresponding nested source, constructs `PlayerSlot` and count-preserving options, and calls `GridItemMoveService`. Successful legacy requests broadcast and synchronize the menu.
+
+`GridItemTransferService` now has two pre-transaction delegating branches:
+
+- `NestedGridEntry -> PlayerSlot`, passing an empty container id.
+- `NestedEquipmentStorageEntry -> PlayerSlot`, passing the source container id.
+
+Both normalize count through `safeOptions.safeCount()` and delegate to `GridInventoryMenu.extractNestedGridEntryToPlayerSlot`, preserving owner and nested-grid resolution, entry and slot validation, vanilla-slot restrictions, merging and capacity clamping, partial extraction, nested writeback, player inventory updates, and saving. Generic transaction count handling remains unchanged.
+
+No source, target, codec, or `GridMoveOptions` definition was modified. Player-inventory auto-placement, quick actions, drop, fold toggles, MenuSlot, and Container Sidecar remain on their previous paths.
+
+`GridMoveOptions.count` is currently consumed by:
+
+- `MenuGridEntry -> PlayerSlot`.
+- `EquipmentStorageEntry -> PlayerSlot`.
+- `NestedGridEntry -> PlayerSlot`.
+- `NestedEquipmentStorageEntry -> PlayerSlot`.
+
+It still does not control ordinary Grid, Nested, or Equipment placements, GroundItem, CreativeItem, quick actions, auto-placement, or drop.
+
+Recommended next phase:
+
+- Perform an amount-path regression audit. Do not immediately migrate `ExtractToPlayerInventoryMessage` until automatic placement has a stable target design, and keep quick, drop, and fold actions dedicated.

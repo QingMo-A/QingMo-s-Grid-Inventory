@@ -1,7 +1,10 @@
 package com.dreamingfish.gridinventory.common.network;
 
+import com.dreamingfish.gridinventory.common.inventory.GridItemMoveService;
+import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
+import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
+import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
-import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.protocol.GridMessage;
 import com.dreamingfish.gridinventory.protocol.GridMessageContext;
 import com.dreamingfish.gridinventory.protocol.GridMessageType;
@@ -11,12 +14,18 @@ import java.util.UUID;
 public record ExtractNestedGridEntryToPlayerSlotMessage(NestedContainerPath sourceOwnerPath, String sourceContainerId,
                                                         UUID entryId, int playerSlot, int amount) implements GridMessage {
     public static void handle(ExtractNestedGridEntryToPlayerSlotMessage message, GridMessageContext context) {
-        if (context.player().containerMenu instanceof GridInventoryMenu menu) {
-            menu.extractNestedGridEntryToPlayerSlot(message.sourceOwnerPath(), message.sourceContainerId(),
-                    message.entryId(), message.playerSlot(), message.amount());
-            menu.broadcastChanges();
-            ModNetworking.syncMenu(context.player(), menu);
-        }
+        GridMoveMessageGuards.withGridMenu(context, "ExtractNestedGridEntryToPlayerSlotMessage", (player, menu) -> {
+            GridItemSource source = message.sourceContainerId().isEmpty()
+                    ? new GridItemSource.NestedGridEntry(message.sourceOwnerPath(), message.entryId())
+                    : new GridItemSource.NestedEquipmentStorageEntry(message.sourceOwnerPath(),
+                    message.sourceContainerId(), message.entryId());
+            GridItemTarget target = new GridItemTarget.PlayerSlot(message.playerSlot());
+            GridMoveOptions options = new GridMoveOptions(message.amount(), false, false);
+            if (GridItemMoveService.move(menu, source, target, options)) {
+                menu.broadcastChanges();
+                ModNetworking.syncMenu(player, menu);
+            }
+        });
     }
 
     @Override
