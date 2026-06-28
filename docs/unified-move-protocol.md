@@ -1397,3 +1397,84 @@ Recommended next phase:
 
 - Perform an ordinary movement and same-root regression audit.
 - Do not immediately migrate `ExtractToPlayerInventoryMessage`; first design `PlayerInventoryAutoPlacement` or formally retain its dedicated packet.
+
+## Phase 38 Notes
+
+Phase 38 is an ordinary-movement and same-root regression audit. It migrates no new path and changes only this document. The audit found no issue that requires a code fix.
+
+### Same-Grid Reposition Audit
+
+The main-grid reposition client path sends `MoveItemMessage` with `MenuGridEntry -> MenuGridPlacement`, preserving coordinates, rotation, and folded state through the existing target and option helpers. It no longer sends `MoveGridEntryMessage`.
+
+`MoveGridEntryMessage` remains registered with unchanged fields, packet id, and codec. Its handler is a compatibility adapter through `GridMoveMessageGuards`, `GridItemMoveService`, `GridMoveOptions.all(rotated, targetFolded)`, menu broadcast, and menu synchronization. It does not call `moveEntry` or write grid data directly.
+
+No `MenuGridEntry -> MenuGridPlacement` special branch exists. The generic transaction:
+
+1. Resolves source and target snapshots.
+2. Detects a shared grid through `sourceRef.sameGrid(targetRef)`.
+3. Uses the source entry id as `ignoredEntryId`.
+4. Removes the source entry from the validation copy.
+5. Validates placement against that copy.
+6. Adds the prepared stack and writes the updated grid to the root copy.
+7. Commits only after all validation and writeback steps succeed.
+
+Failure before commit leaves live data unchanged. The generic flow does not read `GridMoveOptions.count`.
+
+### Ordinary Movement Matrix
+
+The audited ordinary movement coverage is:
+
+| Source | Explicit targets |
+|---|---|
+| `MenuGridEntry` | `MenuGridPlacement`, `NestedGridPlacement`, `NestedEquipmentStoragePlacement`, `EquipmentStoragePlacement`, `AccessorySlot` |
+| `EquipmentStorageEntry` | `MenuGridPlacement`, `NestedGridPlacement`, `NestedEquipmentStoragePlacement`, `EquipmentStoragePlacement`, `AccessorySlot` |
+| `NestedGridEntry` | `MenuGridPlacement`, `NestedGridPlacement`, `NestedEquipmentStoragePlacement`, `EquipmentStoragePlacement` |
+| `NestedEquipmentStorageEntry` | `MenuGridPlacement`, `NestedGridPlacement`, `NestedEquipmentStoragePlacement`, `EquipmentStoragePlacement` |
+| `PlayerSlot` | `MenuGridPlacement`, `NestedGridPlacement`, `NestedEquipmentStoragePlacement`, `EquipmentStoragePlacement`, `PlayerSlot`, `AccessorySlot` |
+| `AccessorySlot` | `MenuGridPlacement`, `NestedGridPlacement`, `NestedEquipmentStoragePlacement`, `EquipmentStoragePlacement`, `PlayerSlot` |
+
+Explicit grid placements use generic transactions except where an established narrow special branch preserves a distinct old semantic. Cross-root writes remain snapshot-based and commit only after source removal, target re-resolution, placement validation, and target writeback succeed.
+
+### Count and Special-Branch Boundaries
+
+Count remains enabled only for:
+
+- `MenuGridEntry -> PlayerSlot`.
+- `EquipmentStorageEntry -> PlayerSlot`.
+- `NestedGridEntry -> PlayerSlot`.
+- `NestedEquipmentStorageEntry -> PlayerSlot`.
+
+These four pre-transaction branches normalize count with `safeOptions.safeCount()` and delegate to the existing extraction menu methods. Ordinary placement, same-grid reposition, GroundItem, CreativeItem, and quick/action packets do not consume option count.
+
+Other pre-transaction special branches remain:
+
+- GroundItem to Grid, Nested, Equipment, PlayerSlot, and Curio.
+- CreativeItem to Grid, Nested, Equipment, PlayerSlot, and Curio.
+- `PlayerSlot -> PlayerSlot`.
+- The four explicit PlayerSlot amount paths.
+
+GroundItem and CreativeItem are handled before transaction construction and are not resolved through `Transaction.resolveSource`. Their branches continue to delegate to authoritative menu methods rather than duplicating entity, creative-tab, placement, inventory, or save logic.
+
+### Dedicated Actions
+
+The following remain dedicated and outside ordinary `MoveItemMessage` placement semantics:
+
+- `ExtractToPlayerInventoryMessage`.
+- `InsertFromPlayerInventoryMessage` with `quick=true`.
+- `QuickEquip*Message`.
+- `Drop*Message`.
+- `Toggle*BackpackFoldMessage`.
+- `ManualPickupItemMessage`.
+- MenuSlot and Container Sidecar paths.
+
+### Compatibility and Server Audit
+
+Source ids remain `0-7`, target ids remain `0-5`, and nested path segment ids remain unchanged. `MoveItemMessage`, `MoveGridEntryMessage` fields/id/codec, and save codecs are unchanged.
+
+The audited common-side transfer, move service, reposition message, options, source, target, and codec classes contain no client, GUI, screen, `net.minecraft.client`, or Blaze3D imports. No dedicated-server client-only loading risk was found.
+
+Recommended next phase:
+
+- Do not immediately migrate `ExtractToPlayerInventoryMessage`. First design `PlayerInventoryAutoPlacement` or formally retain the dedicated packet.
+- Keep quick, drop, and fold actions dedicated.
+- Before further ordinary movement migration, audit the remaining old movement packets and identify whether any non-action path is not yet adapterized.
