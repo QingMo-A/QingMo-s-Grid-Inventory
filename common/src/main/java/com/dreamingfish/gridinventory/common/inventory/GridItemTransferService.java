@@ -281,13 +281,10 @@ public final class GridItemTransferService {
                     targetDepth(target, menu.transactionMenuGridDepth()), false, false, "empty-source");
             return false;
         }
-        if (source instanceof GridItemSource.PlayerSlot
-                && target instanceof GridItemTarget.MenuGridPlacement placement) {
-            Optional<Boolean> merged = tryMergePlayerSlotIntoMenuGrid(transaction, sourceRef.get(), targetRef.get(),
-                    placement, moved, source, target, sourceRoot, targetRoot, sameRoot);
-            if (merged.isPresent()) {
-                return merged.get();
-            }
+        Optional<Boolean> merged = tryMergeIntoExistingGridEntry(transaction, sourceRef.get(), targetRef.get(),
+                moved, source, target, sourceRoot, targetRoot, sameRoot);
+        if (merged.isPresent()) {
+            return merged.get();
         }
         UUID ignoredEntryId = sourceRef.get().sameGrid(targetRef.get()) ? sourceRef.get().entryId() : null;
         GridInventoryData validationGrid = targetRef.get().gridCopy().copy();
@@ -345,17 +342,22 @@ public final class GridItemTransferService {
         return prepared;
     }
 
-    private static Optional<Boolean> tryMergePlayerSlotIntoMenuGrid(Transaction transaction, ResolvedItemRef sourceRef,
-                                                                    ResolvedGridRef targetRef,
-                                                                    GridItemTarget.MenuGridPlacement placement,
-                                                                    ItemStack moved, GridItemSource source,
-                                                                    GridItemTarget target, RootKey sourceRoot,
-                                                                    RootKey targetRoot, boolean sameRoot) {
+    private static Optional<Boolean> tryMergeIntoExistingGridEntry(Transaction transaction, ResolvedItemRef sourceRef,
+                                                                   ResolvedGridRef targetRef, ItemStack moved,
+                                                                   GridItemSource source, GridItemTarget target,
+                                                                   RootKey sourceRoot, RootKey targetRoot,
+                                                                   boolean sameRoot) {
         int depth = targetDepth(target, transaction.menu.transactionMenuGridDepth());
         if (!GridStackMerger.itemsStackableInGrid()) {
             return Optional.empty();
         }
+        GridPlacementTarget placement = gridPlacementTarget(target);
+        if (placement == null) {
+            return Optional.empty();
+        }
+        UUID ignoredEntryId = sourceRef.sameGrid(targetRef) ? sourceRef.entryId() : null;
         Optional<GridEntry> targetEntry = targetRef.gridCopy().getEntries().stream()
+                .filter(entry -> ignoredEntryId == null || !ignoredEntryId.equals(entry.entryId()))
                 .filter(entry -> entry.contains(placement.x(), placement.y()))
                 .findFirst();
         if (targetEntry.isEmpty()) {
@@ -374,18 +376,21 @@ public final class GridItemTransferService {
                     "merge-remove-source-failed");
             return Optional.of(false);
         }
-        GridInventoryData targetCopy = targetRef.gridCopy().copy();
-        Optional<GridEntry> copyEntry = targetCopy.getEntries().stream()
-                .filter(entry -> entry.entryId().equals(targetEntry.get().entryId()))
-                .findFirst();
-        if (copyEntry.isEmpty()) {
+        Optional<ResolvedGridRef> updatedTargetRef = transaction.resolveTarget(target);
+        if (updatedTargetRef.isEmpty()) {
             debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, false,
-                    "merge-target-entry-missing");
+                    "merge-target-after-remove-failed");
             return Optional.of(false);
         }
-        copyEntry.get().stack().grow(moveCount);
-        targetCopy.setChanged();
-        if (!targetRef.writeGridToRootCopy(targetCopy)) {
+        GridInventoryData targetCopy = updatedTargetRef.get().gridCopy().copy();
+        int inserted = GridExplicitInsertHelper.insertOrMergeAt(targetCopy, moved.copyWithCount(moveCount),
+                placement.x(), placement.y(), placement.rotated(), ignoredEntryId, depth);
+        if (inserted != moveCount) {
+            debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, false,
+                    "merge-target-entry-failed");
+            return Optional.of(false);
+        }
+        if (!updatedTargetRef.get().writeGridToRootCopy(targetCopy)) {
             debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, false,
                     "merge-write-target-failed");
             return Optional.of(false);
@@ -394,6 +399,22 @@ public final class GridItemTransferService {
         debug(source, target, sourceRoot, targetRoot, sameRoot, false, depth, true, committed,
                 committed ? "committed-merge" : "merge-commit-failed");
         return Optional.of(committed);
+    }
+
+    private static GridPlacementTarget gridPlacementTarget(GridItemTarget target) {
+        if (target instanceof GridItemTarget.MenuGridPlacement placement) {
+            return new GridPlacementTarget(placement.x(), placement.y(), placement.rotated());
+        }
+        if (target instanceof GridItemTarget.EquipmentStoragePlacement placement) {
+            return new GridPlacementTarget(placement.x(), placement.y(), placement.rotated());
+        }
+        if (target instanceof GridItemTarget.NestedGridPlacement placement) {
+            return new GridPlacementTarget(placement.x(), placement.y(), placement.rotated());
+        }
+        if (target instanceof GridItemTarget.NestedEquipmentStoragePlacement placement) {
+            return new GridPlacementTarget(placement.x(), placement.y(), placement.rotated());
+        }
+        return null;
     }
 
     public static ItemStack prepareForTarget(ItemStack stack, GridItemTarget target) {
@@ -961,5 +982,8 @@ public final class GridItemTransferService {
             root.stackCopy(owner.get().write(updatedOwner));
             return true;
         }
+    }
+
+    private record GridPlacementTarget(int x, int y, boolean rotated) {
     }
 }

@@ -8,6 +8,7 @@ import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageManager;
 import com.dreamingfish.gridinventory.common.equipment.GridEquipmentSlots;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
+import com.dreamingfish.gridinventory.common.inventory.GridExplicitInsertHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
 import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
 import com.dreamingfish.gridinventory.common.inventory.GridItemTransferService;
@@ -578,20 +579,22 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         }
         ItemStack groundStack = itemEntity.get().getItem();
         int targetDepth = targetOwnerPath.depth() + 1;
-        if (groundStack.isEmpty()
-                || !GridPlacementValidator.canPlace(targetGrid.get(), groundStack, targetX, targetY, rotated, null,
-                targetDepth)) {
+        if (groundStack.isEmpty()) {
             return false;
         }
         ItemStack inserted = groundStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? groundStack.getCount() : 1);
         GridInventoryData targetCopy = targetGrid.get().copy();
-        targetCopy.add(inserted, targetX, targetY, rotated);
+        int movedCount = GridExplicitInsertHelper.insertOrMergeAt(
+                targetCopy, inserted, targetX, targetY, rotated, targetDepth);
+        if (movedCount <= 0) {
+            return false;
+        }
         ItemStack updatedTargetOwner = targetOwner.get().stack().copy();
         if (!writeNestedGrid(updatedTargetOwner, targetContainerId, targetCopy)
                 || !targetOwner.get().write(updatedTargetOwner)) {
             return false;
         }
-        finishGroundPickup(itemEntity.get(), inserted.getCount());
+        finishGroundPickup(itemEntity.get(), movedCount);
         playerInventory.setChanged();
         save();
         return true;
@@ -614,12 +617,16 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     private boolean insertGroundStackIntoGrid(ItemEntity itemEntity, GridInventoryData inventory, int targetX, int targetY, boolean rotated, int targetDepth) {
         ItemStack groundStack = itemEntity.getItem();
-        if (groundStack.isEmpty() || !GridPlacementValidator.canPlace(inventory, groundStack, targetX, targetY, rotated, null, targetDepth)) {
+        if (groundStack.isEmpty()) {
             return false;
         }
         ItemStack inserted = groundStack.copyWithCount(GridStackMerger.itemsStackableInGrid() ? groundStack.getCount() : 1);
-        inventory.add(inserted, targetX, targetY, rotated);
-        finishGroundPickup(itemEntity, inserted.getCount());
+        int movedCount = GridExplicitInsertHelper.insertOrMergeAt(
+                inventory, inserted, targetX, targetY, rotated, targetDepth);
+        if (movedCount <= 0) {
+            return false;
+        }
+        finishGroundPickup(itemEntity, movedCount);
         return true;
     }
 
@@ -642,10 +649,14 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     public boolean creativeInsertIntoGrid(int tabIndex, int itemIndex, int count, int targetX, int targetY,
                                           boolean rotated, boolean folded) {
         Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
-        if (stack.isEmpty() || !GridPlacementValidator.canPlace(gridData, stack.get(), targetX, targetY, rotated, null, gridTargetDepth())) {
+        if (stack.isEmpty()) {
             return false;
         }
-        gridData.add(stack.get(), targetX, targetY, rotated);
+        int movedCount = GridExplicitInsertHelper.insertOrMergeAt(
+                gridData, stack.get(), targetX, targetY, rotated, gridTargetDepth());
+        if (movedCount <= 0) {
+            return false;
+        }
         save();
         return true;
     }
@@ -655,12 +666,14 @@ public class GridInventoryMenu extends AbstractContainerMenu {
                                                       boolean rotated, boolean folded) {
         Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
         Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
-        if (stack.isEmpty() || target.isEmpty()
-                || !GridPlacementValidator.canPlace(target.get().inventory(), stack.get(), targetX, targetY, rotated, null,
-                equipmentTargetDepth(equipmentSlot))) {
+        if (stack.isEmpty() || target.isEmpty()) {
             return false;
         }
-        target.get().inventory().add(stack.get(), targetX, targetY, rotated);
+        int movedCount = GridExplicitInsertHelper.insertOrMergeAt(target.get().inventory(), stack.get(),
+                targetX, targetY, rotated, equipmentTargetDepth(equipmentSlot));
+        if (movedCount <= 0) {
+            return false;
+        }
         saveEquipmentStorage(equipmentSlot, target.get().storage());
         return true;
     }
@@ -671,13 +684,15 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
         Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
         Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
-        if (stack.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()
-                || !GridPlacementValidator.canPlace(targetGrid.get(), stack.get(), targetX, targetY, rotated, null,
-                targetOwnerPath.depth() + 1)) {
+        if (stack.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()) {
             return false;
         }
         GridInventoryData targetCopy = targetGrid.get().copy();
-        targetCopy.add(stack.get(), targetX, targetY, rotated);
+        int movedCount = GridExplicitInsertHelper.insertOrMergeAt(targetCopy, stack.get(), targetX, targetY,
+                rotated, targetOwnerPath.depth() + 1);
+        if (movedCount <= 0) {
+            return false;
+        }
         ItemStack updatedTargetOwner = targetOwner.get().stack().copy();
         if (!writeNestedGrid(updatedTargetOwner, targetContainerId, targetCopy)
                 || !targetOwner.get().write(updatedTargetOwner)) {
