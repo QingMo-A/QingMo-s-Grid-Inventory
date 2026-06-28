@@ -23,6 +23,9 @@ public final class NestedBackpackValidator {
         if (stack.isEmpty()) {
             return 0;
         }
+        if (stack.getItem() instanceof GridBackpackItem && GridBackpackItem.isFolded(stack)) {
+            return 0;
+        }
         int childDepth = maxBackpackDepthInside(stack);
         if (stack.getItem() instanceof GridBackpackItem) {
             return 1 + childDepth;

@@ -1770,3 +1770,11 @@ No future auto-placement or action work should begin as an incidental code chang
 ### Build and Test Note
 
 Phase 40 changes documentation only, so it does not require Java compilation. Documentation review is not equivalent to in-game validation. This stable baseline is considered behaviorally proven only after the regression matrix is exercised in game, including dedicated-server and both supported target versions.
+
+## Post-Phase 40 Bugfix Notes
+
+### Folded Backpack Depth
+
+Folded `GridBackpackItem` stacks now evaluate to nested backpack depth `0`. The validator returns before scanning their child grid or equipment storage, so stale child-container data inside a folded backpack does not contribute to placement depth.
+
+Unfolded backpacks retain the existing `1 + childDepth` behavior, and non-backpack stacks retain their child-depth behavior. This focused baseline bugfix does not change `MoveItemMessage`, codecs, source or target ids, packet ids, save formats, target-depth calculation, or cycle prevention.
