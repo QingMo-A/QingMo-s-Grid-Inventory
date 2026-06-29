@@ -9,14 +9,20 @@ DF Grid Inventory 是一个数据驱动的俄罗斯方块式背包模组。不�
 | 1.20.1 | Forge 47+ |
 | 1.21.1 | NeoForge 21+ |
 
-Curios 为可选依赖。安装后，背包界面会显示并支持相应饰品槽位。
+以下模组为可选兼容：
+
+- **Curios**：安装后，背包界面会显示并支持相应饰品槽位。
+- **RarityCore**：安装后，网格物品、自由格子和饰品格会显示 RarityCore 提供的稀有度颜色背景及物品装饰。
+
+不安装这些可选模组不会影响 DF Grid Inventory 的基本功能。
 
 ## 安装
 
 1. 安装对应 Minecraft 版本的 Forge 或 NeoForge。
 2. 将对应版本的模组文件放入游戏实例的 `mods` 文件夹。
 3. 如需饰品栏支持，同时安装对应版本的 Curios。
-4. 启动游戏并进入世界。按原版背包键即可打开网格背包界面。
+4. 如需物品稀有度背景，同时安装对应版本的 RarityCore。
+5. 启动游戏并进入世界。按原版背包键即可打开网格背包界面。
 
 客户端与服务端游玩时应安装相同版本的模组。物品尺寸规则由服务端加载并同步给客户端。
 
@@ -155,5 +161,26 @@ Curios 为可选依赖。安装后，背包界面会显示并支持相应饰品�
 .\gradlew.bat runForge1201Client
 .\gradlew.bat runNeoForge1211Client
 ```
+
+开发环境默认不加载 RarityCore。临时启用 RarityCore 并启动客户端：
+
+```powershell
+.\gradlew.bat runForge1201Client -Praritycore_runtime=true
+.\gradlew.bat runNeoForge1211Client -Praritycore_runtime=true
+```
+
+也可以在 `gradle.properties` 中将以下配置改为 `true`，使后续开发运行默认加载 RarityCore：
+
+```properties
+raritycore_runtime=true
+```
+
+恢复为不加载：
+
+```properties
+raritycore_runtime=false
+```
+
+启用 RarityCore 后，Gradle 会根据目标版本下载对应文件。该依赖只加入开发运行环境，不会被打包进 DF Grid Inventory 的成品 JAR。
 
 共享源码位于 `common`，版本相关代码位于 `targets/forge-1.20.1` 和 `targets/neoforge-1.21.1`。
