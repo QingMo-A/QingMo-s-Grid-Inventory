@@ -33,6 +33,7 @@ public final class ModCreativeTabs {
                     output.accept(ModItems.MEDIUM_HIKING_BACKPACK.get());
                     output.accept(ModItems.MILITARY_HIKING_BACKPACK.get());
                     output.accept(ModItems.TACTICAL_BACKPACK.get());
+                    ModSpecialItems.creativeTabItems().forEach(item -> output.accept(item.get()));
                 })
                 .build());
     }

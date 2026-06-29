@@ -1,0 +1,12 @@
+{
+  "rules": [
+    { "type": "item", "target": "df_grid_inventory:secret_document", "width": 2, "height": 1, "rotatable": true },
+    { "type": "item", "target": "df_grid_inventory:target_locator_module", "width": 2, "height": 2, "rotatable": true },
+    { "type": "item", "target": "df_grid_inventory:golden_coiled_snake_statue", "width": 2, "height": 2, "rotatable": true },
+    { "type": "item", "target": "df_grid_inventory:ornate_vase", "width": 2, "height": 2, "rotatable": true },
+    { "type": "item", "target": "df_grid_inventory:feast_statue", "width": 2, "height": 3, "rotatable": true },
+    { "type": "item", "target": "df_grid_inventory:high_energy_fuel", "width": 2, "height": 2, "rotatable": true },
+    { "type": "item", "target": "df_grid_inventory:antique_teapot", "width": 2, "height": 2, "rotatable": true },
+    { "type": "item", "target": "df_grid_inventory:array_lens", "width": 1, "height": 2, "rotatable": true }
+  ]
+}

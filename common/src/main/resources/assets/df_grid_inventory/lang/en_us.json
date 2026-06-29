@@ -36,5 +36,13 @@
   "tooltip.df_grid_inventory.pickup_hint": "Press Pickup Key or Click to pick up",
   "tooltip.df_grid_inventory.nearby_drag_hint": "Press Pickup Key to pick up, or drag into a grid",
   "tooltip.df_grid_inventory.equipment_storage": "Stored Pockets",
-  "tooltip.df_grid_inventory.right_click_equip": "Right-click in inventory to equip"
+  "tooltip.df_grid_inventory.right_click_equip": "Right-click in inventory to equip",
+  "item.df_grid_inventory.secret_document": "Secret Document",
+  "item.df_grid_inventory.target_locator_module": "Target Locator Module",
+  "item.df_grid_inventory.golden_coiled_snake_statue": "Golden Coiled Snake Statue",
+  "item.df_grid_inventory.ornate_vase": "Ornate Vase",
+  "item.df_grid_inventory.feast_statue": "Feast Statue",
+  "item.df_grid_inventory.high_energy_fuel": "High-Energy Fuel",
+  "item.df_grid_inventory.antique_teapot": "Antique Teapot",
+  "item.df_grid_inventory.array_lens": "Array Lens"
 }

@@ -36,5 +36,6 @@ public final class ModItems {
         MEDIUM_HIKING_BACKPACK = registry.registerItem("medium_hiking_backpack", () -> new GridBackpackItem(new Item.Properties().stacksTo(1)));
         MILITARY_HIKING_BACKPACK = registry.registerItem("military_hiking_backpack", () -> new GridBackpackItem(new Item.Properties().stacksTo(1)));
         TACTICAL_BACKPACK = registry.registerItem("tactical_backpack", () -> new GridBackpackItem(new Item.Properties().stacksTo(1)));
+        ModSpecialItems.register(registry);
     }
 }
