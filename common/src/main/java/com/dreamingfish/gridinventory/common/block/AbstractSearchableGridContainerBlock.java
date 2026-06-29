@@ -1,6 +1,7 @@
 package com.dreamingfish.gridinventory.common.block;
 
 import com.dreamingfish.gridinventory.common.blockentity.SearchableGridContainerBlockEntity;
+import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
@@ -8,6 +9,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -85,7 +87,11 @@ public abstract class AbstractSearchableGridContainerBlock extends BaseEntityBlo
             level.setBlock(pos, state.setValue(OPENED, true), 3);
             level.playSound(null, pos, SoundEvents.CHEST_OPEN, SoundSource.BLOCKS, 0.5F, 1.0F);
         }
-        // TODO Phase 42C: open SearchableGridContainerMenu with container tab UI.
+        if (player instanceof ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof SearchableGridContainerBlockEntity container) {
+            GridInventoryServices.menus().openSearchableGridContainer(serverPlayer, pos, container.getGridData(),
+                    "container.df_grid_inventory.searchable_grid_container");
+        }
         return InteractionResult.CONSUME;
     }
 

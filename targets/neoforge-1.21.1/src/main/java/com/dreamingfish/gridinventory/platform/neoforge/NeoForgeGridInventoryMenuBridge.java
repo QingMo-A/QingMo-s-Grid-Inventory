@@ -3,8 +3,12 @@ package com.dreamingfish.gridinventory.platform.neoforge;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenuOpenData;
+import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenu;
+import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenuOpenData;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
 import com.dreamingfish.gridinventory.target.neoforge1211.menu.NeoForge1211MenuOpenDataCodec;
+import com.dreamingfish.gridinventory.target.neoforge1211.menu.NeoForge1211SearchableGridContainerMenuOpenDataCodec;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -21,6 +25,14 @@ public final class NeoForgeGridInventoryMenuBridge implements GridInventoryMenuB
         player.openMenu(new Provider(openData), buffer -> NeoForge1211MenuOpenDataCodec.encode(openData, buffer));
     }
 
+    @Override
+    public void openSearchableGridContainer(ServerPlayer player, BlockPos blockPos, GridInventoryData data, String titleKey) {
+        SearchableGridContainerMenuOpenData openData = new SearchableGridContainerMenuOpenData(
+                blockPos, data.copy(), titleKey, player.isCreative());
+        player.openMenu(new SearchableProvider(openData), buffer ->
+                NeoForge1211SearchableGridContainerMenuOpenDataCodec.encode(openData, buffer));
+    }
+
     private record Provider(GridInventoryMenuOpenData data) implements MenuProvider {
         @Override
         public Component getDisplayName() {
@@ -33,6 +45,19 @@ public final class NeoForgeGridInventoryMenuBridge implements GridInventoryMenuB
         @Override
         public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
             return GridInventoryMenu.fromOpenData(containerId, playerInventory, data);
+        }
+    }
+
+    private record SearchableProvider(SearchableGridContainerMenuOpenData data) implements MenuProvider {
+        @Override
+        public Component getDisplayName() {
+            return Component.translatable(data.titleKey());
+        }
+
+        @Nullable
+        @Override
+        public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+            return SearchableGridContainerMenu.fromOpenData(containerId, playerInventory, data);
         }
     }
 }

@@ -31,6 +31,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.CreativeModeTab;
@@ -52,7 +53,12 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     }
 
     public GridInventoryMenu(int containerId, Inventory playerInventory, int bagSlot, InteractionHand hand, GridInventoryData gridData, boolean playerGrid) {
-        super(ModMenus.GRID_INVENTORY.get(), containerId);
+        this(ModMenus.GRID_INVENTORY.get(), containerId, playerInventory, bagSlot, hand, gridData, playerGrid);
+    }
+
+    protected GridInventoryMenu(MenuType<?> menuType, int containerId, Inventory playerInventory, int bagSlot,
+                                InteractionHand hand, GridInventoryData gridData, boolean playerGrid) {
+        super(menuType, containerId);
         this.playerInventory = playerInventory;
         this.bagSlot = bagSlot;
         this.hand = hand;

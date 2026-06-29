@@ -47,6 +47,7 @@ public final class Forge1201ClientEvents {
                 GridInventoryClientServices.init(new Forge1201ClientBridge());
                 GridItemRarityServices.init(new Forge1201RarityCoreCompat());
                 MenuScreens.register(ModMenus.GRID_INVENTORY.get(), GridInventoryScreen::new);
+                MenuScreens.register(ModMenus.SEARCHABLE_GRID_CONTAINER.get(), GridInventoryScreen::new);
                 Forge1201ClientEvents.registerItemProperties();
             });
         }

@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.platform.neoforge;
 import com.dreamingfish.gridinventory.DFGridInventoryMod;
 import com.dreamingfish.gridinventory.platform.GridInventoryRegistryBridge;
 import com.dreamingfish.gridinventory.target.neoforge1211.menu.NeoForge1211MenuOpenDataCodec;
+import com.dreamingfish.gridinventory.target.neoforge1211.menu.NeoForge1211SearchableGridContainerMenuOpenDataCodec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -78,6 +79,17 @@ public final class NeoForgeGridInventoryRegistryBridge implements GridInventoryR
     public <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
         return menus.register(name, () -> new MenuType<>(
                 (IContainerFactory<T>) (containerId, inventory, buffer) -> factory.create(containerId, inventory, NeoForge1211MenuOpenDataCodec.decode(buffer)),
+                net.minecraft.world.flag.FeatureFlags.VANILLA_SET
+        ));
+    }
+
+    @Override
+    public <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerSearchableGridContainerMenu(
+            String name,
+            SearchableGridContainerMenuFactory<T> factory) {
+        return menus.register(name, () -> new MenuType<>(
+                (IContainerFactory<T>) (containerId, inventory, buffer) ->
+                        factory.create(containerId, inventory, NeoForge1211SearchableGridContainerMenuOpenDataCodec.decode(buffer)),
                 net.minecraft.world.flag.FeatureFlags.VANILLA_SET
         ));
     }

@@ -32,6 +32,7 @@ public final class NeoForge1211ClientEvents {
 
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.GRID_INVENTORY.get(), GridInventoryScreen::new);
+        event.register(ModMenus.SEARCHABLE_GRID_CONTAINER.get(), GridInventoryScreen::new);
     }
 
     public static void registerKeys(RegisterKeyMappingsEvent event) {

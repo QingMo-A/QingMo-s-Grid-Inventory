@@ -3,6 +3,7 @@ package com.dreamingfish.gridinventory.target.forge1201.platform;
 import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.platform.GridInventoryRegistryBridge;
 import com.dreamingfish.gridinventory.target.forge1201.menu.Forge1201MenuOpenDataCodec;
+import com.dreamingfish.gridinventory.target.forge1201.menu.Forge1201SearchableGridContainerMenuOpenDataCodec;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
@@ -57,6 +58,14 @@ public final class Forge1201RegistryBridge implements GridInventoryRegistryBridg
     public <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
         return MENUS.register(name, () -> IForgeMenuType.create((containerId, inventory, buffer) ->
                 factory.create(containerId, inventory, Forge1201MenuOpenDataCodec.decode(buffer))));
+    }
+
+    @Override
+    public <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerSearchableGridContainerMenu(
+            String name,
+            SearchableGridContainerMenuFactory<T> factory) {
+        return MENUS.register(name, () -> IForgeMenuType.create((containerId, inventory, buffer) ->
+                factory.create(containerId, inventory, Forge1201SearchableGridContainerMenuOpenDataCodec.decode(buffer))));
     }
 
     @Override

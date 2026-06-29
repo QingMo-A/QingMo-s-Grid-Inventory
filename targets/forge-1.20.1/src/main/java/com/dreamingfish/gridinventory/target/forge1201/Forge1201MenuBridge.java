@@ -3,8 +3,12 @@ package com.dreamingfish.gridinventory.target.forge1201;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenuOpenData;
+import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenu;
+import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenuOpenData;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
 import com.dreamingfish.gridinventory.target.forge1201.menu.Forge1201MenuOpenDataCodec;
+import com.dreamingfish.gridinventory.target.forge1201.menu.Forge1201SearchableGridContainerMenuOpenDataCodec;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -29,5 +33,22 @@ public final class Forge1201MenuBridge implements GridInventoryMenuBridge {
                 return GridInventoryMenu.fromOpenData(containerId, inventory, openData);
             }
         }, buf -> Forge1201MenuOpenDataCodec.encode(openData, buf));
+    }
+
+    @Override
+    public void openSearchableGridContainer(ServerPlayer player, BlockPos blockPos, GridInventoryData data, String titleKey) {
+        SearchableGridContainerMenuOpenData openData = new SearchableGridContainerMenuOpenData(
+                blockPos, data.copy(), titleKey, player.isCreative());
+        NetworkHooks.openScreen(player, new MenuProvider() {
+            @Override
+            public Component getDisplayName() {
+                return Component.translatable(titleKey);
+            }
+
+            @Override
+            public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player ignored) {
+                return SearchableGridContainerMenu.fromOpenData(containerId, inventory, openData);
+            }
+        }, buf -> Forge1201SearchableGridContainerMenuOpenDataCodec.encode(openData, buf));
     }
 }
