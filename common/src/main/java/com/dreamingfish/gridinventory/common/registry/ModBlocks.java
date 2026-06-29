@@ -6,6 +6,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.network.chat.Component;
+import com.dreamingfish.gridinventory.common.block.BasicSearchableGridContainerBlock;
 
 import java.util.function.Supplier;
 
@@ -26,10 +28,11 @@ public final class ModBlocks {
 
         SEARCHABLE_GRID_CONTAINER = registry.registerBlock(
                 GridContentIds.SEARCHABLE_GRID_CONTAINER,
-                () -> new Block(Block.Properties.of()
-                        .mapColor(MapColor.WOOD)
-                        .strength(2.5F)
-                        .sound(SoundType.WOOD)));
+                () -> new BasicSearchableGridContainerBlock(
+                        Block.Properties.of().mapColor(MapColor.WOOD).strength(2.5F).sound(SoundType.WOOD),
+                        8,
+                        5,
+                        Component.translatable("container.df_grid_inventory.searchable_grid_container")));
         SEARCHABLE_GRID_CONTAINER_ITEM = registry.registerBlockItem(
                 GridContentIds.SEARCHABLE_GRID_CONTAINER,
                 () -> new BlockItem(SEARCHABLE_GRID_CONTAINER.get(), new Item.Properties()));

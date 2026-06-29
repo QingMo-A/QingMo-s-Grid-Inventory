@@ -1,7 +1,12 @@
 {
   "variants": {
-    "": {
-      "model": "df_grid_inventory:block/searchable_grid_container"
-    }
+    "facing=north,opened=false": { "model": "df_grid_inventory:block/searchable_grid_container" },
+    "facing=east,opened=false": { "model": "df_grid_inventory:block/searchable_grid_container", "y": 90 },
+    "facing=south,opened=false": { "model": "df_grid_inventory:block/searchable_grid_container", "y": 180 },
+    "facing=west,opened=false": { "model": "df_grid_inventory:block/searchable_grid_container", "y": 270 },
+    "facing=north,opened=true": { "model": "df_grid_inventory:block/searchable_grid_container" },
+    "facing=east,opened=true": { "model": "df_grid_inventory:block/searchable_grid_container", "y": 90 },
+    "facing=south,opened=true": { "model": "df_grid_inventory:block/searchable_grid_container", "y": 180 },
+    "facing=west,opened=true": { "model": "df_grid_inventory:block/searchable_grid_container", "y": 270 }
   }
 }

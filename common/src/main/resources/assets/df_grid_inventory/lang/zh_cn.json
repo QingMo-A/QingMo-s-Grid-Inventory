@@ -45,5 +45,6 @@
   "item.df_grid_inventory.high_energy_fuel": "高能燃料",
   "item.df_grid_inventory.antique_teapot": "茶壶",
   "item.df_grid_inventory.array_lens": "阵列镜片",
-  "block.df_grid_inventory.searchable_grid_container": "可搜索网格容器"
+  "block.df_grid_inventory.searchable_grid_container": "可搜索网格容器",
+  "container.df_grid_inventory.searchable_grid_container": "可搜索网格容器"
 }
