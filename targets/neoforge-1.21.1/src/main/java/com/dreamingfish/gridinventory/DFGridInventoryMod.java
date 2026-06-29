@@ -39,6 +39,7 @@ public class DFGridInventoryMod {
 
         DFGridInventoryCommon.registerContent(platform.registry());
         NeoForge1211DataComponents.register(platform.registry());
+        platform.registry().registerBlocks(modEventBus);
         platform.registry().registerItems(modEventBus);
         platform.registry().registerMenus(modEventBus);
         NeoForge1211Attachments.ATTACHMENT_TYPES.register(modEventBus);

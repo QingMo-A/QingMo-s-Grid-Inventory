@@ -9,6 +9,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.network.IContainerFactory;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -17,12 +19,17 @@ import java.util.function.Supplier;
 
 public final class NeoForgeGridInventoryRegistryBridge implements GridInventoryRegistryBridge {
     private final DeferredRegister.Items items = DeferredRegister.createItems(DFGridInventoryMod.MODID);
+    private final DeferredRegister.Blocks blocks = DeferredRegister.createBlocks(DFGridInventoryMod.MODID);
     private final DeferredRegister<MenuType<?>> menus = DeferredRegister.create(Registries.MENU, DFGridInventoryMod.MODID);
     private final DeferredRegister<DataComponentType<?>> dataComponents = DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, DFGridInventoryMod.MODID);
     private final DeferredRegister<CreativeModeTab> creativeTabs = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, DFGridInventoryMod.MODID);
 
     public void registerItems(IEventBus modEventBus) {
         items.register(modEventBus);
+    }
+
+    public void registerBlocks(IEventBus modEventBus) {
+        blocks.register(modEventBus);
     }
 
     public void registerMenus(IEventBus modEventBus) {
@@ -39,6 +46,16 @@ public final class NeoForgeGridInventoryRegistryBridge implements GridInventoryR
 
     @Override
     public <T extends Item> Supplier<T> registerItem(String name, Supplier<T> item) {
+        return items.register(name, item);
+    }
+
+    @Override
+    public <T extends Block> Supplier<T> registerBlock(String name, Supplier<T> block) {
+        return blocks.register(name, block);
+    }
+
+    @Override
+    public <T extends BlockItem> Supplier<T> registerBlockItem(String name, Supplier<T> item) {
         return items.register(name, item);
     }
 

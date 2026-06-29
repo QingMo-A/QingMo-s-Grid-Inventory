@@ -44,5 +44,6 @@
   "item.df_grid_inventory.feast_statue": "Feast Statue",
   "item.df_grid_inventory.high_energy_fuel": "High-Energy Fuel",
   "item.df_grid_inventory.antique_teapot": "Antique Teapot",
-  "item.df_grid_inventory.array_lens": "Array Lens"
+  "item.df_grid_inventory.array_lens": "Array Lens",
+  "block.df_grid_inventory.searchable_grid_container": "Searchable Grid Container"
 }

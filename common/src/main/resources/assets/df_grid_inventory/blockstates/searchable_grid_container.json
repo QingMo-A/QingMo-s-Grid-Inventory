@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "df_grid_inventory:block/searchable_grid_container"
+    }
+  }
+}

@@ -8,6 +8,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
@@ -18,6 +20,8 @@ import java.util.function.Supplier;
 public final class Forge1201RegistryBridge implements GridInventoryRegistryBridge {
     private static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, DFGridInventory.MODID);
+    private static final DeferredRegister<Block> BLOCKS =
+            DeferredRegister.create(ForgeRegistries.BLOCKS, DFGridInventory.MODID);
     private static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(ForgeRegistries.MENU_TYPES, DFGridInventory.MODID);
     private static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
@@ -25,6 +29,16 @@ public final class Forge1201RegistryBridge implements GridInventoryRegistryBridg
 
     @Override
     public <T extends Item> Supplier<T> registerItem(String name, Supplier<T> item) {
+        return ITEMS.register(name, item);
+    }
+
+    @Override
+    public <T extends Block> Supplier<T> registerBlock(String name, Supplier<T> block) {
+        return BLOCKS.register(name, block);
+    }
+
+    @Override
+    public <T extends BlockItem> Supplier<T> registerBlockItem(String name, Supplier<T> item) {
         return ITEMS.register(name, item);
     }
 
@@ -40,6 +54,7 @@ public final class Forge1201RegistryBridge implements GridInventoryRegistryBridg
     }
 
     public void register(IEventBus modEventBus) {
+        BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         MENUS.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);

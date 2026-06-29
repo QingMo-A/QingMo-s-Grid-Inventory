@@ -25,6 +25,7 @@ public final class ModCreativeTabs {
                 .title(Component.translatable("itemGroup.df_grid_inventory"))
                 .icon(() -> new ItemStack(ModItems.SMALL_GRID_BAG.get()))
                 .displayItems((parameters, output) -> {
+                    output.accept(ModBlocks.SEARCHABLE_GRID_CONTAINER_ITEM.get());
                     output.accept(ModItems.SMALL_GRID_BAG.get());
                     output.accept(ModItems.GRID_BACKPACK.get());
                     output.accept(ModItems.GRAY_FIELD_BACKPACK.get());

@@ -6,11 +6,17 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.Block;
 
 import java.util.function.Supplier;
 
 public interface GridInventoryRegistryBridge {
     <T extends Item> Supplier<T> registerItem(String name, Supplier<T> item);
+
+    <T extends Block> Supplier<T> registerBlock(String name, Supplier<T> block);
+
+    <T extends BlockItem> Supplier<T> registerBlockItem(String name, Supplier<T> item);
 
     <T extends AbstractContainerMenu> Supplier<MenuType<T>> registerMenu(String name, MenuFactory<T> factory);
 
