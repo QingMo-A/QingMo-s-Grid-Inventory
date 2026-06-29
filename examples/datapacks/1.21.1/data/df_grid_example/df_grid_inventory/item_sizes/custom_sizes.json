@@ -1,0 +1,25 @@
+{
+  "rules": [
+    {
+      "type": "item",
+      "target": "minecraft:diamond_sword",
+      "width": 1,
+      "height": 3,
+      "rotatable": true
+    },
+    {
+      "type": "tag",
+      "target": "minecraft:boats",
+      "width": 3,
+      "height": 2,
+      "rotatable": true
+    },
+    {
+      "type": "modid",
+      "target": "df_grid_inventory",
+      "width": 2,
+      "height": 2,
+      "rotatable": true
+    }
+  ]
+}

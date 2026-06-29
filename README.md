@@ -64,7 +64,25 @@ DF Grid Inventory 是一个数据驱动的俄罗斯方块式背包模组。不�
 
 ## 自定义物品尺寸
 
-物品尺寸通过数据包配置，不需要修改模组。数据包内建立以下目录：
+物品尺寸通过数据包配置，不需要修改模组，也不需要制作资源包。
+
+### 下载示例包
+
+- [下载 Minecraft 1.20.1 示例数据包](examples/df-grid-item-sizes-example-1.20.1.zip)
+- [下载 Minecraft 1.21.1 示例数据包](examples/df-grid-item-sizes-example-1.21.1.zip)
+
+下载对应版本后：
+
+1. 不要解压 ZIP。
+2. 将 ZIP 放入 `.minecraft/saves/你的世界/datapacks/`。
+3. 进入世界并执行 `/reload`。
+4. 使用 `/datapack list enabled` 确认示例包已启用。
+
+示例包会将钻石剑设为 `1×3`、所有船设为 `3×2`，并将 `df_grid_inventory` 的其余物品设为 `2×2`。单个物品规则优先，因此本模组自身已有明确尺寸的物品不会被最后一条通用示例规则覆盖。
+
+### 自己创建数据包
+
+数据包目录结构如下：
 
 ```text
 你的数据包/
@@ -75,6 +93,8 @@ DF Grid Inventory 是一个数据驱动的俄罗斯方块式背包模组。不�
          └─ item_sizes/
             └─ custom_sizes.json
 ```
+
+`pack.mcmeta` 的 `pack_format` 取决于 Minecraft 版本。建议直接下载上面的对应版本示例包并修改。示例包的可编辑源码也保存在 [`examples/datapacks`](examples/datapacks)。
 
 `custom_sizes.json` 示例：
 
@@ -106,7 +126,9 @@ DF Grid Inventory 是一个数据驱动的俄罗斯方块式背包模组。不�
 }
 ```
 
-规则字段：
+一个 JSON 文件可以包含任意数量的规则，`item_sizes` 目录中也可以放置多个 JSON 文件。文件名可以自定义，但必须使用小写英文字母、数字、下划线或短横线。
+
+### 规则字段
 
 | 字段 | 说明 |
 | --- | --- |
@@ -116,19 +138,89 @@ DF Grid Inventory 是一个数据驱动的俄罗斯方块式背包模组。不�
 | `height` | 物品占用的格子高度，必须大于 0 |
 | `rotatable` | 是否允许旋转；省略时为 `false` |
 
+`width` 与 `height` 表示未旋转状态下占用的格子数。例如 `width: 2`、`height: 3` 表示 `2×3`；允许旋转后可以变为 `3×2`。
+
+### 三种匹配方式
+
+指定单个物品：
+
+```json
+{
+  "type": "item",
+  "target": "minecraft:diamond_sword",
+  "width": 1,
+  "height": 3,
+  "rotatable": true
+}
+```
+
+指定物品标签，标签内的全部物品都会使用该尺寸：
+
+```json
+{
+  "type": "tag",
+  "target": "minecraft:boats",
+  "width": 3,
+  "height": 2,
+  "rotatable": true
+}
+```
+
+指定某个模组的全部物品。`target` 此时只填写模组 ID，不带冒号：
+
+```json
+{
+  "type": "modid",
+  "target": "examplemod",
+  "width": 2,
+  "height": 2,
+  "rotatable": false
+}
+```
+
+可以在游戏中打开高级提示框（`F3 + H`），然后将鼠标放在物品上查看物品 ID。ID 通常形如 `minecraft:diamond_sword` 或 `模组ID:物品ID`。
+
+### 优先级与冲突
+
 匹配优先级为：
 
 ```text
 单个物品（item） > 物品标签（tag） > 整个模组（modid） > 默认尺寸
 ```
 
-将数据包放入世界存档的 `datapacks` 文件夹，然后执行：
+因此可以先用 `modid` 给整个模组设置通用尺寸，再用 `item` 为少数物品单独覆盖。不要为同一个物品编写多条同类型规则；同类型重复规则的结果可能受到资源加载顺序影响。
+
+背包的折叠状态拥有自己的动态尺寸，不受普通物品尺寸规则覆盖。
+
+### 安装与重新加载
+
+单人世界的数据包位置：
+
+```text
+.minecraft/saves/世界名称/datapacks/
+```
+
+专用服务器的数据包位置：
+
+```text
+服务器目录/world/datapacks/
+```
+
+安装或修改数据包后执行：
 
 ```mcfunction
 /reload
 ```
 
-多人游戏应将尺寸数据包安装在服务端。服务端重新加载后会把规则同步给在线玩家。
+多人游戏只需由服务端安装尺寸数据包。服务端重新加载后会把规则同步给在线玩家，客户端不应使用另一套尺寸规则。
+
+如果规则没有生效：
+
+1. 使用 `/datapack list enabled` 检查数据包是否启用。
+2. 确认 ZIP 打开后最外层直接包含 `pack.mcmeta` 和 `data`，而不是额外套了一层文件夹。
+3. 确认路径是 `data/<命名空间>/df_grid_inventory/item_sizes/*.json`。
+4. 确认 `target` 使用正确的物品、标签或模组 ID。
+5. 查看日志中是否出现 `Failed to load grid item size rules` 或 `Invalid grid item size rule`。
 
 ## 新增特殊物品
 
