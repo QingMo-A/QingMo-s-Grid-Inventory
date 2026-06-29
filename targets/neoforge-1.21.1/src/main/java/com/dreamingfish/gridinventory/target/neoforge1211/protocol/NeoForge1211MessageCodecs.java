@@ -199,6 +199,18 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> { b.writeVarInt(m.sourcePlayerSlot()); b.writeVarInt(m.targetPlayerSlot()); b.writeBoolean(m.targetFolded()); },
                 b -> new MovePlayerFreeSlotMessage(b.readVarInt(), b.readVarInt(), b.readBoolean())
         ));
+        register(GridMessages.MOVE_PLAYER_SLOT_TO_SEARCHABLE_CONTAINER, codec(
+                (m, b) -> { b.writeBlockPos(m.blockPos()); b.writeVarInt(m.playerSlot()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.folded()); },
+                b -> new MovePlayerSlotToSearchableContainerMessage(b.readBlockPos(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.MOVE_SEARCHABLE_CONTAINER_ENTRY, codec(
+                (m, b) -> { b.writeBlockPos(m.blockPos()); b.writeUUID(m.entryId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.folded()); },
+                b -> new MoveSearchableContainerEntryMessage(b.readBlockPos(), b.readUUID(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.MOVE_SEARCHABLE_CONTAINER_ENTRY_TO_PLAYER_SLOT, codec(
+                (m, b) -> { b.writeBlockPos(m.blockPos()); b.writeUUID(m.entryId()); b.writeVarInt(m.playerSlot()); b.writeVarInt(m.amount()); },
+                b -> new MoveSearchableContainerEntryToPlayerSlotMessage(b.readBlockPos(), b.readUUID(), b.readVarInt(), b.readVarInt())
+        ));
         register(GridMessages.OPEN_PLAYER_GRID_INVENTORY, new NeoForge1211MessageCodec<>() {
             @Override
             public void encode(OpenPlayerGridInventoryMessage message, RegistryFriendlyByteBuf buf) {
@@ -284,6 +296,10 @@ public final class NeoForge1211MessageCodecs {
                 return new SyncGridInventoryMessage(GridInventoryData.decode(buf));
             }
         });
+        register(GridMessages.SYNC_SEARCHABLE_CONTAINER_GRID, codec(
+                (m, b) -> { b.writeBlockPos(m.blockPos()); m.data().encode(b); },
+                b -> new SyncSearchableContainerGridMessage(b.readBlockPos(), GridInventoryData.decode(b))
+        ));
         register(GridMessages.SYNC_ITEM_SIZE_RULES, new NeoForge1211MessageCodec<>() {
             @Override
             public void encode(SyncItemSizeRulesMessage message, RegistryFriendlyByteBuf buf) {

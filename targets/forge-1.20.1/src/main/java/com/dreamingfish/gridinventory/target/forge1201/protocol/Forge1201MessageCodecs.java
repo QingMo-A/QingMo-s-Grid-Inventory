@@ -36,6 +36,9 @@ import com.dreamingfish.gridinventory.common.network.MoveEquipmentStorageEntryMe
 import com.dreamingfish.gridinventory.common.network.MoveGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
 import com.dreamingfish.gridinventory.common.network.MovePlayerFreeSlotMessage;
+import com.dreamingfish.gridinventory.common.network.MovePlayerSlotToSearchableContainerMessage;
+import com.dreamingfish.gridinventory.common.network.MoveSearchableContainerEntryMessage;
+import com.dreamingfish.gridinventory.common.network.MoveSearchableContainerEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMessage;
@@ -50,6 +53,7 @@ import com.dreamingfish.gridinventory.common.network.SyncBackpackFoldingRulesMes
 import com.dreamingfish.gridinventory.common.network.SyncEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.SyncGridInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.SyncItemSizeRulesMessage;
+import com.dreamingfish.gridinventory.common.network.SyncSearchableContainerGridMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.TransferEquipmentStorageEntryIntoGridMessage;
@@ -168,6 +172,13 @@ public final class Forge1201MessageCodecs {
         register(GridMessages.SYNC_GRID_INVENTORY, codec(
                 (message, buf) -> message.data().encode(buf),
                 buf -> new SyncGridInventoryMessage(GridInventoryData.decode(buf))
+        ));
+        register(GridMessages.SYNC_SEARCHABLE_CONTAINER_GRID, codec(
+                (message, buf) -> {
+                    buf.writeBlockPos(message.blockPos());
+                    message.data().encode(buf);
+                },
+                buf -> new SyncSearchableContainerGridMessage(buf.readBlockPos(), GridInventoryData.decode(buf))
         ));
         register(GridMessages.SYNC_EQUIPMENT_STORAGE, codec(
                 (message, buf) -> {
@@ -369,6 +380,40 @@ public final class Forge1201MessageCodecs {
                     buf.writeBoolean(message.targetFolded());
                 },
                 buf -> new MovePlayerFreeSlotMessage(buf.readVarInt(), buf.readVarInt(), buf.readBoolean())
+        ));
+        register(GridMessages.MOVE_PLAYER_SLOT_TO_SEARCHABLE_CONTAINER, codec(
+                (message, buf) -> {
+                    buf.writeBlockPos(message.blockPos());
+                    buf.writeVarInt(message.playerSlot());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.folded());
+                },
+                buf -> new MovePlayerSlotToSearchableContainerMessage(buf.readBlockPos(), buf.readVarInt(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.MOVE_SEARCHABLE_CONTAINER_ENTRY, codec(
+                (message, buf) -> {
+                    buf.writeBlockPos(message.blockPos());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.folded());
+                },
+                buf -> new MoveSearchableContainerEntryMessage(buf.readBlockPos(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.MOVE_SEARCHABLE_CONTAINER_ENTRY_TO_PLAYER_SLOT, codec(
+                (message, buf) -> {
+                    buf.writeBlockPos(message.blockPos());
+                    buf.writeUUID(message.entryId());
+                    buf.writeVarInt(message.playerSlot());
+                    buf.writeVarInt(message.amount());
+                },
+                buf -> new MoveSearchableContainerEntryToPlayerSlotMessage(buf.readBlockPos(), buf.readUUID(),
+                        buf.readVarInt(), buf.readVarInt())
         ));
         register(GridMessages.MANUAL_PICKUP_ITEM, codec(
                 (message, buf) -> buf.writeInt(message.entityId()),

@@ -11,6 +11,7 @@ public final class Forge1201SearchableGridContainerMenuOpenDataCodec {
 
     public static void encode(SearchableGridContainerMenuOpenData data, FriendlyByteBuf buf) {
         buf.writeBlockPos(data.blockPos());
+        data.playerGrid().encode(buf);
         data.containerGrid().encode(buf);
         buf.writeUtf(data.titleKey());
         buf.writeBoolean(data.creativeMode());
@@ -18,9 +19,10 @@ public final class Forge1201SearchableGridContainerMenuOpenDataCodec {
 
     public static SearchableGridContainerMenuOpenData decode(FriendlyByteBuf buf) {
         BlockPos blockPos = buf.readBlockPos();
+        GridInventoryData playerGrid = GridInventoryData.decode(buf);
         GridInventoryData data = GridInventoryData.decode(buf);
         String titleKey = buf.readUtf();
         boolean creativeMode = buf.readBoolean();
-        return new SearchableGridContainerMenuOpenData(blockPos, data, titleKey, creativeMode);
+        return new SearchableGridContainerMenuOpenData(blockPos, playerGrid, data, titleKey, creativeMode);
     }
 }

@@ -8,7 +8,9 @@ import com.dreamingfish.gridinventory.client.platform.GridInventoryClientService
 import com.dreamingfish.gridinventory.client.render.ItemEntityHighlightRenderer;
 import com.dreamingfish.gridinventory.client.render.PickupPromptHud;
 import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
+import com.dreamingfish.gridinventory.client.screen.SearchableGridContainerScreen;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
+import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.target.neoforge1211.client.compat.rarity.NeoForge1211RarityCoreCompat;
@@ -32,7 +34,8 @@ public final class NeoForge1211ClientEvents {
 
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.GRID_INVENTORY.get(), GridInventoryScreen::new);
-        event.register(ModMenus.SEARCHABLE_GRID_CONTAINER.get(), GridInventoryScreen::new);
+        event.<GridInventoryMenu, SearchableGridContainerScreen>register(
+                ModMenus.SEARCHABLE_GRID_CONTAINER.get(), SearchableGridContainerScreen::new);
     }
 
     public static void registerKeys(RegisterKeyMappingsEvent event) {

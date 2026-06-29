@@ -6,6 +6,7 @@ import com.dreamingfish.gridinventory.common.menu.GridInventoryMenuOpenData;
 import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenu;
 import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenuOpenData;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.target.forge1201.menu.Forge1201MenuOpenDataCodec;
 import com.dreamingfish.gridinventory.target.forge1201.menu.Forge1201SearchableGridContainerMenuOpenDataCodec;
 import net.minecraft.core.BlockPos;
@@ -38,7 +39,7 @@ public final class Forge1201MenuBridge implements GridInventoryMenuBridge {
     @Override
     public void openSearchableGridContainer(ServerPlayer player, BlockPos blockPos, GridInventoryData data, String titleKey) {
         SearchableGridContainerMenuOpenData openData = new SearchableGridContainerMenuOpenData(
-                blockPos, data.copy(), titleKey, player.isCreative());
+                blockPos, GridInventoryServices.playerData().copyPlayerGridInventory(player), data.copy(), titleKey, player.isCreative());
         NetworkHooks.openScreen(player, new MenuProvider() {
             @Override
             public Component getDisplayName() {

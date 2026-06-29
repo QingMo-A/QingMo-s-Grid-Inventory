@@ -7,6 +7,8 @@ import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
 import com.dreamingfish.gridinventory.client.platform.GridInventoryClientServices;
 import com.dreamingfish.gridinventory.client.render.PickupPromptHud;
 import com.dreamingfish.gridinventory.client.screen.GridInventoryScreen;
+import com.dreamingfish.gridinventory.client.screen.SearchableGridContainerScreen;
+import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.registry.ModItems;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
@@ -47,7 +49,8 @@ public final class Forge1201ClientEvents {
                 GridInventoryClientServices.init(new Forge1201ClientBridge());
                 GridItemRarityServices.init(new Forge1201RarityCoreCompat());
                 MenuScreens.register(ModMenus.GRID_INVENTORY.get(), GridInventoryScreen::new);
-                MenuScreens.register(ModMenus.SEARCHABLE_GRID_CONTAINER.get(), GridInventoryScreen::new);
+                MenuScreens.<GridInventoryMenu, SearchableGridContainerScreen>register(
+                        ModMenus.SEARCHABLE_GRID_CONTAINER.get(), SearchableGridContainerScreen::new);
                 Forge1201ClientEvents.registerItemProperties();
             });
         }

@@ -6,6 +6,7 @@ import com.dreamingfish.gridinventory.common.menu.GridInventoryMenuOpenData;
 import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenu;
 import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenuOpenData;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.target.neoforge1211.menu.NeoForge1211MenuOpenDataCodec;
 import com.dreamingfish.gridinventory.target.neoforge1211.menu.NeoForge1211SearchableGridContainerMenuOpenDataCodec;
 import net.minecraft.core.BlockPos;
@@ -28,7 +29,7 @@ public final class NeoForgeGridInventoryMenuBridge implements GridInventoryMenuB
     @Override
     public void openSearchableGridContainer(ServerPlayer player, BlockPos blockPos, GridInventoryData data, String titleKey) {
         SearchableGridContainerMenuOpenData openData = new SearchableGridContainerMenuOpenData(
-                blockPos, data.copy(), titleKey, player.isCreative());
+                blockPos, GridInventoryServices.playerData().copyPlayerGridInventory(player), data.copy(), titleKey, player.isCreative());
         player.openMenu(new SearchableProvider(openData), buffer ->
                 NeoForge1211SearchableGridContainerMenuOpenDataCodec.encode(openData, buffer));
     }

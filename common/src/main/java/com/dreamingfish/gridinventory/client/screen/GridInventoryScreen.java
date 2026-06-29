@@ -69,11 +69,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMenu> {
-    private static final int CELL = 27;
+    protected static final int CELL = 27;
     private static final int DRAG_START_DISTANCE = 6;
     private int gridLeft;
     private int gridTop;
-    private GridEntry draggingEntry;
+    protected GridEntry draggingEntry;
     private GridColumnPanel.EquipmentEntryHit draggingEquipmentEntry;
     private NestedContainerWindowManager.EntryHit draggingNestedEntry;
     private CuriosSlotWidget draggingCurioSlot;
@@ -89,15 +89,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private int pendingItemTop;
     private int pendingItemWidth = 1;
     private int pendingItemHeight = 1;
-    private ItemStack dragPreviewStack = ItemStack.EMPTY;
-    private boolean rotatedPreview;
-    private int lastPlayerSlot = -1;
-    private ItemStack selectedPlayerStack = ItemStack.EMPTY;
+    protected ItemStack dragPreviewStack = ItemStack.EMPTY;
+    protected boolean rotatedPreview;
+    protected int lastPlayerSlot = -1;
+    protected ItemStack selectedPlayerStack = ItemStack.EMPTY;
     private int dragAnchorCellX;
     private int dragAnchorCellY;
-    private int dragAnchorPixelX = CELL / 2;
-    private int dragAnchorPixelY = CELL / 2;
-    private final RightSidebarPanel rightSidebarPanel = new RightSidebarPanel();
+    protected int dragAnchorPixelX = CELL / 2;
+    protected int dragAnchorPixelY = CELL / 2;
+    protected final RightSidebarPanel rightSidebarPanel = new RightSidebarPanel();
     private final NestedContainerWindowManager nestedWindows = new NestedContainerWindowManager();
     private final EquipmentColumnPanel equipmentColumnPanel = new EquipmentColumnPanel();
     private final GridColumnPanel gridColumnPanel = new GridColumnPanel();
@@ -361,7 +361,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         });
     }
 
-    private ItemStack draggedStack() {
+    protected ItemStack draggedStack() {
         if (!dragPreviewStack.isEmpty()) {
             return dragPreviewStack;
         }
@@ -401,7 +401,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
     }
 
-    private void renderPlacementPreview(GuiGraphics graphics, GridInventoryData inventory,
+    protected void renderPlacementPreview(GuiGraphics graphics, GridInventoryData inventory,
                                         int left, int top, int targetX, int targetY, int width, int height,
                                         int anchorX, int anchorY,
                                         int fillColor, int outlineColor) {
@@ -664,15 +664,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return false;
     }
 
-    private int currentMouseX() {
+    protected int currentMouseX() {
         return (int) (minecraft.mouseHandler.xpos() * width / minecraft.getWindow().getScreenWidth());
     }
 
-    private int currentMouseY() {
+    protected int currentMouseY() {
         return (int) (minecraft.mouseHandler.ypos() * height / minecraft.getWindow().getScreenHeight());
     }
 
-    private boolean isCreativePlayer() {
+    protected boolean isCreativePlayer() {
         return minecraft.player != null && minecraft.player.isCreative();
     }
 
@@ -1356,12 +1356,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return GridLayoutMetrics.cellYAt(menu.getGridData(), mouseX - gridLeft, mouseY - gridTop, CELL);
     }
 
-    private int anchorCellX(ItemStack stack) {
+    protected int anchorCellX(ItemStack stack) {
         int width = GridItemSizeManager.getSize(stack).placedWidth(rotatedPreview);
         return Math.max(0, Math.min(dragAnchorCellX, width - 1));
     }
 
-    private int anchorCellY(ItemStack stack) {
+    protected int anchorCellY(ItemStack stack) {
         int height = GridItemSizeManager.getSize(stack).placedHeight(rotatedPreview);
         return Math.max(0, Math.min(dragAnchorCellY, height - 1));
     }
@@ -1382,7 +1382,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return region.cellY(currentMouseX(), mouseY) - anchorCellY(stack);
     }
 
-    private void setGridDragAnchor(int mouseX, int mouseY, int itemLeft, int itemTop, int width, int height) {
+    protected void setGridDragAnchor(int mouseX, int mouseY, int itemLeft, int itemTop, int width, int height) {
         int relativeX = Math.max(0, Math.min(width * CELL - 1, mouseX - itemLeft));
         int relativeY = Math.max(0, Math.min(height * CELL - 1, mouseY - itemTop));
         dragAnchorCellX = relativeX / CELL;
@@ -1483,11 +1483,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return true;
     }
 
-    private boolean hasPendingDrag() {
+    protected boolean hasPendingDrag() {
         return pendingGridDrag != null || pendingEquipmentDrag != null || pendingNestedDrag != null || pendingCurioDrag != null || pendingSlotDrag != null;
     }
 
-    private void playReleaseSound(boolean released, boolean equipped, boolean unequipped) {
+    protected void playReleaseSound(boolean released, boolean equipped, boolean unequipped) {
         if (!released) {
             return;
         }
@@ -1525,7 +1525,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         dragAnchorPixelY = Math.max(0, Math.min(CELL - 1, mouseY - topPos - slot.y));
     }
 
-    private Slot findHoveredSlot(double mouseX, double mouseY) {
+    protected Slot findHoveredSlot(double mouseX, double mouseY) {
         if (menu.isPlayerGrid()) {
             return equipmentColumnPanel.slotAt(mouseX, mouseY)
                     .map(slot -> menu.slots.get(slot.menuIndex()))
@@ -1539,7 +1539,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         return null;
     }
 
-    private void clearDragState() {
+    protected void clearDragState() {
         clearPendingDrag();
         draggingEntry = null;
         draggingEquipmentEntry = null;
