@@ -15,6 +15,12 @@ public final class RaidMapConfigValidator {
     public static RaidMapValidationResult validate(String directoryId, RaidMapConfig map) {
         List<RaidMapValidationIssue> issues = new ArrayList<>();
         if (!directoryId.equals(map.id())) error(issues, "map.id must match directory name");
+        if (net.minecraft.resources.ResourceLocation.tryParse(map.dimension()) == null) {
+            error(issues, "invalid dimension: " + map.dimension());
+        }
+        if (!map.bounds().contains(map.defaultSpawnPos())) {
+            error(issues, "default_spawn outside bounds");
+        }
         Set<String> zones = unique(map.zones().stream().map(RaidZoneConfig::id).toList(), "zone", issues);
         Set<String> types = unique(map.containerTypes().stream().map(RaidContainerTypeConfig::id).toList(), "container type", issues);
         unique(map.containerAnchors().stream().map(RaidContainerAnchorConfig::id).toList(), "anchor", issues);

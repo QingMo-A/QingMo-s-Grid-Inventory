@@ -17,7 +17,10 @@ public final class RaidMapConfigLoader {
         JsonObject map = read(directory.resolve("map.json")).getAsJsonObject();
         String id = string(map, "id");
         JsonObject bounds = map.getAsJsonObject("bounds");
-        return new RaidMapConfig(id, string(map, "display_name"),
+        int[] origin = optionalIntArray(map, "origin");
+        int[] defaultSpawn = optionalIntArray(map, "default_spawn");
+        return new RaidMapConfig(id, string(map, "display_name"), string(map, "dimension"),
+                origin, defaultSpawn == null ? origin : defaultSpawn,
                 new MapBoundsConfig(intArray(bounds, "min"), intArray(bounds, "max")),
                 integer(map, "expected_players", 0), integer(map, "raid_time_seconds", 0),
                 zones(read(directory.resolve("zones.json")).getAsJsonArray()),
@@ -89,6 +92,10 @@ public final class RaidMapConfigLoader {
     private static int[] intArray(JsonObject o, String key) {
         JsonArray a = o.getAsJsonArray(key);
         return new int[]{a.get(0).getAsInt(), a.get(1).getAsInt(), a.get(2).getAsInt()};
+    }
+
+    private static int[] optionalIntArray(JsonObject o, String key) {
+        return o != null && o.has(key) && o.get(key).isJsonArray() ? intArray(o, key) : null;
     }
 
     private static List<String> strings(JsonObject o, String key) {
