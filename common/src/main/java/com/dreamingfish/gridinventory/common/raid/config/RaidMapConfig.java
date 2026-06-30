@@ -16,7 +16,7 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
     public RaidMapConfig {
         dimension = dimension == null || dimension.isBlank() ? "minecraft:overworld" : dimension;
         origin = valid(origin) ? origin.clone() : new int[]{0, 0, 0};
-        defaultSpawn = valid(defaultSpawn) ? defaultSpawn.clone() : origin.clone();
+        defaultSpawn = valid(defaultSpawn) ? defaultSpawn.clone() : new int[]{0, 0, 0};
     }
 
     public BlockPos pasteOriginPos() { return pos(origin, BlockPos.ZERO); }

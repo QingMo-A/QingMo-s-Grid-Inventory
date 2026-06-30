@@ -151,16 +151,18 @@ public final class QmRaidCommands {
         if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
         RaidManifest raid = manifest.get();
         source.sendSuccess(() -> Component.literal("Raid " + raid.raidId() + " map=" + raid.mapId()
-                + " seed=" + raid.raidSeed() + " activeContainers=" + raid.activeContainers().size()), false);
+                + " seed=" + raid.raidSeed() + " dimension=" + raid.dimensionId()
+                + " pasteOrigin=" + raid.pasteOrigin().toShortString()
+                + " activeContainers=" + raid.activeContainers().size()), false);
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
                 + " anchors=" + zone.anchorBudgets()), false));
-        RaidMapConfigRegistry.get(raid.mapId()).ifPresent(map -> raid.activeContainers().forEach(anchor -> {
-            BlockPos worldPos = map.toWorldPos(anchor.localPos());
+        raid.activeContainers().forEach(anchor -> {
+            BlockPos worldPos = raid.toWorldPos(anchor.localPos());
             source.sendSuccess(() -> Component.literal("active " + anchor.anchorId() + " zone=" + anchor.zoneId()
                     + " budget=" + anchor.pointBudget() + " local=" + anchor.localPos().toShortString()
                     + " world=" + worldPos.toShortString()), false);
-        }));
+        });
         return 1;
     }
     private static int apply(CommandSourceStack source, String value) {
@@ -185,7 +187,7 @@ public final class QmRaidCommands {
         var level = raidLevel(source, manifest.get());
         if (level == null) return 0;
         BlockPos localSpawn = map.get().defaultSpawnLocalPos();
-        BlockPos spawn = manifest.get().pasteOrigin().offset(localSpawn);
+        BlockPos spawn = manifest.get().toWorldPos(localSpawn);
         player.teleportTo(level, spawn.getX() + 0.5D, spawn.getY(), spawn.getZ() + 0.5D,
                 player.getYRot(), player.getXRot());
         source.sendSuccess(() -> Component.literal("Joined raid " + manifest.get().raidId() + " map="

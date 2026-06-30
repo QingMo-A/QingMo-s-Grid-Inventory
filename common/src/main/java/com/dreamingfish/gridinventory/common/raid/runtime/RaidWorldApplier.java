@@ -15,14 +15,14 @@ import java.util.stream.Collectors;
 public final class RaidWorldApplier {
     private RaidWorldApplier() {}
     public static RaidWorldApplyResult apply(ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
-        RaidTemplateApplyResult template = RaidTemplateApplier.applyTemplate(level, map);
+        RaidTemplateApplyResult template = RaidTemplateApplier.applyTemplate(level, map, manifest);
         int placed = 0;
         int rebound = 0;
         int cleared = 0;
         int warnings = 0;
         if (template.missing()) warnings++;
         for (ContainerAnchorActivation anchor : manifest.activeContainers()) {
-            var worldPos = map.toWorldPos(anchor.localPos());
+            var worldPos = manifest.toWorldPos(anchor.localPos());
             var oldBlock = level.getBlockState(worldPos).getBlock();
             if (oldBlock == ModBlocks.SEARCHABLE_GRID_CONTAINER.get()) {
                 rebound++;
@@ -31,8 +31,9 @@ public final class RaidWorldApplier {
                 if (oldBlock != ModBlocks.RAID_CONTAINER_PLACEHOLDER.get() && oldBlock != Blocks.AIR) {
                     warnings++;
                     DFGridInventory.LOGGER.warn(
-                            "Raid active anchor replacing unexpected block mapId={} raidId={} anchorId={} localPos={} worldPos={} oldBlock={}",
-                            manifest.mapId(), manifest.raidId(), anchor.anchorId(), anchor.localPos(), worldPos, oldBlock);
+                            "Raid active anchor replacing unexpected block mapId={} raidId={} anchorId={} localPos={} worldPos={} pasteOrigin={} oldBlock={}",
+                            manifest.mapId(), manifest.raidId(), anchor.anchorId(), anchor.localPos(), worldPos,
+                            manifest.pasteOrigin(), oldBlock);
                 }
             }
             level.setBlock(worldPos, ModBlocks.SEARCHABLE_GRID_CONTAINER.get().defaultBlockState(), 3);
@@ -48,7 +49,7 @@ public final class RaidWorldApplier {
         for (var anchor : map.containerAnchors()) {
             if (!anchor.enabled() || activeIds.contains(anchor.id())) continue;
             var localPos = anchor.localBlockPos();
-            var worldPos = map.toWorldPos(localPos);
+            var worldPos = manifest.toWorldPos(localPos);
             var state = level.getBlockState(worldPos);
             if (state.getBlock() == ModBlocks.RAID_CONTAINER_PLACEHOLDER.get()) {
                 level.setBlock(worldPos, Blocks.AIR.defaultBlockState(), 3);
@@ -61,8 +62,9 @@ public final class RaidWorldApplier {
             } else if (!state.isAir()) {
                 warnings++;
                 DFGridInventory.LOGGER.warn(
-                        "Raid inactive anchor expected placeholder mapId={} raidId={} anchorId={} localPos={} worldPos={} oldBlock={}",
-                        manifest.mapId(), manifest.raidId(), anchor.id(), localPos, worldPos, state.getBlock());
+                        "Raid inactive anchor expected placeholder mapId={} raidId={} anchorId={} localPos={} worldPos={} pasteOrigin={} oldBlock={}",
+                        manifest.mapId(), manifest.raidId(), anchor.id(), localPos, worldPos,
+                        manifest.pasteOrigin(), state.getBlock());
             }
         }
         // TODO Phase 45A: apply block patch variants before placing loot containers.
@@ -70,7 +72,7 @@ public final class RaidWorldApplier {
         // TODO Phase 45B: enable extraction points from RaidManifest.
         // TODO Phase 46A: spawn/static-render loose loot nodes from LooseLootManifest.
         // TODO Phase 48A: restore/reset raid instance world after raid ends.
-        // TODO Phase 48B: support per-raid instance origin offsets instead of direct world coordinates.
+        // TODO Phase 50A: allocate unique pasteOrigin and/or isolated dimension per RaidInstance.
         return new RaidWorldApplyResult(template.applied(), template.missing(), placed, rebound, cleared, warnings);
     }
 }

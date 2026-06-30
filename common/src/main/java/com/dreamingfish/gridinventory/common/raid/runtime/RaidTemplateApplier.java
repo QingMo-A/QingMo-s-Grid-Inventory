@@ -10,14 +10,15 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlac
 public final class RaidTemplateApplier {
     private RaidTemplateApplier() {}
 
-    public static RaidTemplateApplyResult applyTemplate(ServerLevel level, RaidMapConfig map) {
+    public static RaidTemplateApplyResult applyTemplate(ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
         if (map.template() == null) return RaidTemplateApplyResult.skipped();
         var template = level.getStructureManager().get(map.template());
         if (template.isEmpty()) {
-            DFGridInventory.LOGGER.warn("Raid template missing mapId={} template={}", map.id(), map.template());
+            DFGridInventory.LOGGER.warn("Raid template missing mapId={} raidId={} template={} pasteOrigin={}",
+                    map.id(), manifest.raidId(), map.template(), manifest.pasteOrigin());
             return new RaidTemplateApplyResult(false, true);
         }
-        var origin = map.pasteOriginPos();
+        var origin = manifest.pasteOrigin();
         boolean applied = template.get().placeInWorld(level, origin, origin,
                 new StructurePlaceSettings().setMirror(Mirror.NONE).setRotation(Rotation.NONE),
                 level.random, 3);
