@@ -18,7 +18,7 @@ public final class RaidMapConfigValidator {
         if (net.minecraft.resources.ResourceLocation.tryParse(map.dimension()) == null) {
             error(issues, "invalid dimension: " + map.dimension());
         }
-        if (!map.bounds().contains(map.defaultSpawnPos())) {
+        if (!map.bounds().contains(map.defaultSpawnLocalPos())) {
             error(issues, "default_spawn outside bounds");
         }
         Set<String> zones = unique(map.zones().stream().map(RaidZoneConfig::id).toList(), "zone", issues);
@@ -30,7 +30,7 @@ public final class RaidMapConfigValidator {
         for (RaidContainerAnchorConfig anchor : map.containerAnchors()) {
             if (!zones.contains(anchor.zone())) error(issues, "unknown zone for anchor " + anchor.id());
             if (!types.contains(anchor.containerType())) error(issues, "unknown container type for anchor " + anchor.id());
-            if (anchor.pos() == null || anchor.pos().length != 3 || !map.bounds().contains(anchor.blockPos())) error(issues, "anchor outside bounds " + anchor.id());
+            if (anchor.pos() == null || anchor.pos().length != 3 || !map.bounds().contains(anchor.localBlockPos())) error(issues, "anchor outside bounds " + anchor.id());
             if (anchor.weight() <= 0) warn(issues, "anchor weight corrected to 100: " + anchor.id());
             if (anchor.qualityMultiplier() <= 0) warn(issues, "anchor uses container type quality: " + anchor.id());
         }

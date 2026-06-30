@@ -29,13 +29,14 @@ public final class RaidManifestGenerator {
                 int share = i == selected.size() - 1 ? budget - assigned
                         : (int) Math.floor(budget * quality(anchor, types.get(anchor.containerType())) / Math.max(qualityTotal, 1));
                 assigned += share; budgets.put(anchor.id(), share);
-                activations.add(new ContainerAnchorActivation(anchor.id(), zone.id(), anchor.group(), anchor.blockPos(),
+                activations.add(new ContainerAnchorActivation(anchor.id(), zone.id(), anchor.group(), anchor.localBlockPos(),
                         anchor.containerType(), share, quality(anchor, types.get(anchor.containerType())), random.nextLong()));
             }
             zones.put(zone.id(), new ZoneRaidState(zone.id(), selected.size(), budget,
                     selected.stream().map(RaidContainerAnchorConfig::id).toList(), Map.copyOf(budgets)));
         }
-        return new RaidManifest(raidId, seed, map.id(), Map.copyOf(zones), List.copyOf(activations));
+        return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
+                Map.copyOf(zones), List.copyOf(activations));
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
         // TODO Phase 45A: select map variant groups before activating loot anchors.

@@ -20,7 +20,8 @@ public final class RaidMapConfigLoader {
         int[] origin = optionalIntArray(map, "origin");
         int[] defaultSpawn = optionalIntArray(map, "default_spawn");
         return new RaidMapConfig(id, string(map, "display_name"), string(map, "dimension"),
-                origin, defaultSpawn == null ? origin : defaultSpawn,
+                optionalLocation(map, "template"),
+                origin, defaultSpawn == null ? new int[]{0, 0, 0} : defaultSpawn,
                 new MapBoundsConfig(intArray(bounds, "min"), intArray(bounds, "max")),
                 integer(map, "expected_players", 0), integer(map, "raid_time_seconds", 0),
                 zones(read(directory.resolve("zones.json")).getAsJsonArray()),
@@ -75,6 +76,14 @@ public final class RaidMapConfigLoader {
 
     private static ResourceLocation location(JsonObject o, String key) {
         return ResourceLocation.tryParse(string(o, key));
+    }
+
+    private static ResourceLocation optionalLocation(JsonObject o, String key) {
+        String value = string(o, key);
+        if (value.isBlank()) return null;
+        ResourceLocation parsed = ResourceLocation.tryParse(value);
+        if (parsed == null) throw new JsonParseException("Invalid resource location for " + key + ": " + value);
+        return parsed;
     }
 
     private static String string(JsonObject o, String key) {

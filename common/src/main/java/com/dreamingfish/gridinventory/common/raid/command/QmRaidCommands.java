@@ -94,7 +94,8 @@ public final class QmRaidCommands {
                     source.getLevel().dimension().location().toString(), origin);
             source.sendSuccess(() -> Component.literal("Created example at " + directory
                     + ". Next: /qmraid map reload; /qmraid map validate " + id
-                    + "; /qmraid create " + id + " seed 666; /qmraid apply latest; /qmraid join latest"), true);
+                    + "; /qmraid create " + id + " seed 666; /qmraid apply latest; /qmraid join latest"
+                    + ". Origin is your current world position; anchors are local positions."), true);
             return 1;
         } catch (IOException exception) {
             source.sendFailure(Component.literal("Example not written (existing files are never overwritten): "
@@ -105,10 +106,16 @@ public final class QmRaidCommands {
     private static int validateWorld(CommandSourceStack source, String id) {
         Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(id);
         if (map.isEmpty()) { source.sendFailure(Component.literal("Unknown map: " + id)); return 0; }
+        ResourceLocation dimension = ResourceLocation.tryParse(map.get().dimension());
+        var targetLevel = dimension == null ? null
+                : source.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, dimension));
+        if (targetLevel == null) { source.sendFailure(Component.literal("Dimension not loaded: " + map.get().dimension())); return 0; }
         int placeholders = 0, air = 0, containers = 0, unexpected = 0;
         for (RaidContainerAnchorConfig anchor : map.get().containerAnchors()) {
             if (!anchor.enabled()) continue;
-            var block = source.getLevel().getBlockState(anchor.blockPos()).getBlock();
+            BlockPos localPos = anchor.localBlockPos();
+            BlockPos worldPos = map.get().toWorldPos(localPos);
+            var block = targetLevel.getBlockState(worldPos).getBlock();
             if (block == ModBlocks.RAID_CONTAINER_PLACEHOLDER.get()) placeholders++;
             else if (block == Blocks.AIR) air++;
             else if (block == ModBlocks.SEARCHABLE_GRID_CONTAINER.get()) containers++;
@@ -116,7 +123,7 @@ public final class QmRaidCommands {
                 unexpected++;
                 source.sendSuccess(() -> Component.literal("WARN anchor " + anchor.id()
                         + " expected placeholder/air/searchable_container but found " + block
-                        + " at " + anchor.blockPos().toShortString()), false);
+                        + " local=" + localPos.toShortString() + " world=" + worldPos.toShortString()), false);
             }
         }
         int p = placeholders, a = air, c = containers, u = unexpected;
@@ -148,6 +155,12 @@ public final class QmRaidCommands {
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
                 + " anchors=" + zone.anchorBudgets()), false));
+        RaidMapConfigRegistry.get(raid.mapId()).ifPresent(map -> raid.activeContainers().forEach(anchor -> {
+            BlockPos worldPos = map.toWorldPos(anchor.localPos());
+            source.sendSuccess(() -> Component.literal("active " + anchor.anchorId() + " zone=" + anchor.zoneId()
+                    + " budget=" + anchor.pointBudget() + " local=" + anchor.localPos().toShortString()
+                    + " world=" + worldPos.toShortString()), false);
+        }));
         return 1;
     }
     private static int apply(CommandSourceStack source, String value) {
@@ -155,9 +168,12 @@ public final class QmRaidCommands {
         if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
         Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(manifest.get().mapId());
         if (map.isEmpty()) { source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId())); return 0; }
-        RaidWorldApplyResult result = RaidWorldApplier.apply(source.getLevel(), map.get(), manifest.get());
+        var targetLevel = raidLevel(source, manifest.get());
+        if (targetLevel == null) return 0;
+        RaidWorldApplyResult result = RaidWorldApplier.apply(targetLevel, map.get(), manifest.get());
         source.sendSuccess(() -> Component.literal("Applied raid " + manifest.get().raidId()
-                + ": activePlaced=" + result.activePlaced() + " activeRebound=" + result.activeRebound()
+                + ": templateApplied=" + result.templateApplied() + " templateMissing=" + result.templateMissing()
+                + " activePlaced=" + result.activePlaced() + " activeRebound=" + result.activeRebound()
                 + " inactiveCleared=" + result.inactiveCleared() + " warnings=" + result.warnings()), true);
         return result.activePlaced() + result.activeRebound();
     }
@@ -166,16 +182,23 @@ public final class QmRaidCommands {
         if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
         Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(manifest.get().mapId());
         if (map.isEmpty()) { source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId())); return 0; }
-        ResourceLocation id = ResourceLocation.tryParse(map.get().dimension());
-        if (id == null) { source.sendFailure(Component.literal("Invalid dimension: " + map.get().dimension())); return 0; }
-        var level = source.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, id));
-        if (level == null) { source.sendFailure(Component.literal("Dimension not loaded: " + id)); return 0; }
-        BlockPos spawn = map.get().defaultSpawnPos();
+        var level = raidLevel(source, manifest.get());
+        if (level == null) return 0;
+        BlockPos localSpawn = map.get().defaultSpawnLocalPos();
+        BlockPos spawn = manifest.get().pasteOrigin().offset(localSpawn);
         player.teleportTo(level, spawn.getX() + 0.5D, spawn.getY(), spawn.getZ() + 0.5D,
                 player.getYRot(), player.getXRot());
         source.sendSuccess(() -> Component.literal("Joined raid " + manifest.get().raidId() + " map="
-                + map.get().id() + " spawn=" + spawn.toShortString() + " player=" + player.getName().getString()), true);
+                + map.get().id() + " localSpawn=" + localSpawn.toShortString()
+                + " worldSpawn=" + spawn.toShortString() + " player=" + player.getName().getString()), true);
         return 1;
+    }
+    private static net.minecraft.server.level.ServerLevel raidLevel(CommandSourceStack source, RaidManifest manifest) {
+        ResourceLocation id = ResourceLocation.tryParse(manifest.dimensionId());
+        if (id == null) { source.sendFailure(Component.literal("Invalid dimension: " + manifest.dimensionId())); return null; }
+        var level = source.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, id));
+        if (level == null) source.sendFailure(Component.literal("Dimension not loaded: " + id));
+        return level;
     }
     private static int inspect(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         var player = source.getPlayerOrException();

@@ -18,16 +18,14 @@ public final class RaidMapExampleWriter {
                   "id": "%s",
                   "display_name": "Example Raid Map",
                   "dimension": "%s",
+                  "template": "",
                   "origin": [%d, %d, %d],
-                  "default_spawn": [%d, %d, %d],
-                  "bounds": {"min": [%d, %d, %d], "max": [%d, %d, %d]},
+                  "default_spawn": [0, 1, 0],
+                  "bounds": {"min": [-32, -16, -32], "max": [32, 32, 32]},
                   "expected_players": 4,
                   "raid_time_seconds": 1800
                 }
-                """.formatted(mapId, dimension, origin.getX(), origin.getY(), origin.getZ(),
-                origin.getX(), origin.getY() + 1, origin.getZ(),
-                origin.getX() - 32, origin.getY() - 16, origin.getZ() - 32,
-                origin.getX() + 32, origin.getY() + 32, origin.getZ() + 32));
+                """.formatted(mapId, dimension, origin.getX(), origin.getY(), origin.getZ()));
         writeNew(directory.resolve("zones.json"), """
                 [
                   {"id":"storage","tier":1,"active_containers":{"min":2,"max":3},"loot_budget":{"min":1000,"max":2000},"allowed_categories":["food","tool"]},
@@ -40,11 +38,11 @@ public final class RaidMapExampleWriter {
                   {"id":"medical_box","block":"df_grid_inventory:searchable_grid_container","columns":6,"rows":4,"fallback_loot_table":"df_grid_inventory:grid_containers/searchable_grid_container","default_quality_multiplier":1.2,"allowed_categories":["medical"]}
                 ]
                 """);
-        writeNew(directory.resolve("container_anchors.json"), anchors(origin));
+        writeNew(directory.resolve("container_anchors.json"), anchors());
         return directory;
     }
 
-    private static String anchors(BlockPos p) {
+    private static String anchors() {
         return """
                 [
                   {"id":"storage_01","zone":"storage","group":"left","pos":[%d,%d,%d],"container_type":"generic_crate","quality_multiplier":0.8,"weight":100,"enabled":true,"tags":["storage"]},
@@ -53,8 +51,7 @@ public final class RaidMapExampleWriter {
                   {"id":"medical_01","zone":"medical","group":"room","pos":[%d,%d,%d],"container_type":"medical_box","quality_multiplier":1.0,"weight":100,"enabled":true,"tags":["medical"]},
                   {"id":"medical_02","zone":"medical","group":"room","pos":[%d,%d,%d],"container_type":"medical_box","quality_multiplier":1.2,"weight":100,"enabled":true,"tags":["medical"]}
                 ]
-                """.formatted(p.getX()+2,p.getY(),p.getZ(), p.getX()+4,p.getY(),p.getZ(),
-                p.getX()+6,p.getY(),p.getZ(), p.getX()+2,p.getY(),p.getZ()+4, p.getX()+4,p.getY(),p.getZ()+4);
+                """.formatted(2,0,0, 4,0,0, 6,0,0, 2,0,4, 4,0,4);
     }
 
     private static void writeNew(Path path, String content) throws IOException {
