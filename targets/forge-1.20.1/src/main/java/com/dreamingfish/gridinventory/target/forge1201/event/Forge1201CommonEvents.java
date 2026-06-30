@@ -9,6 +9,8 @@ import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionLoa
 import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
+import com.dreamingfish.gridinventory.common.raid.command.QmRaidCommands;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -21,6 +23,11 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class Forge1201CommonEvents {
     private Forge1201CommonEvents() {
+    }
+
+    @SubscribeEvent
+    public static void registerCommands(RegisterCommandsEvent event) {
+        QmRaidCommands.register(event.getDispatcher());
     }
 
     @SubscribeEvent

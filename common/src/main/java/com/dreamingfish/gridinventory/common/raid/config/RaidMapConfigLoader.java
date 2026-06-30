@@ -1,0 +1,100 @@
+package com.dreamingfish.gridinventory.common.raid.config;
+
+import com.google.gson.*;
+import net.minecraft.resources.ResourceLocation;
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.*;
+
+public final class RaidMapConfigLoader {
+    private static final Gson GSON = new Gson();
+
+    private RaidMapConfigLoader() {
+    }
+
+    public static RaidMapConfig load(Path directory) throws IOException {
+        JsonObject map = read(directory.resolve("map.json")).getAsJsonObject();
+        String id = string(map, "id");
+        JsonObject bounds = map.getAsJsonObject("bounds");
+        return new RaidMapConfig(id, string(map, "display_name"),
+                new MapBoundsConfig(intArray(bounds, "min"), intArray(bounds, "max")),
+                integer(map, "expected_players", 0), integer(map, "raid_time_seconds", 0),
+                zones(read(directory.resolve("zones.json")).getAsJsonArray()),
+                types(read(directory.resolve("container_types.json")).getAsJsonArray()),
+                anchors(read(directory.resolve("container_anchors.json")).getAsJsonArray()));
+    }
+
+    private static JsonElement read(Path path) throws IOException {
+        try (var reader = Files.newBufferedReader(path)) {
+            return JsonParser.parseReader(reader);
+        }
+    }
+
+    private static List<RaidZoneConfig> zones(JsonArray array) {
+        List<RaidZoneConfig> result = new ArrayList<>();
+        for (JsonElement element : array) {
+            JsonObject o = element.getAsJsonObject();
+            result.add(new RaidZoneConfig(string(o, "id"), integer(o, "tier", 1),
+                    range(o.getAsJsonObject("active_containers")), range(o.getAsJsonObject("loot_budget")),
+                    strings(o, "allowed_categories")));
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<RaidContainerTypeConfig> types(JsonArray array) {
+        List<RaidContainerTypeConfig> result = new ArrayList<>();
+        for (JsonElement element : array) {
+            JsonObject o = element.getAsJsonObject();
+            result.add(new RaidContainerTypeConfig(string(o, "id"), location(o, "block"),
+                    integer(o, "columns", 1), integer(o, "rows", 1), location(o, "fallback_loot_table"),
+                    decimal(o, "default_quality_multiplier", 1.0D), strings(o, "allowed_categories")));
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<RaidContainerAnchorConfig> anchors(JsonArray array) {
+        List<RaidContainerAnchorConfig> result = new ArrayList<>();
+        for (JsonElement element : array) {
+            JsonObject o = element.getAsJsonObject();
+            result.add(new RaidContainerAnchorConfig(string(o, "id"), string(o, "zone"), string(o, "group"),
+                    intArray(o, "pos"), string(o, "container_type"), decimal(o, "quality_multiplier", 0),
+                    integer(o, "weight", 100), !o.has("enabled") || o.get("enabled").getAsBoolean(),
+                    strings(o, "tags")));
+        }
+        return List.copyOf(result);
+    }
+
+    private static IntRangeConfig range(JsonObject o) {
+        return o == null ? new IntRangeConfig(0, 0)
+                : new IntRangeConfig(integer(o, "min", 0), integer(o, "max", 0));
+    }
+
+    private static ResourceLocation location(JsonObject o, String key) {
+        return ResourceLocation.tryParse(string(o, key));
+    }
+
+    private static String string(JsonObject o, String key) {
+        return o != null && o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : "";
+    }
+
+    private static int integer(JsonObject o, String key, int fallback) {
+        return o != null && o.has(key) ? o.get(key).getAsInt() : fallback;
+    }
+
+    private static double decimal(JsonObject o, String key, double fallback) {
+        return o != null && o.has(key) ? o.get(key).getAsDouble() : fallback;
+    }
+
+    private static int[] intArray(JsonObject o, String key) {
+        JsonArray a = o.getAsJsonArray(key);
+        return new int[]{a.get(0).getAsInt(), a.get(1).getAsInt(), a.get(2).getAsInt()};
+    }
+
+    private static List<String> strings(JsonObject o, String key) {
+        if (o == null || !o.has(key)) return List.of();
+        List<String> result = new ArrayList<>();
+        o.getAsJsonArray(key).forEach(e -> result.add(e.getAsString()));
+        return List.copyOf(result);
+    }
+}

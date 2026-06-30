@@ -9,6 +9,7 @@ import com.dreamingfish.gridinventory.common.folding.BackpackFoldingLoader;
 import com.dreamingfish.gridinventory.common.folding.BackpackFoldingSyncManager;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
 import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionLoader;
+import com.dreamingfish.gridinventory.common.raid.command.QmRaidCommands;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.platform.neoforge.NeoForgeGridInventoryPlatform;
 import com.dreamingfish.gridinventory.target.neoforge1211.protocol.NeoForge1211ProtocolCompat;
@@ -28,6 +29,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 @Mod(DFGridInventoryMod.MODID)
 public class DFGridInventoryMod {
@@ -60,6 +62,11 @@ public class DFGridInventoryMod {
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> GridInventoryServices.accessories().registerBackpackAccessories());
         DFGridInventory.LOGGER.info("DF Grid Inventory loaded. Vanilla inventories and creative inventory are left untouched.");
+    }
+
+    @SubscribeEvent
+    public void registerCommands(RegisterCommandsEvent event) {
+        QmRaidCommands.register(event.getDispatcher());
     }
 
     @SubscribeEvent
