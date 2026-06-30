@@ -757,7 +757,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return true;
     }
 
-    private Optional<ItemStack> creativeStack(int tabIndex, int itemIndex, int count, boolean folded) {
+    protected Optional<ItemStack> creativeStack(int tabIndex, int itemIndex, int count, boolean folded) {
         if (!(playerInventory.player instanceof ServerPlayer player) || !player.isCreative() || player.isSpectator()) {
             return Optional.empty();
         }

@@ -7,6 +7,7 @@ import com.dreamingfish.gridinventory.common.inventory.GridExplicitInsertHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.GridStackMerger;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
+import com.dreamingfish.gridinventory.common.pickup.ManualPickupHandler;
 import com.dreamingfish.gridinventory.common.registry.ModMenus;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
@@ -15,6 +16,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -193,6 +196,52 @@ public class SearchableGridContainerMenu extends GridInventoryMenu {
         containerGridData.extract(entryId, accepted);
         target.grow(accepted);
         playerInventory.setChanged();
+        saveContainerGrid();
+        return true;
+    }
+
+    public boolean pickupGroundItemIntoContainerGrid(int entityId, int targetX, int targetY,
+                                                     boolean rotated, boolean folded) {
+        if (!validContainerAccess() || !(playerInventory.player instanceof ServerPlayer player)) {
+            return false;
+        }
+        Optional<ItemEntity> itemEntity = ManualPickupHandler.findReachableItem(player, entityId);
+        if (itemEntity.isEmpty()) {
+            return false;
+        }
+        ItemStack source = itemEntity.get().getItem();
+        ItemStack incoming = source.copy();
+        if (source.isEmpty() || !applyBackpackFolded(incoming, folded)) {
+            return false;
+        }
+        int moved = GridExplicitInsertHelper.insertOrMergeAt(
+                containerGridData, incoming, targetX, targetY, rotated, 0);
+        if (moved <= 0) {
+            return false;
+        }
+        source.shrink(moved);
+        player.take(itemEntity.get(), moved);
+        if (source.isEmpty()) {
+            itemEntity.get().discard();
+        }
+        saveContainerGrid();
+        return true;
+    }
+
+    public boolean creativeInsertIntoContainerGrid(int tabIndex, int itemIndex, int count,
+                                                   int targetX, int targetY, boolean rotated, boolean folded) {
+        if (!validContainerAccess()) {
+            return false;
+        }
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
+        if (stack.isEmpty()) {
+            return false;
+        }
+        int moved = GridExplicitInsertHelper.insertOrMergeAt(
+                containerGridData, stack.get(), targetX, targetY, rotated, 0);
+        if (moved <= 0) {
+            return false;
+        }
         saveContainerGrid();
         return true;
     }

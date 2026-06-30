@@ -211,6 +211,14 @@ public final class NeoForge1211MessageCodecs {
                 (m, b) -> { b.writeBlockPos(m.blockPos()); b.writeUUID(m.entryId()); b.writeVarInt(m.playerSlot()); b.writeVarInt(m.amount()); },
                 b -> new MoveSearchableContainerEntryToPlayerSlotMessage(b.readBlockPos(), b.readUUID(), b.readVarInt(), b.readVarInt())
         ));
+        register(GridMessages.PICKUP_GROUND_ITEM_INTO_SEARCHABLE_CONTAINER, codec(
+                (m, b) -> { b.writeBlockPos(m.blockPos()); b.writeVarInt(m.entityId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.folded()); },
+                b -> new PickupGroundItemIntoSearchableContainerMessage(b.readBlockPos(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
+        register(GridMessages.CREATIVE_INSERT_INTO_SEARCHABLE_CONTAINER, codec(
+                (m, b) -> { b.writeBlockPos(m.blockPos()); b.writeVarInt(m.tabIndex()); b.writeVarInt(m.itemIndex()); b.writeVarInt(m.count()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); b.writeBoolean(m.folded()); },
+                b -> new CreativeInsertIntoSearchableContainerMessage(b.readBlockPos(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readBoolean(), b.readBoolean())
+        ));
         register(GridMessages.OPEN_PLAYER_GRID_INVENTORY, new NeoForge1211MessageCodec<>() {
             @Override
             public void encode(OpenPlayerGridInventoryMessage message, RegistryFriendlyByteBuf buf) {

@@ -2,6 +2,9 @@ package com.dreamingfish.gridinventory.client.screen;
 
 import com.dreamingfish.gridinventory.api.GridItemSize;
 import com.dreamingfish.gridinventory.client.screen.panel.ContainerGridSidebarPanel;
+import com.dreamingfish.gridinventory.client.screen.panel.CreativeItemReference;
+import com.dreamingfish.gridinventory.client.screen.panel.SidebarDragKind;
+import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.sound.GridInventoryUiSounds;
 import com.dreamingfish.gridinventory.common.data.GridEntry;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
@@ -10,6 +13,8 @@ import com.dreamingfish.gridinventory.common.menu.SearchableGridContainerMenu;
 import com.dreamingfish.gridinventory.common.network.MovePlayerSlotToSearchableContainerMessage;
 import com.dreamingfish.gridinventory.common.network.MoveSearchableContainerEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveSearchableContainerEntryToPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoSearchableContainerMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoSearchableContainerMessage;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
@@ -64,6 +69,32 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && rightSidebarPanel.dragKind() != SidebarDragKind.NONE) {
+            Optional<ContainerGridSidebarPanel.GridPlacementHit> placement =
+                    rightSidebarPanel.containerPlacementAt((int) mouseX, (int) mouseY);
+            if (placement.isPresent()) {
+                ContainerGridSidebarPanel.GridPlacementHit hit = placement.get();
+                int targetX = hit.cellX() - anchorCellX(draggedStack());
+                int targetY = hit.cellY() - anchorCellY(draggedStack());
+                boolean folded = GridBackpackItem.isFolded(draggedStack());
+                if (rightSidebarPanel.dragKind() == SidebarDragKind.NEARBY_GROUND_ITEM) {
+                    Optional<NearbyGroundItemView> dragged = rightSidebarPanel.draggedGroundItem();
+                    dragged.ifPresent(view -> GridInventoryServices.network().sendToServer(
+                            new PickupGroundItemIntoSearchableContainerMessage(searchableMenu.blockPos(),
+                                    view.entityId(), targetX, targetY, rotatedPreview, folded)));
+                } else {
+                    Optional<CreativeItemReference> dragged = rightSidebarPanel.draggedCreativeItem();
+                    dragged.ifPresent(item -> GridInventoryServices.network().sendToServer(
+                            new CreativeInsertIntoSearchableContainerMessage(searchableMenu.blockPos(),
+                                    item.tabIndex(), item.itemIndex(), item.stack().getCount(),
+                                    targetX, targetY, rotatedPreview, folded)));
+                }
+                playReleaseSound(true, false, false);
+                rightSidebarPanel.clearDrag();
+                clearDragState();
+                return true;
+            }
+        }
         if (button == 0 && draggingContainerEntry != null) {
             boolean released = false;
             Optional<ContainerGridSidebarPanel.GridPlacementHit> placement =
@@ -103,6 +134,14 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
             }
         }
         return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (button == 0 && rightSidebarPanel.dragKind() != SidebarDragKind.NONE) {
+            rightSidebarPanel.switchToContainerTabIfHovered(mouseX, mouseY);
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override

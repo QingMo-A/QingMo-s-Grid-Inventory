@@ -78,6 +78,18 @@ public final class RightSidebarPanel {
         return containerTabEnabled && page == Page.CONTAINER;
     }
 
+    public boolean switchToContainerTabIfHovered(double mouseX, double mouseY) {
+        if (!containerTabEnabled || mouseY < top || mouseY >= top + 18 || mouseX < left || mouseX >= left + width) {
+            return false;
+        }
+        int tabWidth = Math.max(1, width / tabCount());
+        if (mouseX >= left + tabWidth) {
+            return false;
+        }
+        page = Page.CONTAINER;
+        return true;
+    }
+
     public Optional<ContainerGridSidebarPanel.GridEntryHit> containerEntryAt(int mouseX, int mouseY) {
         return isContainerPage() ? containerPanel.entryAt(mouseX, mouseY) : Optional.empty();
     }

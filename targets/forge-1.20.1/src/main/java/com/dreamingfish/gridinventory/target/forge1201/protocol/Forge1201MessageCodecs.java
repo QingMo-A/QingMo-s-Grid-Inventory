@@ -12,6 +12,7 @@ import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipment
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoSearchableContainerMessage;
 import com.dreamingfish.gridinventory.common.network.DropCurioMessage;
 import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
@@ -45,6 +46,7 @@ import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMe
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoNestedGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoSearchableContainerMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
@@ -414,6 +416,33 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new MoveSearchableContainerEntryToPlayerSlotMessage(buf.readBlockPos(), buf.readUUID(),
                         buf.readVarInt(), buf.readVarInt())
+        ));
+        register(GridMessages.PICKUP_GROUND_ITEM_INTO_SEARCHABLE_CONTAINER, codec(
+                (message, buf) -> {
+                    buf.writeBlockPos(message.blockPos());
+                    buf.writeVarInt(message.entityId());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.folded());
+                },
+                buf -> new PickupGroundItemIntoSearchableContainerMessage(buf.readBlockPos(), buf.readVarInt(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.CREATIVE_INSERT_INTO_SEARCHABLE_CONTAINER, codec(
+                (message, buf) -> {
+                    buf.writeBlockPos(message.blockPos());
+                    buf.writeVarInt(message.tabIndex());
+                    buf.writeVarInt(message.itemIndex());
+                    buf.writeVarInt(message.count());
+                    buf.writeVarInt(message.targetX());
+                    buf.writeVarInt(message.targetY());
+                    buf.writeBoolean(message.rotated());
+                    buf.writeBoolean(message.folded());
+                },
+                buf -> new CreativeInsertIntoSearchableContainerMessage(buf.readBlockPos(), buf.readVarInt(),
+                        buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                        buf.readBoolean(), buf.readBoolean())
         ));
         register(GridMessages.MANUAL_PICKUP_ITEM, codec(
                 (message, buf) -> buf.writeInt(message.entityId()),
