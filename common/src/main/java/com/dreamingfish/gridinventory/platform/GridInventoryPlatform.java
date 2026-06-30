@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.client.creative.VanillaCreativeTabProvider
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.common.loot.ContainerLootProvider;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArmorItem;
@@ -31,6 +32,8 @@ public interface GridInventoryPlatform {
     GridInventoryRegistryBridge registry();
 
     GridInventoryMenuBridge menus();
+
+    ContainerLootProvider containerLootProvider();
 
     GridInventoryConfigAccess config();
 

@@ -1,31 +1,22 @@
 package com.dreamingfish.gridinventory.common.block;
 
-import net.minecraft.network.chat.Component;
-
 public final class BasicSearchableGridContainerBlock extends AbstractSearchableGridContainerBlock {
-    private final int columns;
-    private final int rows;
-    private final Component title;
+    private final SearchableGridContainerSpec spec;
 
-    public BasicSearchableGridContainerBlock(Properties properties, int columns, int rows, Component title) {
+    public BasicSearchableGridContainerBlock(Properties properties, SearchableGridContainerSpec spec) {
         super(properties);
-        if (columns <= 0 || rows <= 0) {
-            throw new IllegalArgumentException("Grid dimensions must be positive");
-        }
-        this.columns = columns;
-        this.rows = rows;
-        this.title = title;
+        this.spec = spec;
     }
 
     public int columns() {
-        return columns;
+        return spec.columns();
     }
 
     public int rows() {
-        return rows;
+        return spec.rows();
     }
 
-    public Component title() {
-        return title;
+    public SearchableGridContainerSpec spec() {
+        return spec;
     }
 }

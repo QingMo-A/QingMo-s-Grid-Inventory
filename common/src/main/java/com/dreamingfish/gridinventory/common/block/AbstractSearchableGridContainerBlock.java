@@ -1,6 +1,9 @@
 package com.dreamingfish.gridinventory.common.block;
 
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.blockentity.SearchableGridContainerBlockEntity;
+import com.dreamingfish.gridinventory.common.loot.ContainerLootContext;
+import com.dreamingfish.gridinventory.common.loot.ContainerLootServices;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -89,10 +92,37 @@ public abstract class AbstractSearchableGridContainerBlock extends BaseEntityBlo
         }
         if (player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof SearchableGridContainerBlockEntity container) {
+            maybeGenerateContainerLoot(serverPlayer, pos, container);
             GridInventoryServices.menus().openSearchableGridContainer(serverPlayer, pos, container.getGridData(),
                     "container.df_grid_inventory.searchable_grid_container");
         }
         return InteractionResult.CONSUME;
+    }
+
+    private void maybeGenerateContainerLoot(ServerPlayer player, BlockPos pos,
+                                            SearchableGridContainerBlockEntity container) {
+        if (container.isLootGenerated()) {
+            return;
+        }
+        try {
+            if (this instanceof BasicSearchableGridContainerBlock basic) {
+                SearchableGridContainerSpec spec = basic.spec();
+                long seed = container.getLootSeed() != 0L ? container.getLootSeed()
+                        : player.serverLevel().getSeed() ^ pos.asLong();
+                ContainerLootContext context = new ContainerLootContext(
+                        container.getRaidId(), seed, "standalone", container.getZoneId(),
+                        container.getAnchorId().isEmpty() ? pos.toShortString() : container.getAnchorId(),
+                        container.getContainerType().isEmpty() ? spec.containerType() : container.getContainerType(),
+                        1, container.getPointBudget(), spec.qualityMultiplier(), spec.fallbackLootTableId());
+                ContainerLootServices.generateIntoGrid(player, player.serverLevel(), pos,
+                        container.getGridData(), context);
+            }
+        } catch (RuntimeException exception) {
+            DFGridInventory.LOGGER.error("Failed to generate searchable container loot at {}", pos, exception);
+        } finally {
+            container.setLootGenerated(true);
+            container.setChanged();
+        }
     }
 
     @Override

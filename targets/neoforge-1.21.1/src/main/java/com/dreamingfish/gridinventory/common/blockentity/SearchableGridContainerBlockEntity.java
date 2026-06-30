@@ -34,6 +34,18 @@ public final class SearchableGridContainerBlockEntity extends BlockEntity {
         data.setLootGenerated(lootGenerated);
     }
 
+    public String getAnchorId() { return data.getAnchorId(); }
+    public String getZoneId() { return data.getZoneId(); }
+    public String getContainerType() { return data.getContainerType(); }
+    public long getRaidId() { return data.getRaidId(); }
+    public long getLootSeed() { return data.getLootSeed(); }
+    public int getPointBudget() { return data.getPointBudget(); }
+
+    public void setLootMetadata(String anchorId, String zoneId, String containerType, long raidId,
+                                long lootSeed, int pointBudget) {
+        data.setLootMetadata(anchorId, zoneId, containerType, raidId, lootSeed, pointBudget);
+    }
+
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);

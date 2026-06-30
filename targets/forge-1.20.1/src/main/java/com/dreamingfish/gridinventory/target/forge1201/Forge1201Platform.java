@@ -10,6 +10,7 @@ import com.dreamingfish.gridinventory.platform.GridInventoryPlayerDataBridge;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.common.loot.ContainerLootProvider;
 import com.dreamingfish.gridinventory.target.forge1201.config.Forge1201ClientConfigAccess;
 import com.dreamingfish.gridinventory.target.forge1201.config.Forge1201ServerConfigAccess;
 import com.dreamingfish.gridinventory.target.forge1201.platform.Forge1201RegistryBridge;
@@ -30,6 +31,7 @@ public final class Forge1201Platform implements GridInventoryPlatform {
     private final GridInventoryConfigAccess config = new Forge1201ServerConfigAccess();
     private final GridInventoryClientConfigAccess clientConfig = new Forge1201ClientConfigAccess();
     private final VanillaCreativeTabProvider creativeTabs = new VanillaCreativeTabsSnapshot();
+    private final ContainerLootProvider containerLootProvider = new Forge1201ContainerLootProvider();
 
     @Override
     public boolean isModLoaded(String modId) {
@@ -72,6 +74,11 @@ public final class Forge1201Platform implements GridInventoryPlatform {
     @Override
     public GridInventoryMenuBridge menus() {
         return menus;
+    }
+
+    @Override
+    public ContainerLootProvider containerLootProvider() {
+        return containerLootProvider;
     }
 
     @Override

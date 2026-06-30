@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.client.creative.VanillaCreativeTabProvider
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.common.loot.ContainerLootProvider;
 
 public final class GridInventoryServices {
     private static GridInventoryPlatform platform;
@@ -47,6 +48,10 @@ public final class GridInventoryServices {
 
     public static GridInventoryMenuBridge menus() {
         return platform().menus();
+    }
+
+    public static ContainerLootProvider containerLootProvider() {
+        return platform().containerLootProvider();
     }
 
     public static GridInventoryConfigAccess config() {

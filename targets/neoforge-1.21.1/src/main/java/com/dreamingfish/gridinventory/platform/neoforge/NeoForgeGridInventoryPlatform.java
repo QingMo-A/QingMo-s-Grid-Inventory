@@ -11,6 +11,7 @@ import com.dreamingfish.gridinventory.platform.GridInventoryRegistryBridge;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryClientConfigAccess;
 import com.dreamingfish.gridinventory.platform.config.GridInventoryConfigAccess;
 import com.dreamingfish.gridinventory.platform.menu.GridInventoryMenuBridge;
+import com.dreamingfish.gridinventory.common.loot.ContainerLootProvider;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +27,7 @@ public final class NeoForgeGridInventoryPlatform implements GridInventoryPlatfor
     private final GridInventoryConfigAccess config = new NeoForgeGridInventoryConfigAccess();
     private final GridInventoryClientConfigAccess clientConfig = new NeoForgeGridInventoryClientConfigAccess();
     private final VanillaCreativeTabProvider creativeTabs = new VanillaCreativeTabsSnapshot();
+    private final ContainerLootProvider containerLootProvider = new NeoForge1211ContainerLootProvider();
 
     @Override
     public boolean isModLoaded(String modId) {
@@ -65,6 +67,11 @@ public final class NeoForgeGridInventoryPlatform implements GridInventoryPlatfor
     @Override
     public GridInventoryMenuBridge menus() {
         return menus;
+    }
+
+    @Override
+    public ContainerLootProvider containerLootProvider() {
+        return containerLootProvider;
     }
 
     @Override
