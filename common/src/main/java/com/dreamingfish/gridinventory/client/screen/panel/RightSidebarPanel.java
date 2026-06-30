@@ -24,6 +24,7 @@ public final class RightSidebarPanel {
     private int height;
     private boolean creative;
     private boolean containerTabEnabled;
+    private Component containerTitle = Component.translatable("container.df_grid_inventory.searchable_grid_container");
 
     public void setBounds(int left, int top, int height, int columns, boolean creative) {
         this.left = left;
@@ -64,8 +65,13 @@ public final class RightSidebarPanel {
 
     public void enableContainerTab(GridInventoryData gridData, Component title) {
         containerTabEnabled = true;
-        containerPanel.setContainer(gridData, title);
+        updateContainerTab(gridData, title);
         page = Page.CONTAINER;
+    }
+
+    public void updateContainerTab(GridInventoryData gridData, Component title) {
+        containerTitle = title;
+        containerPanel.setContainer(gridData, title);
     }
 
     public boolean isContainerPage() {
@@ -222,7 +228,7 @@ public final class RightSidebarPanel {
 
     private Component titleFor(Page tabPage) {
         return switch (tabPage) {
-            case CONTAINER -> Component.translatable("container.df_grid_inventory.searchable_grid_container");
+            case CONTAINER -> containerTitle;
             case NEARBY -> Component.translatable("screen.df_grid_inventory.nearby_items");
             case CREATIVE -> Component.translatable("container.creative");
         };

@@ -107,6 +107,7 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        rightSidebarPanel.updateContainerTab(searchableMenu.getContainerGridData(), searchableMenu.containerTitle());
         super.render(graphics, mouseX, mouseY, partialTick);
         renderContainerPlacementPreview(graphics, mouseX, mouseY);
     }

@@ -91,7 +91,7 @@ public class SearchableGridContainerMenu extends GridInventoryMenu {
     }
 
     public boolean insertPlayerSlotIntoContainerGrid(int playerSlot, int targetX, int targetY, boolean rotated, boolean folded) {
-        if (!validContainerBlock() || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
+        if (!validContainerAccess() || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
             return false;
         }
         ItemStack source = playerInventory.getItem(playerSlot);
@@ -114,14 +114,15 @@ public class SearchableGridContainerMenu extends GridInventoryMenu {
     }
 
     public boolean moveContainerEntry(UUID entryId, int targetX, int targetY, boolean rotated, boolean folded) {
-        if (!validContainerBlock()) {
+        if (!validContainerAccess()) {
             return false;
         }
         Optional<GridEntry> entry = containerGridData.getEntry(entryId);
         if (entry.isEmpty()) {
             return false;
         }
-        ItemStack moving = entry.get().stack();
+        ItemStack source = entry.get().stack();
+        ItemStack moving = source.copy();
         if (!applyBackpackFolded(moving, folded)) {
             return false;
         }
@@ -139,6 +140,7 @@ public class SearchableGridContainerMenu extends GridInventoryMenu {
             if (moved <= 0) {
                 return false;
             }
+            applyBackpackFolded(source, folded);
             target.grow(moved);
             containerGridData.extract(entryId, moved);
             saveContainerGrid();
@@ -147,15 +149,19 @@ public class SearchableGridContainerMenu extends GridInventoryMenu {
         if (!GridPlacementValidator.canPlace(containerGridData, moving, targetX, targetY, rotated, entryId, 0)) {
             return false;
         }
+        boolean previousFolded = GridBackpackItem.isFolded(source);
+        applyBackpackFolded(source, folded);
         boolean moved = containerGridData.move(entryId, targetX, targetY, rotated);
         if (moved) {
             saveContainerGrid();
+        } else {
+            applyBackpackFolded(source, previousFolded);
         }
         return moved;
     }
 
     public boolean extractContainerEntryToPlayerSlot(UUID entryId, int playerSlot, int amount) {
-        if (!validContainerBlock() || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
+        if (!validContainerAccess() || playerSlot < 0 || playerSlot >= playerInventory.getContainerSize()) {
             return false;
         }
         Optional<GridEntry> entry = containerGridData.getEntry(entryId);
@@ -191,8 +197,18 @@ public class SearchableGridContainerMenu extends GridInventoryMenu {
         return true;
     }
 
-    private boolean validContainerBlock() {
-        return playerInventory.player.level().getBlockEntity(blockPos) instanceof SearchableGridContainerBlockEntity;
+    private boolean validContainerAccess() {
+        Player player = playerInventory.player;
+        if (player.distanceToSqr(blockPos.getX() + 0.5D, blockPos.getY() + 0.5D, blockPos.getZ() + 0.5D)
+                > MAX_DISTANCE_SQUARED) {
+            return false;
+        }
+        if (!(player.level().getBlockEntity(blockPos) instanceof SearchableGridContainerBlockEntity container)) {
+            return false;
+        }
+        containerGridData = container.getGridData().copy();
+        containerGridData.setChangeListener(this::saveContainerGrid);
+        return true;
     }
 
     private static boolean applyBackpackFolded(ItemStack stack, boolean folded) {
