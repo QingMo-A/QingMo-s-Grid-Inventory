@@ -17,6 +17,8 @@ import java.util.function.Supplier;
 public final class ModBlocks {
     public static Supplier<Block> SEARCHABLE_GRID_CONTAINER;
     public static Supplier<BlockItem> SEARCHABLE_GRID_CONTAINER_ITEM;
+    public static Supplier<Block> RAID_CONTAINER_PLACEHOLDER;
+    public static Supplier<BlockItem> RAID_CONTAINER_PLACEHOLDER_ITEM;
 
     private static boolean registered;
 
@@ -41,5 +43,12 @@ public final class ModBlocks {
         SEARCHABLE_GRID_CONTAINER_ITEM = registry.registerBlockItem(
                 GridContentIds.SEARCHABLE_GRID_CONTAINER,
                 () -> new BlockItem(SEARCHABLE_GRID_CONTAINER.get(), new Item.Properties()));
+        RAID_CONTAINER_PLACEHOLDER = registry.registerBlock(
+                GridContentIds.RAID_CONTAINER_PLACEHOLDER,
+                () -> new Block(Block.Properties.of().mapColor(MapColor.COLOR_BLUE)
+                        .strength(1.0F).sound(SoundType.METAL)));
+        RAID_CONTAINER_PLACEHOLDER_ITEM = registry.registerBlockItem(
+                GridContentIds.RAID_CONTAINER_PLACEHOLDER,
+                () -> new BlockItem(RAID_CONTAINER_PLACEHOLDER.get(), new Item.Properties()));
     }
 }

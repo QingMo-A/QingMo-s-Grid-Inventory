@@ -3,6 +3,12 @@ package com.dreamingfish.gridinventory.common.raid.config;
 import java.util.*;
 
 public final class RaidMapConfigValidator {
+    // TODO Phase 44C: validate anchor group limits and group coverage.
+    // TODO Phase 45A: load variant_groups.json.
+    // TODO Phase 45B: load navigation.json and validate reachability.
+    // TODO Phase 45B: load extraction_anchors.json and spawn_anchors.json.
+    // TODO Phase 46A: load loose_loot_anchors.json.
+    // TODO Phase 44D: load item value config with spawn_cost/sell_value/combat_score/rarity_weight.
     private RaidMapConfigValidator() {
     }
 

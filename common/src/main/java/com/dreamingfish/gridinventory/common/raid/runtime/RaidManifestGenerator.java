@@ -13,7 +13,8 @@ public final class RaidManifestGenerator {
         Map<String, RaidContainerTypeConfig> types = new HashMap<>();
         map.containerTypes().forEach(t -> types.put(t.id(), t));
         for (RaidZoneConfig zone : map.zones()) {
-            // TODO Phase 44B: group coverage and min-distance activation rules.
+            // TODO Phase 44C: enforce group coverage so active container anchors are spread across sub-areas.
+            // TODO Phase 44C: enforce minimum distance between active loot anchors.
             List<RaidContainerAnchorConfig> candidates = new ArrayList<>(map.containerAnchors().stream()
                     .filter(a -> a.enabled() && a.zone().equals(zone.id())).toList());
             int requested = roll(random, zone.activeContainers());
@@ -35,6 +36,12 @@ public final class RaidManifestGenerator {
                     selected.stream().map(RaidContainerAnchorConfig::id).toList(), Map.copyOf(budgets)));
         }
         return new RaidManifest(raidId, seed, map.id(), Map.copyOf(zones), List.copyOf(activations));
+        // TODO Phase 44D: allocate global rare items before normal container loot.
+        // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
+        // TODO Phase 45A: select map variant groups before activating loot anchors.
+        // TODO Phase 45B: validate navigation graph after variants and extractions are selected.
+        // TODO Phase 46A: activate loose loot anchors and generate LooseLootManifest.
+        // TODO Phase 47A: generate mob spawn manifest and event manifest.
     }
 
     private static int roll(Random random, IntRangeConfig range) {

@@ -46,5 +46,6 @@
   "item.df_grid_inventory.antique_teapot": "Antique Teapot",
   "item.df_grid_inventory.array_lens": "Array Lens",
   "block.df_grid_inventory.searchable_grid_container": "Searchable Grid Container",
+  "block.df_grid_inventory.raid_container_placeholder": "Raid Container Placeholder",
   "container.df_grid_inventory.searchable_grid_container": "Searchable Grid Container"
 }

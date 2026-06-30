@@ -17,6 +17,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class QmRaidCommands {
+    // TODO Phase 48A: persist RaidManifest to disk and reload after server restart.
+    // TODO Phase 48B: add /qmraid reset to clear applied containers and restore placeholders.
+    // TODO Phase 49A: add /qmraid join latest <player> once spawn anchors are implemented.
+    // TODO Phase 49B: add raid lifecycle states: CREATED, APPLIED, RUNNING, ENDED, CLEANED.
     private static final AtomicLong RAID_IDS = new AtomicLong(System.currentTimeMillis());
     private QmRaidCommands() {}
 
@@ -92,9 +96,13 @@ public final class QmRaidCommands {
     private static int apply(CommandSourceStack source, String value) {
         Optional<RaidManifest> manifest = manifest(value);
         if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
-        int count = RaidWorldApplier.apply(source.getLevel(), manifest.get());
-        source.sendSuccess(() -> Component.literal("Applied containers=" + count), true);
-        return count;
+        Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(manifest.get().mapId());
+        if (map.isEmpty()) { source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId())); return 0; }
+        RaidWorldApplyResult result = RaidWorldApplier.apply(source.getLevel(), map.get(), manifest.get());
+        source.sendSuccess(() -> Component.literal("Applied raid " + manifest.get().raidId()
+                + ": activePlaced=" + result.activePlaced() + " activeRebound=" + result.activeRebound()
+                + " inactiveCleared=" + result.inactiveCleared() + " warnings=" + result.warnings()), true);
+        return result.activePlaced() + result.activeRebound();
     }
     private static int inspect(CommandSourceStack source) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         var player = source.getPlayerOrException();

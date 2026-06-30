@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "df_grid_inventory:block/raid_container_placeholder" }
+  }
+}
