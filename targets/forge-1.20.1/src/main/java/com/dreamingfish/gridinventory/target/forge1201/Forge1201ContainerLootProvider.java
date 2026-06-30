@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.target.forge1201;
 
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.loot.ContainerLootContext;
 import com.dreamingfish.gridinventory.common.loot.ContainerLootProvider;
@@ -26,9 +27,13 @@ public final class Forge1201ContainerLootProvider implements ContainerLootProvid
             return new ContainerLootResult(false, List.of(), "none", Optional.empty());
         }
         LootTable table = player.server.getLootData().getLootTable(context.fallbackLootTableId());
+        if (table == LootTable.EMPTY) {
+            DFGridInventory.LOGGER.warn("Missing fallback loot table {}", context.fallbackLootTableId());
+            return new ContainerLootResult(false, List.of(), "missing_loot_table", Optional.empty());
+        }
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
-                .withParameter(LootContextParams.THIS_ENTITY, player)
+                .withLuck(player.getLuck())
                 .create(LootContextParamSets.CHEST);
         List<ItemStack> stacks = table.getRandomItems(params);
         GridLootFiller.insertAll(grid, stacks);

@@ -118,7 +118,14 @@ public abstract class AbstractSearchableGridContainerBlock extends BaseEntityBlo
                         container.getGridData(), context);
             }
         } catch (RuntimeException exception) {
-            DFGridInventory.LOGGER.error("Failed to generate searchable container loot at {}", pos, exception);
+            SearchableGridContainerSpec spec = this instanceof BasicSearchableGridContainerBlock basic
+                    ? basic.spec() : null;
+            DFGridInventory.LOGGER.error(
+                    "Failed to generate searchable container loot at {} table={} containerType={} anchorId={} zoneId={}",
+                    pos, spec == null ? null : spec.fallbackLootTableId(),
+                    container.getContainerType().isEmpty() && spec != null
+                            ? spec.containerType() : container.getContainerType(),
+                    container.getAnchorId(), container.getZoneId(), exception);
         } finally {
             container.setLootGenerated(true);
             container.setChanged();

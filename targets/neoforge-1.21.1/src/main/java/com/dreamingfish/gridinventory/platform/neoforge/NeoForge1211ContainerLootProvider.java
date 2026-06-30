@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.platform.neoforge;
 
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.loot.ContainerLootContext;
 import com.dreamingfish.gridinventory.common.loot.ContainerLootProvider;
@@ -29,9 +30,13 @@ public final class NeoForge1211ContainerLootProvider implements ContainerLootPro
         }
         ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE, context.fallbackLootTableId());
         LootTable table = player.server.reloadableRegistries().getLootTable(key);
+        if (table == LootTable.EMPTY) {
+            DFGridInventory.LOGGER.warn("Missing fallback loot table {}", context.fallbackLootTableId());
+            return new ContainerLootResult(false, List.of(), "missing_loot_table", Optional.empty());
+        }
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
-                .withParameter(LootContextParams.THIS_ENTITY, player)
+                .withLuck(player.getLuck())
                 .create(LootContextParamSets.CHEST);
         List<ItemStack> stacks = table.getRandomItems(params);
         GridLootFiller.insertAll(grid, stacks);
