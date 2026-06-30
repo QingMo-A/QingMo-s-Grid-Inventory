@@ -2,6 +2,7 @@ package com.dreamingfish.gridinventory.common.blockentity;
 
 import com.dreamingfish.gridinventory.common.block.BasicSearchableGridContainerBlock;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.loot.SearchableContainerLootBinding;
 import com.mojang.serialization.DataResult;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -17,6 +18,8 @@ public final class SearchableGridContainerData {
     private static final String RAID_ID_KEY = "RaidId";
     private static final String LOOT_SEED_KEY = "LootSeed";
     private static final String POINT_BUDGET_KEY = "PointBudget";
+    private static final String MAP_ID_KEY = "MapId";
+    private static final String QUALITY_MULTIPLIER_KEY = "QualityMultiplier";
 
     private GridInventoryData gridData;
     private boolean lootGenerated;
@@ -26,6 +29,8 @@ public final class SearchableGridContainerData {
     private long raidId;
     private long lootSeed;
     private int pointBudget;
+    private String mapId = "";
+    private double qualityMultiplier = 1.0D;
     private final Runnable changeListener;
 
     public SearchableGridContainerData(BlockState state, Runnable changeListener) {
@@ -59,6 +64,8 @@ public final class SearchableGridContainerData {
     public long getRaidId() { return raidId; }
     public long getLootSeed() { return lootSeed; }
     public int getPointBudget() { return pointBudget; }
+    public String getMapId() { return mapId; }
+    public double getQualityMultiplier() { return qualityMultiplier; }
 
     public void setLootMetadata(String anchorId, String zoneId, String containerType, long raidId,
                                 long lootSeed, int pointBudget) {
@@ -68,6 +75,18 @@ public final class SearchableGridContainerData {
         this.raidId = raidId;
         this.lootSeed = lootSeed;
         this.pointBudget = pointBudget;
+        changeListener.run();
+    }
+
+    public void applyLootBinding(SearchableContainerLootBinding binding) {
+        raidId = binding.raidId();
+        lootSeed = binding.lootSeed();
+        mapId = binding.mapId();
+        zoneId = binding.zoneId();
+        anchorId = binding.anchorId();
+        containerType = binding.containerType();
+        pointBudget = binding.pointBudget();
+        qualityMultiplier = binding.qualityMultiplier();
         changeListener.run();
     }
 
@@ -86,6 +105,12 @@ public final class SearchableGridContainerData {
         raidId = tag.getLong(RAID_ID_KEY);
         lootSeed = tag.getLong(LOOT_SEED_KEY);
         pointBudget = tag.getInt(POINT_BUDGET_KEY);
+        mapId = tag.getString(MAP_ID_KEY);
+        qualityMultiplier = tag.contains(QUALITY_MULTIPLIER_KEY)
+                ? tag.getDouble(QUALITY_MULTIPLIER_KEY) : 1.0D;
+        if (qualityMultiplier <= 0.0D) {
+            qualityMultiplier = 1.0D;
+        }
         attachListener();
     }
 
@@ -99,6 +124,8 @@ public final class SearchableGridContainerData {
         tag.putLong(RAID_ID_KEY, raidId);
         tag.putLong(LOOT_SEED_KEY, lootSeed);
         tag.putInt(POINT_BUDGET_KEY, pointBudget);
+        tag.putString(MAP_ID_KEY, mapId);
+        tag.putDouble(QUALITY_MULTIPLIER_KEY, qualityMultiplier);
     }
 
     private void attachListener() {

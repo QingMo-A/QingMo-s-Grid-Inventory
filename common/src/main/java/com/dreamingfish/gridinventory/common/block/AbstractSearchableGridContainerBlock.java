@@ -109,11 +109,15 @@ public abstract class AbstractSearchableGridContainerBlock extends BaseEntityBlo
                 SearchableGridContainerSpec spec = basic.spec();
                 long seed = container.getLootSeed() != 0L ? container.getLootSeed()
                         : player.serverLevel().getSeed() ^ pos.asLong();
+                String mapId = container.getMapId().isEmpty() ? "standalone" : container.getMapId();
+                double qualityMultiplier = container.getQualityMultiplier() > 0.0D
+                        ? container.getQualityMultiplier() : spec.qualityMultiplier();
                 ContainerLootContext context = new ContainerLootContext(
-                        container.getRaidId(), seed, "standalone", container.getZoneId(),
+                        container.getRaidId(), seed, mapId, container.getZoneId(),
                         container.getAnchorId().isEmpty() ? pos.toShortString() : container.getAnchorId(),
                         container.getContainerType().isEmpty() ? spec.containerType() : container.getContainerType(),
-                        1, container.getPointBudget(), spec.qualityMultiplier(), spec.fallbackLootTableId());
+                        // TODO Phase 44: derive zoneTier from raid/zone manifest.
+                        1, container.getPointBudget(), qualityMultiplier, spec.fallbackLootTableId());
                 ContainerLootServices.generateIntoGrid(player, player.serverLevel(), pos,
                         container.getGridData(), context);
             }

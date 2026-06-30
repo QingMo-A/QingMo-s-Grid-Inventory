@@ -1,6 +1,7 @@
 package com.dreamingfish.gridinventory.common.blockentity;
 
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
+import com.dreamingfish.gridinventory.common.loot.SearchableContainerLootBinding;
 import com.dreamingfish.gridinventory.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -40,10 +41,20 @@ public final class SearchableGridContainerBlockEntity extends BlockEntity {
     public long getRaidId() { return data.getRaidId(); }
     public long getLootSeed() { return data.getLootSeed(); }
     public int getPointBudget() { return data.getPointBudget(); }
+    public String getMapId() { return data.getMapId(); }
+    public double getQualityMultiplier() { return data.getQualityMultiplier(); }
 
     public void setLootMetadata(String anchorId, String zoneId, String containerType, long raidId,
                                 long lootSeed, int pointBudget) {
         data.setLootMetadata(anchorId, zoneId, containerType, raidId, lootSeed, pointBudget);
+    }
+
+    public void applyLootBinding(SearchableContainerLootBinding binding, boolean resetLootGenerated) {
+        data.applyLootBinding(binding);
+        if (resetLootGenerated) {
+            data.setLootGenerated(false);
+        }
+        setChanged();
     }
 
     @Override
