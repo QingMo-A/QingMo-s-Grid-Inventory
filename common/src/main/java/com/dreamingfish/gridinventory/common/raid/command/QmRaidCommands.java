@@ -64,6 +64,10 @@ public final class QmRaidCommands {
                         .executes(c -> preview(c.getSource(), StringArgumentType.getString(c, "raid")))))
                 .then(Commands.literal("apply").then(Commands.argument("raid", StringArgumentType.word())
                         .executes(c -> apply(c.getSource(), StringArgumentType.getString(c, "raid")))))
+                .then(Commands.literal("reset").then(Commands.argument("raid", StringArgumentType.word())
+                        .executes(c -> reset(c.getSource(), StringArgumentType.getString(c, "raid"), false))))
+                .then(Commands.literal("rebuild").then(Commands.argument("raid", StringArgumentType.word())
+                        .executes(c -> reset(c.getSource(), StringArgumentType.getString(c, "raid"), true))))
                 .then(Commands.literal("join").then(Commands.argument("raid", StringArgumentType.word())
                         .executes(c -> join(c.getSource(), StringArgumentType.getString(c, "raid"),
                                 c.getSource().getPlayerOrException()))
@@ -198,6 +202,39 @@ public final class QmRaidCommands {
                 + raid.raidId() + " map=" + raid.mapId() + " state=" + raid.state()
                 + " dimension=" + raid.dimensionId()), false));
         return RaidManifestRegistry.size();
+    }
+    private static int reset(CommandSourceStack source, String value, boolean rebuild) {
+        Optional<RaidManifest> manifest = manifest(value);
+        if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
+        Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(manifest.get().mapId());
+        if (map.isEmpty()) { source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId())); return 0; }
+        var targetLevel = raidLevel(source, manifest.get());
+        if (targetLevel == null) return 0;
+        RaidWorldResetResult result = RaidWorldResetter.reset(targetLevel, map.get(), manifest.get());
+        if (result.refused()) {
+            source.sendFailure(Component.literal("Raid reset refused because bounds volume exceeds "
+                    + RaidWorldResetter.MAX_RESET_VOLUME));
+            return 0;
+        }
+        RaidManifest updated = manifest.get().withState(RaidLifecycleState.CREATED);
+        RaidManifestRegistry.put(updated);
+        saveManifest(source, updated);
+        source.sendSuccess(() -> Component.literal("Reset raid " + updated.raidId()
+                + ": clearedBlocks=" + result.clearedBlocks()
+                + " templateApplied=" + result.templateApplied()
+                + " templateMissing=" + result.templateMissing()
+                + " placeholdersRestored=" + result.placeholdersRestored()
+                + " warnings=" + result.warnings() + " state=CREATED"), true);
+        if (!rebuild) return 1;
+        RaidWorldApplyResult applied = RaidWorldApplier.apply(targetLevel, map.get(), updated);
+        RaidManifest rebuilt = updated.withState(RaidLifecycleState.APPLIED);
+        RaidManifestRegistry.put(rebuilt);
+        saveManifest(source, rebuilt);
+        source.sendSuccess(() -> Component.literal("Rebuilt raid " + rebuilt.raidId()
+                + ": activePlaced=" + applied.activePlaced() + " activeRebound=" + applied.activeRebound()
+                + " inactiveCleared=" + applied.inactiveCleared() + " warnings=" + applied.warnings()
+                + " state=APPLIED"), true);
+        return applied.activePlaced() + applied.activeRebound();
     }
     private static int manifestReload(CommandSourceStack source) {
         RaidManifestRegistry.clear();
