@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class QmRaidCommands {
-    // TODO Phase 48D: persist RaidManifest to disk and reload after server restart.
+    // TODO Phase 48D: auto-load RaidManifestStorage during server starting event.
     // TODO Phase 48B: add /qmraid reset to clear applied containers and restore placeholders.
     // TODO Phase 49A: spawn anchors and spawn group selection.
     // TODO Phase 48A: transition lifecycle on join/end/reset for RUNNING, ENDED and CLEANED.
@@ -45,6 +45,13 @@ public final class QmRaidCommands {
                                 .executes(c -> validateWorld(c.getSource(), StringArgumentType.getString(c, "mapId")))))
                         .then(Commands.literal("validate").then(Commands.argument("mapId", StringArgumentType.word())
                                 .executes(c -> validate(c.getSource(), StringArgumentType.getString(c, "mapId"))))))
+                .then(Commands.literal("manifest")
+                        .then(Commands.literal("list").executes(c -> manifestList(c.getSource())))
+                        .then(Commands.literal("reload").executes(c -> manifestReload(c.getSource())))
+                        .then(Commands.literal("save").then(Commands.argument("raid", StringArgumentType.word())
+                                .executes(c -> manifestSave(c.getSource(), StringArgumentType.getString(c, "raid")))))
+                        .then(Commands.literal("load").then(Commands.argument("raidId", LongArgumentType.longArg())
+                                .executes(c -> manifestLoad(c.getSource(), LongArgumentType.getLong(c, "raidId"))))))
                 .then(Commands.literal("create").then(Commands.argument("mapId", StringArgumentType.word())
                         .executes(c -> create(c.getSource(), StringArgumentType.getString(c, "mapId"), System.currentTimeMillis()))
                         .then(Commands.argument("seed", LongArgumentType.longArg())
@@ -138,6 +145,7 @@ public final class QmRaidCommands {
         long raidId = RAID_IDS.incrementAndGet();
         RaidManifest manifest = RaidManifestGenerator.generate(map.get(), raidId, seed);
         RaidManifestRegistry.put(manifest);
+        saveManifest(source, manifest);
         source.sendSuccess(() -> Component.literal("Raid " + raidId + " map=" + id + " seed=" + seed
                 + " activeContainers=" + manifest.activeContainers().size()), true);
         return 1;
@@ -175,12 +183,53 @@ public final class QmRaidCommands {
         var targetLevel = raidLevel(source, manifest.get());
         if (targetLevel == null) return 0;
         RaidWorldApplyResult result = RaidWorldApplier.apply(targetLevel, map.get(), manifest.get());
-        RaidManifestRegistry.put(manifest.get().withState(RaidLifecycleState.APPLIED));
+        RaidManifest updated = manifest.get().withState(RaidLifecycleState.APPLIED);
+        RaidManifestRegistry.put(updated);
+        saveManifest(source, updated);
         source.sendSuccess(() -> Component.literal("Applied raid " + manifest.get().raidId()
                 + ": templateApplied=" + result.templateApplied() + " templateMissing=" + result.templateMissing()
                 + " activePlaced=" + result.activePlaced() + " activeRebound=" + result.activeRebound()
                 + " inactiveCleared=" + result.inactiveCleared() + " warnings=" + result.warnings()), true);
         return result.activePlaced() + result.activeRebound();
+    }
+    private static int manifestList(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.literal("Raid manifests loaded: " + RaidManifestRegistry.size()), false);
+        RaidManifestRegistry.all().forEach(raid -> source.sendSuccess(() -> Component.literal("- "
+                + raid.raidId() + " map=" + raid.mapId() + " state=" + raid.state()
+                + " dimension=" + raid.dimensionId()), false));
+        return RaidManifestRegistry.size();
+    }
+    private static int manifestReload(CommandSourceStack source) {
+        RaidManifestRegistry.clear();
+        RaidManifestStorage.loadAll(source.getServer()).forEach(RaidManifestRegistry::put);
+        source.sendSuccess(() -> Component.literal("Reloaded raid manifests: loaded="
+                + RaidManifestRegistry.size()), true);
+        return RaidManifestRegistry.size();
+    }
+    private static int manifestSave(CommandSourceStack source, String value) {
+        Optional<RaidManifest> raid = manifest(value);
+        if (raid.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
+        return saveManifest(source, raid.get()) ? 1 : 0;
+    }
+    private static int manifestLoad(CommandSourceStack source, long raidId) {
+        Optional<RaidManifest> raid = RaidManifestStorage.load(source.getServer(), raidId);
+        if (raid.isEmpty()) { source.sendFailure(Component.literal("Raid manifest not found: " + raidId)); return 0; }
+        RaidManifestRegistry.put(raid.get());
+        source.sendSuccess(() -> Component.literal("Loaded raid manifest " + raidId + " map="
+                + raid.get().mapId() + " state=" + raid.get().state()), true);
+        return 1;
+    }
+    private static boolean saveManifest(CommandSourceStack source, RaidManifest manifest) {
+        try {
+            RaidManifestStorage.save(source.getServer(), manifest);
+            source.sendSuccess(() -> Component.literal("Saved raid manifest " + manifest.raidId()), false);
+            return true;
+        } catch (IOException exception) {
+            com.dreamingfish.gridinventory.DFGridInventory.LOGGER.warn(
+                    "Failed to save raid manifest {}", manifest.raidId(), exception);
+            source.sendFailure(Component.literal("Failed to save raid manifest: " + exception.getMessage()));
+            return false;
+        }
     }
     private static int join(CommandSourceStack source, String value, ServerPlayer player) {
         Optional<RaidManifest> manifest = manifest(value);
