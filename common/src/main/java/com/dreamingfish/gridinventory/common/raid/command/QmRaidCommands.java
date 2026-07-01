@@ -207,6 +207,7 @@ public final class QmRaidCommands {
                 + " variants=" + raid.variantSelections().size()
                 + " extractions=" + raid.activeExtractions().size()
                 + " spawns=" + raid.activeSpawns().size()
+                + " participants=" + raid.participants().size()
                 + " extractedPlayers=" + raid.extractedPlayers().size()), false);
         raid.variantSelections().forEach(selection -> source.sendSuccess(() -> Component.literal(
                 "variant " + selection.groupId() + "=" + selection.variantId()
@@ -239,6 +240,10 @@ public final class QmRaidCommands {
                 () -> Component.literal("extracted " + player.playerName()
                         + " uuid=" + player.playerId() + " extraction=" + player.extractionId()
                         + " at=" + player.extractedAtMillis()), false));
+        raid.participants().stream().limit(10).forEach(participant -> source.sendSuccess(
+                () -> Component.literal("participant " + participant.playerName()
+                        + " uuid=" + participant.playerId()
+                        + " joinedAt=" + participant.joinedAtMillis()), false));
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
                 + " anchors=" + zone.anchorBudgets()), false));
@@ -299,6 +304,7 @@ public final class QmRaidCommands {
         RaidManifestRegistry.all().forEach(raid -> source.sendSuccess(() -> Component.literal("- "
                 + raid.raidId() + " map=" + raid.mapId() + " state=" + raid.state()
                 + " dimension=" + raid.dimensionId()
+                + " participants=" + raid.participants().size()
                 + " extracted=" + raid.extractedPlayers().size()), false));
         return RaidManifestRegistry.size();
     }
@@ -315,7 +321,7 @@ public final class QmRaidCommands {
                     + RaidWorldResetter.MAX_RESET_VOLUME));
             return 0;
         }
-        RaidManifest updated = manifest.get().withState(RaidLifecycleState.CREATED);
+        RaidManifest updated = manifest.get().withClearedRunState(RaidLifecycleState.CREATED);
         RaidManifestRegistry.put(updated);
         saveManifest(source, updated);
         source.sendSuccess(() -> Component.literal("Reset raid " + updated.raidId()
@@ -323,7 +329,8 @@ public final class QmRaidCommands {
                 + " templateApplied=" + result.templateApplied()
                 + " templateMissing=" + result.templateMissing()
                 + " placeholdersRestored=" + result.placeholdersRestored()
-                + " warnings=" + result.warnings() + " state=CREATED"), true);
+                + " warnings=" + result.warnings()
+                + " participantsCleared=true extractedPlayersCleared=true state=CREATED"), true);
         if (!rebuild) return 1;
         // Reset restored the base template; rebuild reapplies frozen variants before resources.
         RaidWorldApplyResult applied = RaidWorldApplier.applyGeneratedStateOnly(targetLevel, map.get(), updated);
@@ -384,16 +391,21 @@ public final class QmRaidCommands {
         String spawnId = activeSpawn != null ? activeSpawn.id() : "default_spawn_fallback";
         player.teleportTo(level, worldSpawn.getX() + 0.5D, worldSpawn.getY(), worldSpawn.getZ() + 0.5D,
                 yaw, pitch);
-        if (manifest.get().state() == RaidLifecycleState.APPLIED) {
-            RaidManifest running = manifest.get().withState(RaidLifecycleState.RUNNING);
-            RaidManifestRegistry.put(running);
-            saveManifest(source, running);
+        RaidManifest updated = manifest.get().withParticipant(new RaidParticipant(
+                player.getUUID(), player.getName().getString(), System.currentTimeMillis()));
+        if (updated.state() == RaidLifecycleState.APPLIED
+                || updated.state() == RaidLifecycleState.CREATED) {
+            updated = updated.withState(RaidLifecycleState.RUNNING);
         }
+        RaidManifestRegistry.put(updated);
+        if (!saveManifest(source, updated)) return 0;
+        int participantCount = updated.participants().size();
         source.sendSuccess(() -> Component.literal("Joined raid " + manifest.get().raidId() + " map="
                 + manifest.get().mapId() + " spawn=" + spawnId
                 + " localSpawn=" + localSpawn.toShortString()
                 + " worldSpawn=" + worldSpawn.toShortString()
-                + " player=" + player.getName().getString()), true);
+                + " player=" + player.getName().getString()
+                + " participants=" + participantCount), true);
         return 1;
     }
 
@@ -408,12 +420,30 @@ public final class QmRaidCommands {
             source.sendFailure(Component.literal(result.message()));
             return 0;
         }
-        if (!saveManifest(source, result.updatedManifest())) return 0;
-        RaidManifestRegistry.put(result.updatedManifest());
+        boolean hadParticipants = !manifest.get().participants().isEmpty();
+        RaidManifest updated = result.updatedManifest();
+        if (!updated.isParticipant(player.getUUID())) {
+            updated = updated.withParticipant(new RaidParticipant(
+                    player.getUUID(), player.getName().getString(), System.currentTimeMillis()));
+        }
+        if (hadParticipants && allParticipantsExtracted(updated)) {
+            updated = updated.withState(RaidLifecycleState.ENDED);
+        } else if (updated.state() == RaidLifecycleState.CREATED
+                || updated.state() == RaidLifecycleState.APPLIED) {
+            updated = updated.withState(RaidLifecycleState.RUNNING);
+        }
+        if (!saveManifest(source, updated)) return 0;
+        RaidManifestRegistry.put(updated);
+        RaidManifest saved = updated;
         source.sendSuccess(() -> Component.literal("Extracted player " + player.getName().getString()
-                + " from raid " + result.updatedManifest().raidId() + " " + result.message()), true);
-        // TODO Phase 49B: compare extracted players with a future participant registry before ending the raid.
+                + " from raid " + saved.raidId() + " " + result.message()
+                + " state=" + saved.state()), true);
         return 1;
+    }
+
+    private static boolean allParticipantsExtracted(RaidManifest manifest) {
+        return !manifest.participants().isEmpty() && manifest.participants().stream()
+                .allMatch(participant -> manifest.isPlayerExtracted(participant.playerId()));
     }
 
     private static int extractionCheck(CommandSourceStack source, String value, ServerPlayer player) {

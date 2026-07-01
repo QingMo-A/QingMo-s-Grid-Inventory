@@ -41,7 +41,8 @@ public final class RaidManifestGenerator {
         }
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
                 map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
-                Map.copyOf(zones), List.copyOf(activations), variants, extractions, spawns, List.of());
+                Map.copyOf(zones), List.copyOf(activations), variants, extractions, spawns,
+                List.of(), List.of());
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
         // TODO Phase 46A: activate loose loot anchors and generate LooseLootManifest.

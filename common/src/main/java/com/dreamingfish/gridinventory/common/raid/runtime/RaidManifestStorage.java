@@ -145,6 +145,15 @@ public final class RaidManifestStorage {
             extractedPlayers.add(value);
         });
         root.add("extracted_players", extractedPlayers);
+        JsonArray participants = new JsonArray();
+        manifest.participants().forEach(participant -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("player_id", participant.playerId().toString());
+            value.addProperty("player_name", participant.playerName());
+            value.addProperty("joined_at_millis", participant.joinedAtMillis());
+            participants.add(value);
+        });
+        root.add("participants", participants);
         return root;
     }
 
@@ -251,6 +260,19 @@ public final class RaidManifestStorage {
                 }
             }
         }
+        List<RaidParticipant> participants = new ArrayList<>();
+        if (root.has("participants") && root.get("participants").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("participants")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    UUID playerId = UUID.fromString(string(value, "player_id", ""));
+                    participants.add(new RaidParticipant(playerId, string(value, "player_name", ""),
+                            longValue(value, "joined_at_millis", 0L)));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid participant", exception);
+                }
+            }
+        }
         RaidLifecycleState state;
         try { state = RaidLifecycleState.valueOf(string(root, "state", "CREATED")); }
         catch (IllegalArgumentException ignored) { state = RaidLifecycleState.CREATED; }
@@ -258,7 +280,8 @@ public final class RaidManifestStorage {
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
                 Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants),
-                List.copyOf(extractions), List.copyOf(spawns), List.copyOf(extractedPlayers));
+                List.copyOf(extractions), List.copyOf(spawns), List.copyOf(extractedPlayers),
+                List.copyOf(participants));
     }
 
     private static JsonArray pos(BlockPos pos) {
