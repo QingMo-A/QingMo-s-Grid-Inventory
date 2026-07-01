@@ -122,6 +122,19 @@ public final class RaidManifestStorage {
             extractions.add(value);
         });
         root.add("active_extractions", extractions);
+        JsonArray spawns = new JsonArray();
+        manifest.activeSpawns().forEach(spawn -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("id", spawn.id());
+            value.addProperty("node", spawn.node());
+            value.add("local_pos", pos(spawn.localPos()));
+            value.addProperty("yaw", spawn.yaw());
+            value.addProperty("pitch", spawn.pitch());
+            value.addProperty("display_name", spawn.displayName());
+            value.add("tags", GSON.toJsonTree(spawn.tags()));
+            spawns.add(value);
+        });
+        root.add("active_spawns", spawns);
         return root;
     }
 
@@ -194,13 +207,34 @@ public final class RaidManifestStorage {
                 }
             }
         }
+        List<RaidSpawnActivation> spawns = new ArrayList<>();
+        if (root.has("active_spawns") && root.get("active_spawns").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("active_spawns")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    String id = string(value, "id", "");
+                    if (id.isBlank()) throw new JsonParseException("Empty spawn id");
+                    List<String> tags = new ArrayList<>();
+                    if (value.has("tags") && value.get("tags").isJsonArray()) {
+                        value.getAsJsonArray("tags").forEach(tag -> tags.add(tag.getAsString()));
+                    }
+                    spawns.add(new RaidSpawnActivation(id, string(value, "node", ""),
+                            readRequiredPos(value, "local_pos"), (float) decimal(value, "yaw", 0.0D),
+                            (float) decimal(value, "pitch", 0.0D),
+                            string(value, "display_name", ""), tags));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid spawn activation", exception);
+                }
+            }
+        }
         RaidLifecycleState state;
         try { state = RaidLifecycleState.valueOf(string(root, "state", "CREATED")); }
         catch (IllegalArgumentException ignored) { state = RaidLifecycleState.CREATED; }
         return new RaidManifest(longValue(root, "raid_id", 0L), longValue(root, "raid_seed", 0L),
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
-                Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants), List.copyOf(extractions));
+                Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants),
+                List.copyOf(extractions), List.copyOf(spawns));
     }
 
     private static JsonArray pos(BlockPos pos) {

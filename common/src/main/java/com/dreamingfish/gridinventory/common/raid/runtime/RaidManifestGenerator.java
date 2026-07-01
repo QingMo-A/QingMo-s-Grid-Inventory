@@ -10,6 +10,7 @@ public final class RaidManifestGenerator {
     public static RaidManifest generate(RaidMapConfig map, long raidId, long seed) {
         Random random = new Random(seed ^ map.id().hashCode());
         List<RaidVariantSelection> variants = selectVariants(map, seed);
+        List<RaidSpawnActivation> spawns = selectSpawns(map, variants, seed);
         List<RaidExtractionActivation> extractions = selectExtractions(map, variants, seed);
         Map<String, ZoneRaidState> zones = new LinkedHashMap<>();
         List<ContainerAnchorActivation> activations = new ArrayList<>();
@@ -40,7 +41,7 @@ public final class RaidManifestGenerator {
         }
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
                 map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
-                Map.copyOf(zones), List.copyOf(activations), variants, extractions);
+                Map.copyOf(zones), List.copyOf(activations), variants, extractions, spawns);
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
         // TODO Phase 46A: activate loose loot anchors and generate LooseLootManifest.
@@ -104,6 +105,41 @@ public final class RaidManifestGenerator {
                 .toList();
     }
 
+    private static List<RaidSpawnActivation> selectSpawns(
+            RaidMapConfig map, List<RaidVariantSelection> variants, long seed) {
+        if (map.spawnAnchors().isEmpty()) {
+            return List.of(new RaidSpawnActivation("default_spawn", "spawn",
+                    map.defaultSpawnLocalPos(), 0.0F, 0.0F, "Default Spawn",
+                    List.of("spawn", "fallback")));
+        }
+        Set<String> selectedTags = variants.stream().flatMap(selection -> selection.tags().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        List<RaidSpawnAnchorConfig> eligible = map.spawnAnchors().stream()
+                .filter(RaidSpawnAnchorConfig::enabled)
+                .filter(anchor -> selectedTags.containsAll(anchor.requiresTags()))
+                .filter(anchor -> anchor.forbiddenTags().stream().noneMatch(selectedTags::contains))
+                .toList();
+        List<RaidSpawnAnchorConfig> always = eligible.stream()
+                .filter(RaidSpawnAnchorConfig::alwaysActive).toList();
+        List<RaidSpawnAnchorConfig> randomCandidates = eligible.stream()
+                .filter(anchor -> !anchor.alwaysActive()).toList();
+        Random random = new Random(seed ^ map.id().hashCode() ^ 0x535041574E4CL);
+        int requested = roll(random, map.spawnActiveCount());
+        if (requested > randomCandidates.size()) {
+            DFGridInventory.LOGGER.warn(
+                    "Raid spawn candidates below requested count mapId={} requested={} available={}",
+                    map.id(), requested, randomCandidates.size());
+        }
+        List<RaidSpawnAnchorConfig> selected = new ArrayList<>(always);
+        selected.addAll(weightedSpawnSample(randomCandidates,
+                Math.min(requested, randomCandidates.size()), random));
+        Set<String> ids = new HashSet<>();
+        return selected.stream().filter(anchor -> ids.add(anchor.id()))
+                .map(anchor -> new RaidSpawnActivation(anchor.id(), anchor.node(),
+                        anchor.localBlockPos(), anchor.yaw(), anchor.pitch(), anchor.displayName(), anchor.tags()))
+                .toList();
+    }
+
     private static int roll(Random random, IntRangeConfig range) {
         return range.min() + (range.max() == range.min() ? 0 : random.nextInt(range.max() - range.min() + 1));
     }
@@ -129,6 +165,23 @@ public final class RaidManifestGenerator {
         List<RaidExtractionAnchorConfig> pool = new ArrayList<>(source), result = new ArrayList<>();
         while (result.size() < count && !pool.isEmpty()) {
             int total = pool.stream().mapToInt(RaidExtractionAnchorConfig::effectiveWeight).sum();
+            int roll = random.nextInt(total);
+            for (int i = 0; i < pool.size(); i++) {
+                roll -= pool.get(i).effectiveWeight();
+                if (roll < 0) {
+                    result.add(pool.remove(i));
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    private static List<RaidSpawnAnchorConfig> weightedSpawnSample(
+            List<RaidSpawnAnchorConfig> source, int count, Random random) {
+        List<RaidSpawnAnchorConfig> pool = new ArrayList<>(source), result = new ArrayList<>();
+        while (result.size() < count && !pool.isEmpty()) {
+            int total = pool.stream().mapToInt(RaidSpawnAnchorConfig::effectiveWeight).sum();
             int roll = random.nextInt(total);
             for (int i = 0; i < pool.size(); i++) {
                 roll -= pool.get(i).effectiveWeight();

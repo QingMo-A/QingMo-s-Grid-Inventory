@@ -22,6 +22,9 @@ public final class RaidMapConfigLoader {
         JsonObject extractionCount = map.has("extraction_active_count")
                 && map.get("extraction_active_count").isJsonObject()
                 ? map.getAsJsonObject("extraction_active_count") : null;
+        JsonObject spawnCount = map.has("spawn_active_count")
+                && map.get("spawn_active_count").isJsonObject()
+                ? map.getAsJsonObject("spawn_active_count") : null;
         return new RaidMapConfig(id, string(map, "display_name"), string(map, "dimension"),
                 optionalLocation(map, "template"),
                 origin, defaultSpawn == null ? new int[]{0, 0, 0} : defaultSpawn,
@@ -33,7 +36,9 @@ public final class RaidMapConfigLoader {
                 variants(directory.resolve("variants.json")),
                 navigation(directory.resolve("navigation.json")),
                 extractionCount == null ? new IntRangeConfig(1, 1) : range(extractionCount),
-                extractions(directory.resolve("extraction_anchors.json")));
+                extractions(directory.resolve("extraction_anchors.json")),
+                spawnCount == null ? new IntRangeConfig(1, 1) : range(spawnCount),
+                spawns(directory.resolve("spawn_anchors.json")));
     }
 
     private static JsonElement read(Path path) throws IOException {
@@ -147,6 +152,21 @@ public final class RaidMapConfigLoader {
                     bool(anchor, "always_active", false), strings(anchor, "requires_tags"),
                     strings(anchor, "forbidden_tags"), string(anchor, "display_name"),
                     strings(anchor, "tags")));
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<RaidSpawnAnchorConfig> spawns(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) return List.of();
+        List<RaidSpawnAnchorConfig> result = new ArrayList<>();
+        for (JsonElement element : read(path).getAsJsonArray()) {
+            JsonObject anchor = element.getAsJsonObject();
+            result.add(new RaidSpawnAnchorConfig(string(anchor, "id"), string(anchor, "node"),
+                    flexibleIntArray(anchor, "pos"), (float) decimal(anchor, "yaw", 0.0D),
+                    (float) decimal(anchor, "pitch", 0.0D), integer(anchor, "weight", 1),
+                    bool(anchor, "enabled", true), bool(anchor, "always_active", false),
+                    strings(anchor, "requires_tags"), strings(anchor, "forbidden_tags"),
+                    string(anchor, "display_name"), strings(anchor, "tags")));
         }
         return List.copyOf(result);
     }

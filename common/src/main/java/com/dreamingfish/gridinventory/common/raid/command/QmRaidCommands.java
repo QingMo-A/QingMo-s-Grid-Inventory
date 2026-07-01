@@ -157,7 +157,12 @@ public final class QmRaidCommands {
         source.sendSuccess(() -> Component.literal("Raid " + raidId + " map=" + id + " seed=" + seed
                 + " activeContainers=" + manifest.activeContainers().size()
                 + " variants=" + manifest.variantSelections().size()
-                + " extractions=" + manifest.activeExtractions().size()), true);
+                + " extractions=" + manifest.activeExtractions().size()
+                + " spawns=" + manifest.activeSpawns().size()), true);
+        if (manifest.activeSpawns().isEmpty()) {
+            source.sendSuccess(() -> Component.literal(
+                    "WARN: raid has no active spawns; join will use default_spawn fallback."), true);
+        }
         if (manifest.activeExtractions().isEmpty()) {
             source.sendSuccess(() -> Component.literal("WARN: raid has no active extractions."), true);
         }
@@ -183,7 +188,8 @@ public final class QmRaidCommands {
                 + " defaultSpawnWorld=" + raid.defaultSpawnWorld().toShortString()
                 + " activeContainers=" + raid.activeContainers().size()
                 + " variants=" + raid.variantSelections().size()
-                + " extractions=" + raid.activeExtractions().size()), false);
+                + " extractions=" + raid.activeExtractions().size()
+                + " spawns=" + raid.activeSpawns().size()), false);
         raid.variantSelections().forEach(selection -> source.sendSuccess(() -> Component.literal(
                 "variant " + selection.groupId() + "=" + selection.variantId()
                         + " tags=" + selection.tags() + " patches=" + selection.patches().size()), false));
@@ -201,6 +207,15 @@ public final class QmRaidCommands {
                     + " local=" + extraction.localPos().toShortString()
                     + " world=" + worldPos.toShortString()
                     + " radius=" + extraction.radius() + " tags=" + extraction.tags()), false);
+        });
+        raid.activeSpawns().forEach(spawn -> {
+            BlockPos worldPos = raid.toWorldPos(spawn.localPos());
+            source.sendSuccess(() -> Component.literal("spawn " + spawn.id()
+                    + " node=" + spawn.node()
+                    + " local=" + spawn.localPos().toShortString()
+                    + " world=" + worldPos.toShortString()
+                    + " yaw=" + spawn.yaw() + " pitch=" + spawn.pitch()
+                    + " tags=" + spawn.tags()), false);
         });
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
@@ -230,6 +245,7 @@ public final class QmRaidCommands {
                 + " map=" + manifest.get().mapId() + ": nodes=" + report.nodes()
                 + " enabledEdges=" + report.enabledEdges() + " disabledEdges=" + report.disabledEdges()
                 + " checks=" + report.checks().size()
+                + " activeSpawns=" + manifest.get().activeSpawns().size()
                 + " activeExtractions=" + manifest.get().activeExtractions().size()
                 + " failedRequired=" + report.failedRequiredChecks()), false);
         report.checks().forEach(check -> source.sendSuccess(() -> Component.literal(
@@ -335,13 +351,21 @@ public final class QmRaidCommands {
         if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
         var level = raidLevel(source, manifest.get());
         if (level == null) return 0;
-        BlockPos localSpawn = manifest.get().defaultSpawnLocal();
-        BlockPos spawn = manifest.get().defaultSpawnWorld();
-        player.teleportTo(level, spawn.getX() + 0.5D, spawn.getY(), spawn.getZ() + 0.5D,
-                player.getYRot(), player.getXRot());
+        RaidSpawnActivation activeSpawn = manifest.get().activeSpawns().isEmpty()
+                ? null : manifest.get().activeSpawns().get(0);
+        BlockPos localSpawn = activeSpawn != null
+                ? activeSpawn.localPos() : manifest.get().defaultSpawnLocal();
+        BlockPos worldSpawn = manifest.get().toWorldPos(localSpawn);
+        float yaw = activeSpawn != null ? activeSpawn.yaw() : player.getYRot();
+        float pitch = activeSpawn != null ? activeSpawn.pitch() : player.getXRot();
+        String spawnId = activeSpawn != null ? activeSpawn.id() : "default_spawn_fallback";
+        player.teleportTo(level, worldSpawn.getX() + 0.5D, worldSpawn.getY(), worldSpawn.getZ() + 0.5D,
+                yaw, pitch);
         source.sendSuccess(() -> Component.literal("Joined raid " + manifest.get().raidId() + " map="
-                + manifest.get().mapId() + " localSpawn=" + localSpawn.toShortString()
-                + " worldSpawn=" + spawn.toShortString() + " player=" + player.getName().getString()), true);
+                + manifest.get().mapId() + " spawn=" + spawnId
+                + " localSpawn=" + localSpawn.toShortString()
+                + " worldSpawn=" + worldSpawn.toShortString()
+                + " player=" + player.getName().getString()), true);
         return 1;
     }
     private static net.minecraft.server.level.ServerLevel raidLevel(CommandSourceStack source, RaidManifest manifest) {

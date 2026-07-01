@@ -36,9 +36,13 @@ public final class RaidNavigationEvaluator {
                 .map(check -> evaluateCheck(map, graph, check))
                 .toList());
         if (!manifest.activeExtractions().isEmpty() && !map.navigation().nodes().isEmpty()) {
-            String start = map.navigation().nodes().stream()
-                    .filter(node -> node.tags().contains("spawn"))
-                    .map(node -> node.id()).findFirst().orElse("spawn");
+            String activeSpawnNode = manifest.activeSpawns().isEmpty()
+                    ? "" : manifest.activeSpawns().get(0).node();
+            String start = activeSpawnNode.isBlank()
+                    ? map.navigation().nodes().stream()
+                            .filter(node -> node.tags().contains("spawn"))
+                            .map(node -> node.id()).findFirst().orElse("spawn")
+                    : activeSpawnNode;
             Set<String> targets = manifest.activeExtractions().stream()
                     .map(RaidExtractionActivation::node)
                     .filter(node -> !node.isBlank())

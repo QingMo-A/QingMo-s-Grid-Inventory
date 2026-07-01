@@ -24,7 +24,8 @@ public final class RaidMapExampleWriter {
                   "bounds": {"min": [-32, -16, -32], "max": [32, 32, 32]},
                   "expected_players": 4,
                   "raid_time_seconds": 1800,
-                  "extraction_active_count": {"min": 1, "max": 1}
+                  "extraction_active_count": {"min": 1, "max": 1},
+                  "spawn_active_count": {"min": 1, "max": 1}
                 }
                 """.formatted(mapId, dimension, origin.getX(), origin.getY(), origin.getZ()));
         writeNew(directory.resolve("zones.json"), """
@@ -95,6 +96,24 @@ public final class RaidMapExampleWriter {
                     "forbidden_tags": [],
                     "display_name": "Example Exit A",
                     "tags": ["extraction"]
+                  }
+                ]
+                """);
+        writeNew(directory.resolve("spawn_anchors.json"), """
+                [
+                  {
+                    "id": "spawn_main",
+                    "node": "spawn",
+                    "pos": [0, 1, 0],
+                    "yaw": 0.0,
+                    "pitch": 0.0,
+                    "weight": 100,
+                    "enabled": true,
+                    "always_active": true,
+                    "requires_tags": [],
+                    "forbidden_tags": [],
+                    "display_name": "Example Spawn",
+                    "tags": ["spawn"]
                   }
                 ]
                 """);

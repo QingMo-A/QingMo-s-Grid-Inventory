@@ -39,6 +39,9 @@ public final class RaidMapConfigValidator {
         validateVariants(map, issues);
         validateNavigation(map, issues);
         validateExtractions(map, issues);
+        validateSpawns(map, issues);
+        validateRange("spawn_active_count", map.spawnActiveCount(), issues);
+        validateRange("extraction_active_count", map.extractionActiveCount(), issues);
         return new RaidMapValidationResult(List.copyOf(issues));
     }
 
@@ -141,6 +144,36 @@ public final class RaidMapConfigValidator {
         if (map.extractionActiveCount().min() > enabled) {
             warn(issues, "extraction_active_count min exceeds enabled extraction anchors");
         }
+    }
+
+    private static void validateSpawns(RaidMapConfig map, List<RaidMapValidationIssue> issues) {
+        Set<String> nodeIds = map.navigation().nodes().stream()
+                .map(RaidNavigationNodeConfig::id).collect(java.util.stream.Collectors.toSet());
+        unique(map.spawnAnchors().stream().map(RaidSpawnAnchorConfig::id).toList(), "spawn", issues);
+        for (RaidSpawnAnchorConfig anchor : map.spawnAnchors()) {
+            if (anchor.pos() == null || anchor.pos().length != 3
+                    || !map.bounds().contains(anchor.localBlockPos())) {
+                error(issues, "spawn outside bounds: " + anchor.id());
+            }
+            if (anchor.weight() <= 0) warn(issues, "spawn weight corrected to 1: " + anchor.id());
+            if (anchor.enabled() && !anchor.node().isBlank()) {
+                if (map.navigation().nodes().isEmpty()) {
+                    warn(issues, "spawn node cannot be validated without navigation: " + anchor.id());
+                } else if (!nodeIds.contains(anchor.node())) {
+                    error(issues, "spawn has unknown navigation node: " + anchor.id() + "/" + anchor.node());
+                }
+            }
+        }
+        long enabled = map.spawnAnchors().stream().filter(RaidSpawnAnchorConfig::enabled).count();
+        if (!map.spawnAnchors().isEmpty() && map.spawnActiveCount().min() > enabled) {
+            warn(issues, "spawn_active_count min exceeds enabled spawn anchors");
+        }
+    }
+
+    private static void validateRange(
+            String name, IntRangeConfig range, List<RaidMapValidationIssue> issues) {
+        if (range.min() < 0) error(issues, name + ".min must be >= 0");
+        if (range.max() < range.min()) error(issues, name + ".max must be >= min");
     }
 
     private static Set<String> unique(List<String> ids, String kind, List<RaidMapValidationIssue> issues) {
