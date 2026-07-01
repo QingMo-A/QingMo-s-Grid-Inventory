@@ -10,6 +10,7 @@ public final class RaidManifestGenerator {
     public static RaidManifest generate(RaidMapConfig map, long raidId, long seed) {
         Random random = new Random(seed ^ map.id().hashCode());
         List<RaidVariantSelection> variants = selectVariants(map, seed);
+        List<RaidExtractionActivation> extractions = selectExtractions(map, variants, seed);
         Map<String, ZoneRaidState> zones = new LinkedHashMap<>();
         List<ContainerAnchorActivation> activations = new ArrayList<>();
         Map<String, RaidContainerTypeConfig> types = new HashMap<>();
@@ -39,10 +40,9 @@ public final class RaidManifestGenerator {
         }
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
                 map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
-                Map.copyOf(zones), List.copyOf(activations), variants);
+                Map.copyOf(zones), List.copyOf(activations), variants, extractions);
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
-        // TODO Phase 45B: validate navigation graph after variants and extractions are selected.
         // TODO Phase 46A: activate loose loot anchors and generate LooseLootManifest.
         // TODO Phase 47A: generate mob spawn manifest and event manifest.
     }
@@ -74,6 +74,36 @@ public final class RaidManifestGenerator {
         return List.copyOf(selections);
     }
 
+    private static List<RaidExtractionActivation> selectExtractions(
+            RaidMapConfig map, List<RaidVariantSelection> variants, long seed) {
+        Set<String> selectedTags = variants.stream().flatMap(selection -> selection.tags().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        List<RaidExtractionAnchorConfig> eligible = map.extractionAnchors().stream()
+                .filter(RaidExtractionAnchorConfig::enabled)
+                .filter(anchor -> selectedTags.containsAll(anchor.requiresTags()))
+                .filter(anchor -> anchor.forbiddenTags().stream().noneMatch(selectedTags::contains))
+                .toList();
+        List<RaidExtractionAnchorConfig> always = eligible.stream()
+                .filter(RaidExtractionAnchorConfig::alwaysActive).toList();
+        List<RaidExtractionAnchorConfig> randomCandidates = eligible.stream()
+                .filter(anchor -> !anchor.alwaysActive()).toList();
+        Random random = new Random(seed ^ map.id().hashCode() ^ 0x455854524143544CL);
+        int requested = roll(random, map.extractionActiveCount());
+        if (requested > randomCandidates.size()) {
+            DFGridInventory.LOGGER.warn(
+                    "Raid extraction candidates below requested count mapId={} requested={} available={}",
+                    map.id(), requested, randomCandidates.size());
+        }
+        List<RaidExtractionAnchorConfig> selected = new ArrayList<>(always);
+        selected.addAll(weightedExtractionSample(randomCandidates,
+                Math.min(requested, randomCandidates.size()), random));
+        Set<String> ids = new HashSet<>();
+        return selected.stream().filter(anchor -> ids.add(anchor.id()))
+                .map(anchor -> new RaidExtractionActivation(anchor.id(), anchor.node(),
+                        anchor.localBlockPos(), anchor.effectiveRadius(), anchor.displayName(), anchor.tags()))
+                .toList();
+    }
+
     private static int roll(Random random, IntRangeConfig range) {
         return range.min() + (range.max() == range.min() ? 0 : random.nextInt(range.max() - range.min() + 1));
     }
@@ -89,6 +119,23 @@ public final class RaidManifestGenerator {
             for (int i = 0; i < pool.size(); i++) {
                 roll -= pool.get(i).effectiveWeight();
                 if (roll < 0) { result.add(pool.remove(i)); break; }
+            }
+        }
+        return result;
+    }
+
+    private static List<RaidExtractionAnchorConfig> weightedExtractionSample(
+            List<RaidExtractionAnchorConfig> source, int count, Random random) {
+        List<RaidExtractionAnchorConfig> pool = new ArrayList<>(source), result = new ArrayList<>();
+        while (result.size() < count && !pool.isEmpty()) {
+            int total = pool.stream().mapToInt(RaidExtractionAnchorConfig::effectiveWeight).sum();
+            int roll = random.nextInt(total);
+            for (int i = 0; i < pool.size(); i++) {
+                roll -= pool.get(i).effectiveWeight();
+                if (roll < 0) {
+                    result.add(pool.remove(i));
+                    break;
+                }
             }
         }
         return result;

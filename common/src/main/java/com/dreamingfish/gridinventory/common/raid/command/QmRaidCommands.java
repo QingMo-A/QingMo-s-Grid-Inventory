@@ -156,7 +156,11 @@ public final class QmRaidCommands {
         saveManifest(source, manifest);
         source.sendSuccess(() -> Component.literal("Raid " + raidId + " map=" + id + " seed=" + seed
                 + " activeContainers=" + manifest.activeContainers().size()
-                + " variants=" + manifest.variantSelections().size()), true);
+                + " variants=" + manifest.variantSelections().size()
+                + " extractions=" + manifest.activeExtractions().size()), true);
+        if (manifest.activeExtractions().isEmpty()) {
+            source.sendSuccess(() -> Component.literal("WARN: raid has no active extractions."), true);
+        }
         RaidNavigationReport navigation = RaidNavigationEvaluator.evaluate(map.get(), manifest);
         if (navigation.hasFailedRequiredChecks()) {
             source.sendSuccess(() -> Component.literal("WARN: Raid created, but navigation has "
@@ -178,7 +182,8 @@ public final class QmRaidCommands {
                 + " defaultSpawnLocal=" + raid.defaultSpawnLocal().toShortString()
                 + " defaultSpawnWorld=" + raid.defaultSpawnWorld().toShortString()
                 + " activeContainers=" + raid.activeContainers().size()
-                + " variants=" + raid.variantSelections().size()), false);
+                + " variants=" + raid.variantSelections().size()
+                + " extractions=" + raid.activeExtractions().size()), false);
         raid.variantSelections().forEach(selection -> source.sendSuccess(() -> Component.literal(
                 "variant " + selection.groupId() + "=" + selection.variantId()
                         + " tags=" + selection.tags() + " patches=" + selection.patches().size()), false));
@@ -189,6 +194,14 @@ public final class QmRaidCommands {
                     + " checks=" + navigation.checks().size()
                     + " failedRequired=" + navigation.failedRequiredChecks()), false);
         }
+        raid.activeExtractions().forEach(extraction -> {
+            BlockPos worldPos = raid.toWorldPos(extraction.localPos());
+            source.sendSuccess(() -> Component.literal("extraction " + extraction.id()
+                    + " node=" + extraction.node()
+                    + " local=" + extraction.localPos().toShortString()
+                    + " world=" + worldPos.toShortString()
+                    + " radius=" + extraction.radius() + " tags=" + extraction.tags()), false);
+        });
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
                 + " anchors=" + zone.anchorBudgets()), false));
@@ -217,6 +230,7 @@ public final class QmRaidCommands {
                 + " map=" + manifest.get().mapId() + ": nodes=" + report.nodes()
                 + " enabledEdges=" + report.enabledEdges() + " disabledEdges=" + report.disabledEdges()
                 + " checks=" + report.checks().size()
+                + " activeExtractions=" + manifest.get().activeExtractions().size()
                 + " failedRequired=" + report.failedRequiredChecks()), false);
         report.checks().forEach(check -> source.sendSuccess(() -> Component.literal(
                 (check.required() && !check.reachable() ? "REQUIRED FAILED " : "")

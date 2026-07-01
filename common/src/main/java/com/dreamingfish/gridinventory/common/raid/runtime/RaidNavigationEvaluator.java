@@ -32,11 +32,22 @@ public final class RaidNavigationEvaluator {
                 graph.computeIfAbsent(edge.to(), ignored -> new LinkedHashSet<>()).add(edge.from());
             }
         }
-        List<RaidNavigationCheckResult> checks = map.navigation().checks().stream()
+        List<RaidNavigationCheckResult> checks = new ArrayList<>(map.navigation().checks().stream()
                 .map(check -> evaluateCheck(map, graph, check))
-                .toList();
+                .toList());
+        if (!manifest.activeExtractions().isEmpty() && !map.navigation().nodes().isEmpty()) {
+            String start = map.navigation().nodes().stream()
+                    .filter(node -> node.tags().contains("spawn"))
+                    .map(node -> node.id()).findFirst().orElse("spawn");
+            Set<String> targets = manifest.activeExtractions().stream()
+                    .map(RaidExtractionActivation::node)
+                    .filter(node -> !node.isBlank())
+                    .collect(Collectors.toSet());
+            checks.add(new RaidNavigationCheckResult("spawn_to_active_extraction", start,
+                    "active_extractions", true, reachable(graph, start, targets)));
+        }
         return new RaidNavigationReport(map.navigation().nodes().size(),
-                enabledEdges, disabledEdges, checks);
+                enabledEdges, disabledEdges, List.copyOf(checks));
     }
 
     private static RaidNavigationCheckResult evaluateCheck(

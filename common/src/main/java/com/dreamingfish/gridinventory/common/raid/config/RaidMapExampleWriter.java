@@ -23,7 +23,8 @@ public final class RaidMapExampleWriter {
                   "default_spawn": [0, 1, 0],
                   "bounds": {"min": [-32, -16, -32], "max": [32, 32, 32]},
                   "expected_players": 4,
-                  "raid_time_seconds": 1800
+                  "raid_time_seconds": 1800,
+                  "extraction_active_count": {"min": 1, "max": 1}
                 }
                 """.formatted(mapId, dimension, origin.getX(), origin.getY(), origin.getZ()));
         writeNew(directory.resolve("zones.json"), """
@@ -79,6 +80,23 @@ public final class RaidMapExampleWriter {
                     {"id": "spawn_to_loot", "from": "spawn", "to_any_tag": "loot_zone", "required": false}
                   ]
                 }
+                """);
+        writeNew(directory.resolve("extraction_anchors.json"), """
+                [
+                  {
+                    "id": "exit_a",
+                    "node": "exit_a",
+                    "pos": [24, 1, 0],
+                    "radius": 3.0,
+                    "weight": 100,
+                    "enabled": true,
+                    "always_active": true,
+                    "requires_tags": [],
+                    "forbidden_tags": [],
+                    "display_name": "Example Exit A",
+                    "tags": ["extraction"]
+                  }
+                ]
                 """);
         return directory;
     }

@@ -10,11 +10,13 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
                            BlockPos defaultSpawnLocal, RaidLifecycleState state,
                            Map<String, ZoneRaidState> zones,
                            List<ContainerAnchorActivation> activeContainers,
-                           List<RaidVariantSelection> variantSelections) {
+                           List<RaidVariantSelection> variantSelections,
+                           List<RaidExtractionActivation> activeExtractions) {
     public RaidManifest {
         defaultSpawnLocal = defaultSpawnLocal == null ? BlockPos.ZERO : defaultSpawnLocal;
         state = state == null ? RaidLifecycleState.CREATED : state;
         variantSelections = variantSelections == null ? List.of() : List.copyOf(variantSelections);
+        activeExtractions = activeExtractions == null ? List.of() : List.copyOf(activeExtractions);
     }
     public BlockPos toWorldPos(BlockPos localPos) { return pasteOrigin.offset(localPos); }
     public BlockPos toWorldPos(int[] localPos) {
@@ -25,6 +27,6 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
     public BlockPos defaultSpawnWorld() { return toWorldPos(defaultSpawnLocal); }
     public RaidManifest withState(RaidLifecycleState newState) {
         return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
-                newState, zones, activeContainers, variantSelections);
+                newState, zones, activeContainers, variantSelections, activeExtractions);
     }
 }

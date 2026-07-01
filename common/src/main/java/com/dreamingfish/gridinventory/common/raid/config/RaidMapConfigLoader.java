@@ -19,6 +19,9 @@ public final class RaidMapConfigLoader {
         JsonObject bounds = map.getAsJsonObject("bounds");
         int[] origin = optionalIntArray(map, "origin");
         int[] defaultSpawn = optionalIntArray(map, "default_spawn");
+        JsonObject extractionCount = map.has("extraction_active_count")
+                && map.get("extraction_active_count").isJsonObject()
+                ? map.getAsJsonObject("extraction_active_count") : null;
         return new RaidMapConfig(id, string(map, "display_name"), string(map, "dimension"),
                 optionalLocation(map, "template"),
                 origin, defaultSpawn == null ? new int[]{0, 0, 0} : defaultSpawn,
@@ -28,7 +31,9 @@ public final class RaidMapConfigLoader {
                 types(read(directory.resolve("container_types.json")).getAsJsonArray()),
                 anchors(read(directory.resolve("container_anchors.json")).getAsJsonArray()),
                 variants(directory.resolve("variants.json")),
-                navigation(directory.resolve("navigation.json")));
+                navigation(directory.resolve("navigation.json")),
+                extractionCount == null ? new IntRangeConfig(1, 1) : range(extractionCount),
+                extractions(directory.resolve("extraction_anchors.json")));
     }
 
     private static JsonElement read(Path path) throws IOException {
@@ -115,7 +120,7 @@ public final class RaidMapConfigLoader {
                 JsonObject edge = element.getAsJsonObject();
                 edges.add(new RaidNavigationEdgeConfig(string(edge, "id"), string(edge, "from"),
                         string(edge, "to"), bool(edge, "bidirectional", false),
-                        bool(edge, "enabled_by_default", false), strings(edge, "required_tags"),
+                        bool(edge, "enabled_by_default", true), strings(edge, "required_tags"),
                         strings(edge, "disabled_by_tags")));
             }
         }
@@ -129,6 +134,21 @@ public final class RaidMapConfigLoader {
             }
         }
         return new RaidNavigationConfig(nodes, edges, checks);
+    }
+
+    private static List<RaidExtractionAnchorConfig> extractions(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) return List.of();
+        List<RaidExtractionAnchorConfig> result = new ArrayList<>();
+        for (JsonElement element : read(path).getAsJsonArray()) {
+            JsonObject anchor = element.getAsJsonObject();
+            result.add(new RaidExtractionAnchorConfig(string(anchor, "id"), string(anchor, "node"),
+                    flexibleIntArray(anchor, "pos"), decimal(anchor, "radius", 3.0D),
+                    integer(anchor, "weight", 1), bool(anchor, "enabled", true),
+                    bool(anchor, "always_active", false), strings(anchor, "requires_tags"),
+                    strings(anchor, "forbidden_tags"), string(anchor, "display_name"),
+                    strings(anchor, "tags")));
+        }
+        return List.copyOf(result);
     }
 
     private static IntRangeConfig range(JsonObject o) {

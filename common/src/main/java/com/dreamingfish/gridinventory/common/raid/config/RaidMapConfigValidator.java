@@ -38,6 +38,7 @@ public final class RaidMapConfigValidator {
         }
         validateVariants(map, issues);
         validateNavigation(map, issues);
+        validateExtractions(map, issues);
         return new RaidMapValidationResult(List.copyOf(issues));
     }
 
@@ -112,6 +113,33 @@ public final class RaidMapConfigValidator {
                 error(issues, "navigation check target tag has no nodes: "
                         + check.id() + "/" + check.toAnyTag());
             }
+        }
+    }
+
+    private static void validateExtractions(RaidMapConfig map, List<RaidMapValidationIssue> issues) {
+        Set<String> nodeIds = map.navigation().nodes().stream()
+                .map(RaidNavigationNodeConfig::id).collect(java.util.stream.Collectors.toSet());
+        unique(map.extractionAnchors().stream().map(RaidExtractionAnchorConfig::id).toList(),
+                "extraction", issues);
+        for (RaidExtractionAnchorConfig anchor : map.extractionAnchors()) {
+            if (anchor.pos() == null || anchor.pos().length != 3
+                    || !map.bounds().contains(anchor.localBlockPos())) {
+                error(issues, "extraction outside bounds: " + anchor.id());
+            }
+            if (anchor.radius() <= 0) warn(issues, "extraction radius corrected to 3.0: " + anchor.id());
+            if (anchor.weight() <= 0) warn(issues, "extraction weight corrected to 1: " + anchor.id());
+            if (anchor.enabled() && !anchor.node().isBlank()) {
+                if (map.navigation().nodes().isEmpty()) {
+                    warn(issues, "extraction node cannot be validated without navigation: " + anchor.id());
+                } else if (!nodeIds.contains(anchor.node())) {
+                    error(issues, "extraction has unknown navigation node: "
+                            + anchor.id() + "/" + anchor.node());
+                }
+            }
+        }
+        long enabled = map.extractionAnchors().stream().filter(RaidExtractionAnchorConfig::enabled).count();
+        if (map.extractionActiveCount().min() > enabled) {
+            warn(issues, "extraction_active_count min exceeds enabled extraction anchors");
         }
     }
 

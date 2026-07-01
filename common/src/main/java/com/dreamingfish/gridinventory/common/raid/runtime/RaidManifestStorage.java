@@ -110,6 +110,18 @@ public final class RaidManifestStorage {
             variants.add(value);
         });
         root.add("variant_selections", variants);
+        JsonArray extractions = new JsonArray();
+        manifest.activeExtractions().forEach(extraction -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("id", extraction.id());
+            value.addProperty("node", extraction.node());
+            value.add("local_pos", pos(extraction.localPos()));
+            value.addProperty("radius", extraction.radius());
+            value.addProperty("display_name", extraction.displayName());
+            value.add("tags", GSON.toJsonTree(extraction.tags()));
+            extractions.add(value);
+        });
+        root.add("active_extractions", extractions);
         return root;
     }
 
@@ -163,13 +175,32 @@ public final class RaidManifestStorage {
                 }
             }
         }
+        List<RaidExtractionActivation> extractions = new ArrayList<>();
+        if (root.has("active_extractions") && root.get("active_extractions").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("active_extractions")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    String id = string(value, "id", "");
+                    if (id.isBlank()) throw new JsonParseException("Empty extraction id");
+                    List<String> tags = new ArrayList<>();
+                    if (value.has("tags") && value.get("tags").isJsonArray()) {
+                        value.getAsJsonArray("tags").forEach(tag -> tags.add(tag.getAsString()));
+                    }
+                    extractions.add(new RaidExtractionActivation(id, string(value, "node", ""),
+                            readRequiredPos(value, "local_pos"), decimal(value, "radius", 3.0D),
+                            string(value, "display_name", ""), tags));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid extraction activation", exception);
+                }
+            }
+        }
         RaidLifecycleState state;
         try { state = RaidLifecycleState.valueOf(string(root, "state", "CREATED")); }
         catch (IllegalArgumentException ignored) { state = RaidLifecycleState.CREATED; }
         return new RaidManifest(longValue(root, "raid_id", 0L), longValue(root, "raid_seed", 0L),
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
-                Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants));
+                Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants), List.copyOf(extractions));
     }
 
     private static JsonArray pos(BlockPos pos) {
