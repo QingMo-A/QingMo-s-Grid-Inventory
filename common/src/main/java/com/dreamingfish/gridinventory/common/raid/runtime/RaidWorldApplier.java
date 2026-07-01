@@ -14,8 +14,24 @@ import java.util.stream.Collectors;
 
 public final class RaidWorldApplier {
     private RaidWorldApplier() {}
+
     public static RaidWorldApplyResult apply(ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
+        return applyFull(level, map, manifest);
+    }
+
+    public static RaidWorldApplyResult applyFull(ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
         RaidTemplateApplyResult template = RaidTemplateApplier.applyTemplate(level, map, manifest);
+        return applyResources(level, map, manifest, template);
+    }
+
+    public static RaidWorldApplyResult applyResourcesOnly(
+            ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
+        // The caller has already restored/pasted the template; only activate manifest-driven resources.
+        return applyResources(level, map, manifest, new RaidTemplateApplyResult(false, false));
+    }
+
+    private static RaidWorldApplyResult applyResources(
+            ServerLevel level, RaidMapConfig map, RaidManifest manifest, RaidTemplateApplyResult template) {
         int placed = 0;
         int rebound = 0;
         int cleared = 0;

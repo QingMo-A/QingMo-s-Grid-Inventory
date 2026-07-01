@@ -186,7 +186,7 @@ public final class QmRaidCommands {
         if (map.isEmpty()) { source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId())); return 0; }
         var targetLevel = raidLevel(source, manifest.get());
         if (targetLevel == null) return 0;
-        RaidWorldApplyResult result = RaidWorldApplier.apply(targetLevel, map.get(), manifest.get());
+        RaidWorldApplyResult result = RaidWorldApplier.applyFull(targetLevel, map.get(), manifest.get());
         RaidManifest updated = manifest.get().withState(RaidLifecycleState.APPLIED);
         RaidManifestRegistry.put(updated);
         saveManifest(source, updated);
@@ -226,7 +226,8 @@ public final class QmRaidCommands {
                 + " placeholdersRestored=" + result.placeholdersRestored()
                 + " warnings=" + result.warnings() + " state=CREATED"), true);
         if (!rebuild) return 1;
-        RaidWorldApplyResult applied = RaidWorldApplier.apply(targetLevel, map.get(), updated);
+        // Reset already restored the template, so rebuild must only reactivate manifest resources.
+        RaidWorldApplyResult applied = RaidWorldApplier.applyResourcesOnly(targetLevel, map.get(), updated);
         RaidManifest rebuilt = updated.withState(RaidLifecycleState.APPLIED);
         RaidManifestRegistry.put(rebuilt);
         saveManifest(source, rebuilt);
