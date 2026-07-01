@@ -4,7 +4,6 @@ import java.util.*;
 
 public final class RaidMapConfigValidator {
     // TODO Phase 44C: validate anchor group limits and group coverage.
-    // TODO Phase 45B: load navigation.json and validate reachability.
     // TODO Phase 45B: load extraction_anchors.json and spawn_anchors.json.
     // TODO Phase 46A: load loose_loot_anchors.json.
     // TODO Phase 44D: load item value config with spawn_cost/sell_value/combat_score/rarity_weight.
@@ -38,6 +37,7 @@ public final class RaidMapConfigValidator {
             if (available < zone.activeContainers().min()) error(issues, "insufficient enabled anchors in zone " + zone.id());
         }
         validateVariants(map, issues);
+        validateNavigation(map, issues);
         return new RaidMapValidationResult(List.copyOf(issues));
     }
 
@@ -71,6 +71,46 @@ public final class RaidMapConfigValidator {
                     }
                     // Runtime performs the cross-version BlockState property parsing and reports failures.
                 }
+            }
+        }
+    }
+
+    private static void validateNavigation(RaidMapConfig map, List<RaidMapValidationIssue> issues) {
+        RaidNavigationConfig navigation = map.navigation();
+        Set<String> nodeIds = unique(navigation.nodes().stream().map(RaidNavigationNodeConfig::id).toList(),
+                "navigation node", issues);
+        for (RaidNavigationNodeConfig node : navigation.nodes()) {
+            if (node.pos() == null || node.pos().length != 3
+                    || !map.bounds().contains(node.localBlockPos())) {
+                error(issues, "navigation node outside bounds: " + node.id());
+            }
+        }
+        unique(navigation.edges().stream().map(RaidNavigationEdgeConfig::id).toList(),
+                "navigation edge", issues);
+        for (RaidNavigationEdgeConfig edge : navigation.edges()) {
+            if (!nodeIds.contains(edge.from())) {
+                error(issues, "navigation edge has unknown from node: " + edge.id() + "/" + edge.from());
+            }
+            if (!nodeIds.contains(edge.to())) {
+                error(issues, "navigation edge has unknown to node: " + edge.id() + "/" + edge.to());
+            }
+        }
+        unique(navigation.checks().stream().map(RaidNavigationCheckConfig::id).toList(),
+                "navigation check", issues);
+        for (RaidNavigationCheckConfig check : navigation.checks()) {
+            if (!nodeIds.contains(check.from())) {
+                error(issues, "navigation check has unknown from node: " + check.id() + "/" + check.from());
+            }
+            if (check.to().isBlank() && check.toAnyTag().isBlank()) {
+                error(issues, "navigation check has no target: " + check.id());
+            }
+            if (!check.to().isBlank() && !nodeIds.contains(check.to())) {
+                error(issues, "navigation check has unknown target node: " + check.id() + "/" + check.to());
+            }
+            if (!check.toAnyTag().isBlank() && navigation.nodes().stream()
+                    .noneMatch(node -> node.tags().contains(check.toAnyTag()))) {
+                error(issues, "navigation check target tag has no nodes: "
+                        + check.id() + "/" + check.toAnyTag());
             }
         }
     }

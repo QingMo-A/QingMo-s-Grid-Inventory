@@ -62,6 +62,10 @@ public final class QmRaidCommands {
                                         LongArgumentType.getLong(c, "seedValue")))))))
                 .then(Commands.literal("preview").then(Commands.argument("raid", StringArgumentType.word())
                         .executes(c -> preview(c.getSource(), StringArgumentType.getString(c, "raid")))))
+                .then(Commands.literal("nav")
+                        .then(Commands.literal("preview").then(Commands.argument("raid", StringArgumentType.word())
+                                .executes(c -> navigationPreview(c.getSource(),
+                                        StringArgumentType.getString(c, "raid"))))))
                 .then(Commands.literal("apply").then(Commands.argument("raid", StringArgumentType.word())
                         .executes(c -> apply(c.getSource(), StringArgumentType.getString(c, "raid")))))
                 .then(Commands.literal("reset").then(Commands.argument("raid", StringArgumentType.word())
@@ -153,6 +157,11 @@ public final class QmRaidCommands {
         source.sendSuccess(() -> Component.literal("Raid " + raidId + " map=" + id + " seed=" + seed
                 + " activeContainers=" + manifest.activeContainers().size()
                 + " variants=" + manifest.variantSelections().size()), true);
+        RaidNavigationReport navigation = RaidNavigationEvaluator.evaluate(map.get(), manifest);
+        if (navigation.hasFailedRequiredChecks()) {
+            source.sendSuccess(() -> Component.literal("WARN: Raid created, but navigation has "
+                    + navigation.failedRequiredChecks() + " failed required checks."), true);
+        }
         return 1;
     }
     private static Optional<RaidManifest> manifest(String value) {
@@ -173,6 +182,13 @@ public final class QmRaidCommands {
         raid.variantSelections().forEach(selection -> source.sendSuccess(() -> Component.literal(
                 "variant " + selection.groupId() + "=" + selection.variantId()
                         + " tags=" + selection.tags() + " patches=" + selection.patches().size()), false));
+        Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(raid.mapId());
+        if (map.isPresent()) {
+            RaidNavigationReport navigation = RaidNavigationEvaluator.evaluate(map.get(), raid);
+            source.sendSuccess(() -> Component.literal("navigation nodes=" + navigation.nodes()
+                    + " checks=" + navigation.checks().size()
+                    + " failedRequired=" + navigation.failedRequiredChecks()), false);
+        }
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
                 + " anchors=" + zone.anchorBudgets()), false));
@@ -183,6 +199,30 @@ public final class QmRaidCommands {
                     + " world=" + worldPos.toShortString()), false);
         });
         return 1;
+    }
+
+    private static int navigationPreview(CommandSourceStack source, String value) {
+        Optional<RaidManifest> manifest = manifest(value);
+        if (manifest.isEmpty()) {
+            source.sendFailure(Component.literal("Raid not found: " + value));
+            return 0;
+        }
+        Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(manifest.get().mapId());
+        if (map.isEmpty()) {
+            source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId()));
+            return 0;
+        }
+        RaidNavigationReport report = RaidNavigationEvaluator.evaluate(map.get(), manifest.get());
+        source.sendSuccess(() -> Component.literal("Navigation raid " + manifest.get().raidId()
+                + " map=" + manifest.get().mapId() + ": nodes=" + report.nodes()
+                + " enabledEdges=" + report.enabledEdges() + " disabledEdges=" + report.disabledEdges()
+                + " checks=" + report.checks().size()
+                + " failedRequired=" + report.failedRequiredChecks()), false);
+        report.checks().forEach(check -> source.sendSuccess(() -> Component.literal(
+                (check.required() && !check.reachable() ? "REQUIRED FAILED " : "")
+                        + "check " + check.id() + " from=" + check.from() + " target=" + check.target()
+                        + " required=" + check.required() + " reachable=" + check.reachable()), false));
+        return report.hasFailedRequiredChecks() ? 0 : 1;
     }
     private static int apply(CommandSourceStack source, String value) {
         Optional<RaidManifest> manifest = manifest(value);

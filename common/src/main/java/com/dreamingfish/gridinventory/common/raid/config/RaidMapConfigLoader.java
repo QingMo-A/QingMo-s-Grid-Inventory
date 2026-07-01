@@ -27,7 +27,8 @@ public final class RaidMapConfigLoader {
                 zones(read(directory.resolve("zones.json")).getAsJsonArray()),
                 types(read(directory.resolve("container_types.json")).getAsJsonArray()),
                 anchors(read(directory.resolve("container_anchors.json")).getAsJsonArray()),
-                variants(directory.resolve("variants.json")));
+                variants(directory.resolve("variants.json")),
+                navigation(directory.resolve("navigation.json")));
     }
 
     private static JsonElement read(Path path) throws IOException {
@@ -97,6 +98,39 @@ public final class RaidMapConfigLoader {
         return List.copyOf(result);
     }
 
+    private static RaidNavigationConfig navigation(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) return RaidNavigationConfig.empty();
+        JsonObject root = read(path).getAsJsonObject();
+        List<RaidNavigationNodeConfig> nodes = new ArrayList<>();
+        if (root.has("nodes") && root.get("nodes").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("nodes")) {
+                JsonObject node = element.getAsJsonObject();
+                nodes.add(new RaidNavigationNodeConfig(string(node, "id"),
+                        flexibleIntArray(node, "pos"), strings(node, "tags")));
+            }
+        }
+        List<RaidNavigationEdgeConfig> edges = new ArrayList<>();
+        if (root.has("edges") && root.get("edges").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("edges")) {
+                JsonObject edge = element.getAsJsonObject();
+                edges.add(new RaidNavigationEdgeConfig(string(edge, "id"), string(edge, "from"),
+                        string(edge, "to"), bool(edge, "bidirectional", false),
+                        bool(edge, "enabled_by_default", false), strings(edge, "required_tags"),
+                        strings(edge, "disabled_by_tags")));
+            }
+        }
+        List<RaidNavigationCheckConfig> checks = new ArrayList<>();
+        if (root.has("checks") && root.get("checks").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("checks")) {
+                JsonObject check = element.getAsJsonObject();
+                checks.add(new RaidNavigationCheckConfig(string(check, "id"), string(check, "from"),
+                        string(check, "to"), string(check, "to_any_tag"),
+                        bool(check, "required", false)));
+            }
+        }
+        return new RaidNavigationConfig(nodes, edges, checks);
+    }
+
     private static IntRangeConfig range(JsonObject o) {
         return o == null ? new IntRangeConfig(0, 0)
                 : new IntRangeConfig(integer(o, "min", 0), integer(o, "max", 0));
@@ -124,6 +158,10 @@ public final class RaidMapConfigLoader {
 
     private static double decimal(JsonObject o, String key, double fallback) {
         return o != null && o.has(key) ? o.get(key).getAsDouble() : fallback;
+    }
+
+    private static boolean bool(JsonObject o, String key, boolean fallback) {
+        return o != null && o.has(key) ? o.get(key).getAsBoolean() : fallback;
     }
 
     private static int[] intArray(JsonObject o, String key) {

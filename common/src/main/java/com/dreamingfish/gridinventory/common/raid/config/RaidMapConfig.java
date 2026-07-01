@@ -11,7 +11,8 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
                             int raidTimeSeconds, List<RaidZoneConfig> zones,
                             List<RaidContainerTypeConfig> containerTypes,
                             List<RaidContainerAnchorConfig> containerAnchors,
-                            List<RaidVariantGroupConfig> variantGroups) {
+                            List<RaidVariantGroupConfig> variantGroups,
+                            RaidNavigationConfig navigation) {
     // TODO Phase 48B: apply origin offset to all local anchor positions for multi-instance raids.
     // TODO Phase 48C: restore placeholder blocks on raid reset.
     public RaidMapConfig {
@@ -19,6 +20,7 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
         origin = valid(origin) ? origin.clone() : new int[]{0, 0, 0};
         defaultSpawn = valid(defaultSpawn) ? defaultSpawn.clone() : new int[]{0, 0, 0};
         variantGroups = variantGroups == null ? List.of() : List.copyOf(variantGroups);
+        navigation = navigation == null ? RaidNavigationConfig.empty() : navigation;
     }
 
     public BlockPos pasteOriginPos() { return pos(origin, BlockPos.ZERO); }

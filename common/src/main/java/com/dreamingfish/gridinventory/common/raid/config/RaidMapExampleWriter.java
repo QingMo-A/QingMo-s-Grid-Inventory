@@ -61,6 +61,25 @@ public final class RaidMapExampleWriter {
                   }
                 ]
                 """);
+        writeNew(directory.resolve("navigation.json"), """
+                {
+                  "nodes": [
+                    {"id": "spawn", "pos": [0, 1, 0], "tags": ["spawn"]},
+                    {"id": "main", "pos": [8, 1, 0], "tags": ["central"]},
+                    {"id": "storage", "pos": [16, 1, 0], "tags": ["loot_zone"]},
+                    {"id": "exit_a", "pos": [24, 1, 0], "tags": ["extraction"]}
+                  ],
+                  "edges": [
+                    {"id": "spawn_to_main", "from": "spawn", "to": "main", "bidirectional": true, "enabled_by_default": true, "required_tags": [], "disabled_by_tags": []},
+                    {"id": "main_to_storage", "from": "main", "to": "storage", "bidirectional": true, "enabled_by_default": true, "required_tags": [], "disabled_by_tags": ["blocked"]},
+                    {"id": "main_to_exit_a", "from": "main", "to": "exit_a", "bidirectional": true, "enabled_by_default": true, "required_tags": [], "disabled_by_tags": []}
+                  ],
+                  "checks": [
+                    {"id": "spawn_to_exit", "from": "spawn", "to_any_tag": "extraction", "required": true},
+                    {"id": "spawn_to_loot", "from": "spawn", "to_any_tag": "loot_zone", "required": false}
+                  ]
+                }
+                """);
         return directory;
     }
 
