@@ -36,6 +36,7 @@ public final class RaidManifestGenerator {
                     selected.stream().map(RaidContainerAnchorConfig::id).toList(), Map.copyOf(budgets)));
         }
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
+                map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
                 Map.copyOf(zones), List.copyOf(activations));
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.

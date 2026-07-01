@@ -7,12 +7,22 @@ import net.minecraft.core.BlockPos;
 // TODO Phase 50C: delete or recycle raid dimension after raid ends.
 // TODO Phase 50E: persist RaidInstance metadata with dimensionId, pasteOrigin and lifecycle state.
 public record RaidManifest(long raidId, long raidSeed, String mapId, String dimensionId, BlockPos pasteOrigin,
+                           BlockPos defaultSpawnLocal, RaidLifecycleState state,
                            Map<String, ZoneRaidState> zones,
                            List<ContainerAnchorActivation> activeContainers) {
+    public RaidManifest {
+        defaultSpawnLocal = defaultSpawnLocal == null ? BlockPos.ZERO : defaultSpawnLocal;
+        state = state == null ? RaidLifecycleState.CREATED : state;
+    }
     public BlockPos toWorldPos(BlockPos localPos) { return pasteOrigin.offset(localPos); }
     public BlockPos toWorldPos(int[] localPos) {
         return localPos != null && localPos.length == 3
                 ? toWorldPos(new BlockPos(localPos[0], localPos[1], localPos[2])) : pasteOrigin;
     }
     public BlockPos toLocalPos(BlockPos worldPos) { return worldPos.subtract(pasteOrigin); }
+    public BlockPos defaultSpawnWorld() { return toWorldPos(defaultSpawnLocal); }
+    public RaidManifest withState(RaidLifecycleState newState) {
+        return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
+                newState, zones, activeContainers);
+    }
 }

@@ -29,7 +29,7 @@ public final class QmRaidCommands {
     // TODO Phase 48D: persist RaidManifest to disk and reload after server restart.
     // TODO Phase 48B: add /qmraid reset to clear applied containers and restore placeholders.
     // TODO Phase 49A: spawn anchors and spawn group selection.
-    // TODO Phase 49B: add raid lifecycle states: CREATED, APPLIED, RUNNING, ENDED, CLEANED.
+    // TODO Phase 48A: transition lifecycle on join/end/reset for RUNNING, ENDED and CLEANED.
     private static final AtomicLong RAID_IDS = new AtomicLong(System.currentTimeMillis());
     private QmRaidCommands() {}
 
@@ -151,8 +151,10 @@ public final class QmRaidCommands {
         if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
         RaidManifest raid = manifest.get();
         source.sendSuccess(() -> Component.literal("Raid " + raid.raidId() + " map=" + raid.mapId()
-                + " seed=" + raid.raidSeed() + " dimension=" + raid.dimensionId()
+                + " seed=" + raid.raidSeed() + " state=" + raid.state() + " dimension=" + raid.dimensionId()
                 + " pasteOrigin=" + raid.pasteOrigin().toShortString()
+                + " defaultSpawnLocal=" + raid.defaultSpawnLocal().toShortString()
+                + " defaultSpawnWorld=" + raid.defaultSpawnWorld().toShortString()
                 + " activeContainers=" + raid.activeContainers().size()), false);
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
@@ -173,6 +175,7 @@ public final class QmRaidCommands {
         var targetLevel = raidLevel(source, manifest.get());
         if (targetLevel == null) return 0;
         RaidWorldApplyResult result = RaidWorldApplier.apply(targetLevel, map.get(), manifest.get());
+        RaidManifestRegistry.put(manifest.get().withState(RaidLifecycleState.APPLIED));
         source.sendSuccess(() -> Component.literal("Applied raid " + manifest.get().raidId()
                 + ": templateApplied=" + result.templateApplied() + " templateMissing=" + result.templateMissing()
                 + " activePlaced=" + result.activePlaced() + " activeRebound=" + result.activeRebound()
@@ -182,16 +185,14 @@ public final class QmRaidCommands {
     private static int join(CommandSourceStack source, String value, ServerPlayer player) {
         Optional<RaidManifest> manifest = manifest(value);
         if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
-        Optional<RaidMapConfig> map = RaidMapConfigRegistry.get(manifest.get().mapId());
-        if (map.isEmpty()) { source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId())); return 0; }
         var level = raidLevel(source, manifest.get());
         if (level == null) return 0;
-        BlockPos localSpawn = map.get().defaultSpawnLocalPos();
-        BlockPos spawn = manifest.get().toWorldPos(localSpawn);
+        BlockPos localSpawn = manifest.get().defaultSpawnLocal();
+        BlockPos spawn = manifest.get().defaultSpawnWorld();
         player.teleportTo(level, spawn.getX() + 0.5D, spawn.getY(), spawn.getZ() + 0.5D,
                 player.getYRot(), player.getXRot());
         source.sendSuccess(() -> Component.literal("Joined raid " + manifest.get().raidId() + " map="
-                + map.get().id() + " localSpawn=" + localSpawn.toShortString()
+                + manifest.get().mapId() + " localSpawn=" + localSpawn.toShortString()
                 + " worldSpawn=" + spawn.toShortString() + " player=" + player.getName().getString()), true);
         return 1;
     }
