@@ -1,5 +1,6 @@
 package com.dreamingfish.gridinventory.common.raid.runtime;
 
+import com.dreamingfish.gridinventory.DFGridInventory;
 import com.dreamingfish.gridinventory.common.raid.config.*;
 import java.util.*;
 
@@ -8,6 +9,7 @@ public final class RaidManifestGenerator {
 
     public static RaidManifest generate(RaidMapConfig map, long raidId, long seed) {
         Random random = new Random(seed ^ map.id().hashCode());
+        List<RaidVariantSelection> variants = selectVariants(map, seed);
         Map<String, ZoneRaidState> zones = new LinkedHashMap<>();
         List<ContainerAnchorActivation> activations = new ArrayList<>();
         Map<String, RaidContainerTypeConfig> types = new HashMap<>();
@@ -37,13 +39,39 @@ public final class RaidManifestGenerator {
         }
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
                 map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
-                Map.copyOf(zones), List.copyOf(activations));
+                Map.copyOf(zones), List.copyOf(activations), variants);
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
-        // TODO Phase 45A: select map variant groups before activating loot anchors.
         // TODO Phase 45B: validate navigation graph after variants and extractions are selected.
         // TODO Phase 46A: activate loose loot anchors and generate LooseLootManifest.
         // TODO Phase 47A: generate mob spawn manifest and event manifest.
+    }
+
+    private static List<RaidVariantSelection> selectVariants(RaidMapConfig map, long seed) {
+        Random random = new Random(seed ^ map.id().hashCode() ^ 0x56415249414E54L);
+        List<RaidVariantSelection> selections = new ArrayList<>();
+        for (RaidVariantGroupConfig group : map.variantGroups()) {
+            if (group.variants().isEmpty()) {
+                DFGridInventory.LOGGER.warn("Skipping empty raid variant group mapId={} groupId={}",
+                        map.id(), group.id());
+                continue;
+            }
+            int totalWeight = group.variants().stream().mapToInt(RaidVariantConfig::effectiveWeight).sum();
+            int roll = random.nextInt(totalWeight);
+            RaidVariantConfig selected = group.variants().get(group.variants().size() - 1);
+            for (RaidVariantConfig variant : group.variants()) {
+                roll -= variant.effectiveWeight();
+                if (roll < 0) {
+                    selected = variant;
+                    break;
+                }
+            }
+            List<RaidBlockPatch> patches = selected.patches().stream()
+                    .map(patch -> new RaidBlockPatch(patch.localBlockPos(), patch.block()))
+                    .toList();
+            selections.add(new RaidVariantSelection(group.id(), selected.id(), selected.tags(), patches));
+        }
+        return List.copyOf(selections);
     }
 
     private static int roll(Random random, IntRangeConfig range) {

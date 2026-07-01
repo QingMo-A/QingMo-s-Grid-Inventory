@@ -21,21 +21,29 @@ public final class RaidWorldApplier {
 
     public static RaidWorldApplyResult applyFull(ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
         RaidTemplateApplyResult template = RaidTemplateApplier.applyTemplate(level, map, manifest);
-        return applyResources(level, map, manifest, template);
+        RaidVariantApplyResult variants = RaidVariantApplier.apply(level, manifest);
+        return applyResources(level, map, manifest, template, variants);
+    }
+
+    public static RaidWorldApplyResult applyGeneratedStateOnly(
+            ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
+        RaidVariantApplyResult variants = RaidVariantApplier.apply(level, manifest);
+        return applyResources(level, map, manifest, skippedTemplate(), variants);
     }
 
     public static RaidWorldApplyResult applyResourcesOnly(
             ServerLevel level, RaidMapConfig map, RaidManifest manifest) {
         // The caller has already restored/pasted the template; only activate manifest-driven resources.
-        return applyResources(level, map, manifest, new RaidTemplateApplyResult(false, false));
+        return applyResources(level, map, manifest, skippedTemplate(), new RaidVariantApplyResult(0, 0));
     }
 
     private static RaidWorldApplyResult applyResources(
-            ServerLevel level, RaidMapConfig map, RaidManifest manifest, RaidTemplateApplyResult template) {
+            ServerLevel level, RaidMapConfig map, RaidManifest manifest, RaidTemplateApplyResult template,
+            RaidVariantApplyResult variants) {
         int placed = 0;
         int rebound = 0;
         int cleared = 0;
-        int warnings = 0;
+        int warnings = variants.warnings();
         if (template.missing()) warnings++;
         for (ContainerAnchorActivation anchor : manifest.activeContainers()) {
             var worldPos = manifest.toWorldPos(anchor.localPos());
@@ -83,12 +91,16 @@ public final class RaidWorldApplier {
                         manifest.pasteOrigin(), state.getBlock());
             }
         }
-        // TODO Phase 45A: apply block patch variants before placing loot containers.
         // TODO Phase 45C: apply structure variants for large local map changes.
         // TODO Phase 45B: enable extraction points from RaidManifest.
         // TODO Phase 46A: spawn/static-render loose loot nodes from LooseLootManifest.
         // TODO Phase 48A: restore/reset raid instance world after raid ends.
         // TODO Phase 50A: allocate unique pasteOrigin and/or isolated dimension per RaidInstance.
-        return new RaidWorldApplyResult(template.applied(), template.missing(), placed, rebound, cleared, warnings);
+        return new RaidWorldApplyResult(template.applied(), template.missing(), variants.patchesApplied(),
+                placed, rebound, cleared, warnings);
+    }
+
+    private static RaidTemplateApplyResult skippedTemplate() {
+        return new RaidTemplateApplyResult(false, false);
     }
 }

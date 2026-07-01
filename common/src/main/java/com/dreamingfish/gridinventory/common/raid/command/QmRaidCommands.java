@@ -151,7 +151,8 @@ public final class QmRaidCommands {
         RaidManifestRegistry.put(manifest);
         saveManifest(source, manifest);
         source.sendSuccess(() -> Component.literal("Raid " + raidId + " map=" + id + " seed=" + seed
-                + " activeContainers=" + manifest.activeContainers().size()), true);
+                + " activeContainers=" + manifest.activeContainers().size()
+                + " variants=" + manifest.variantSelections().size()), true);
         return 1;
     }
     private static Optional<RaidManifest> manifest(String value) {
@@ -167,7 +168,11 @@ public final class QmRaidCommands {
                 + " pasteOrigin=" + raid.pasteOrigin().toShortString()
                 + " defaultSpawnLocal=" + raid.defaultSpawnLocal().toShortString()
                 + " defaultSpawnWorld=" + raid.defaultSpawnWorld().toShortString()
-                + " activeContainers=" + raid.activeContainers().size()), false);
+                + " activeContainers=" + raid.activeContainers().size()
+                + " variants=" + raid.variantSelections().size()), false);
+        raid.variantSelections().forEach(selection -> source.sendSuccess(() -> Component.literal(
+                "variant " + selection.groupId() + "=" + selection.variantId()
+                        + " tags=" + selection.tags() + " patches=" + selection.patches().size()), false));
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
                 + " anchors=" + zone.anchorBudgets()), false));
@@ -192,6 +197,7 @@ public final class QmRaidCommands {
         saveManifest(source, updated);
         source.sendSuccess(() -> Component.literal("Applied raid " + manifest.get().raidId()
                 + ": templateApplied=" + result.templateApplied() + " templateMissing=" + result.templateMissing()
+                + " variantPatchesApplied=" + result.variantPatchesApplied()
                 + " activePlaced=" + result.activePlaced() + " activeRebound=" + result.activeRebound()
                 + " inactiveCleared=" + result.inactiveCleared() + " warnings=" + result.warnings()), true);
         return result.activePlaced() + result.activeRebound();
@@ -226,13 +232,14 @@ public final class QmRaidCommands {
                 + " placeholdersRestored=" + result.placeholdersRestored()
                 + " warnings=" + result.warnings() + " state=CREATED"), true);
         if (!rebuild) return 1;
-        // Reset already restored the template, so rebuild must only reactivate manifest resources.
-        RaidWorldApplyResult applied = RaidWorldApplier.applyResourcesOnly(targetLevel, map.get(), updated);
+        // Reset restored the base template; rebuild reapplies frozen variants before resources.
+        RaidWorldApplyResult applied = RaidWorldApplier.applyGeneratedStateOnly(targetLevel, map.get(), updated);
         RaidManifest rebuilt = updated.withState(RaidLifecycleState.APPLIED);
         RaidManifestRegistry.put(rebuilt);
         saveManifest(source, rebuilt);
         source.sendSuccess(() -> Component.literal("Rebuilt raid " + rebuilt.raidId()
-                + ": activePlaced=" + applied.activePlaced() + " activeRebound=" + applied.activeRebound()
+                + ": variantPatchesApplied=" + applied.variantPatchesApplied()
+                + " activePlaced=" + applied.activePlaced() + " activeRebound=" + applied.activeRebound()
                 + " inactiveCleared=" + applied.inactiveCleared() + " warnings=" + applied.warnings()
                 + " state=APPLIED"), true);
         return applied.activePlaced() + applied.activeRebound();

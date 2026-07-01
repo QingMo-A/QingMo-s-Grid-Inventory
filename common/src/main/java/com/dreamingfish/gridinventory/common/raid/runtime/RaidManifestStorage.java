@@ -93,6 +93,23 @@ public final class RaidManifestStorage {
             containers.add(value);
         });
         root.add("active_containers", containers);
+        JsonArray variants = new JsonArray();
+        manifest.variantSelections().forEach(selection -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("group_id", selection.groupId());
+            value.addProperty("variant_id", selection.variantId());
+            value.add("tags", GSON.toJsonTree(selection.tags()));
+            JsonArray patches = new JsonArray();
+            selection.patches().forEach(patch -> {
+                JsonObject patchValue = new JsonObject();
+                patchValue.add("local_pos", pos(patch.localPos()));
+                patchValue.addProperty("block_state", patch.blockState());
+                patches.add(patchValue);
+            });
+            value.add("patches", patches);
+            variants.add(value);
+        });
+        root.add("variant_selections", variants);
         return root;
     }
 
@@ -117,13 +134,42 @@ public final class RaidManifestStorage {
                     string(value, "container_type", ""), integer(value, "point_budget", 0),
                     decimal(value, "quality_multiplier", 1.0D), longValue(value, "loot_seed", 0L)));
         }
+        List<RaidVariantSelection> variants = new ArrayList<>();
+        if (root.has("variant_selections") && root.get("variant_selections").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("variant_selections")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    List<String> tags = new ArrayList<>();
+                    if (value.has("tags") && value.get("tags").isJsonArray()) {
+                        value.getAsJsonArray("tags").forEach(tag -> tags.add(tag.getAsString()));
+                    }
+                    List<RaidBlockPatch> patches = new ArrayList<>();
+                    if (value.has("patches") && value.get("patches").isJsonArray()) {
+                        for (JsonElement patchElement : value.getAsJsonArray("patches")) {
+                            try {
+                                JsonObject patch = patchElement.getAsJsonObject();
+                                String blockState = string(patch, "block_state", "");
+                                if (blockState.isBlank()) throw new JsonParseException("Empty block_state");
+                                patches.add(new RaidBlockPatch(readRequiredPos(patch, "local_pos"), blockState));
+                            } catch (Exception exception) {
+                                DFGridInventory.LOGGER.warn("Skipping damaged raid variant patch", exception);
+                            }
+                        }
+                    }
+                    variants.add(new RaidVariantSelection(string(value, "group_id", ""),
+                            string(value, "variant_id", ""), tags, patches));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid variant selection", exception);
+                }
+            }
+        }
         RaidLifecycleState state;
         try { state = RaidLifecycleState.valueOf(string(root, "state", "CREATED")); }
         catch (IllegalArgumentException ignored) { state = RaidLifecycleState.CREATED; }
         return new RaidManifest(longValue(root, "raid_id", 0L), longValue(root, "raid_seed", 0L),
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
-                Map.copyOf(zones), List.copyOf(containers));
+                Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants));
     }
 
     private static JsonArray pos(BlockPos pos) {
@@ -133,6 +179,13 @@ public final class RaidManifestStorage {
     }
     private static BlockPos readPos(JsonObject root, String key) {
         if (!root.has(key) || !root.get(key).isJsonArray() || root.getAsJsonArray(key).size() != 3) return BlockPos.ZERO;
+        JsonArray value = root.getAsJsonArray(key);
+        return new BlockPos(value.get(0).getAsInt(), value.get(1).getAsInt(), value.get(2).getAsInt());
+    }
+    private static BlockPos readRequiredPos(JsonObject root, String key) {
+        if (!root.has(key) || !root.get(key).isJsonArray() || root.getAsJsonArray(key).size() != 3) {
+            throw new JsonParseException("Invalid " + key);
+        }
         JsonArray value = root.getAsJsonArray(key);
         return new BlockPos(value.get(0).getAsInt(), value.get(1).getAsInt(), value.get(2).getAsInt());
     }

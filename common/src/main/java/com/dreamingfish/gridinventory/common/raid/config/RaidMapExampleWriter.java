@@ -39,6 +39,28 @@ public final class RaidMapExampleWriter {
                 ]
                 """);
         writeNew(directory.resolve("container_anchors.json"), anchors());
+        writeNew(directory.resolve("variants.json"), """
+                [
+                  {
+                    "id": "example_blocker",
+                    "choose": 1,
+                    "variants": [
+                      {
+                        "id": "open",
+                        "weight": 50,
+                        "patches": [{"pos": [8, 0, 0], "block": "minecraft:air"}],
+                        "tags": ["open"]
+                      },
+                      {
+                        "id": "blocked",
+                        "weight": 50,
+                        "patches": [{"pos": [8, 0, 0], "block": "minecraft:iron_bars"}],
+                        "tags": ["blocked"]
+                      }
+                    ]
+                  }
+                ]
+                """);
         return directory;
     }
 

@@ -9,10 +9,12 @@ import net.minecraft.core.BlockPos;
 public record RaidManifest(long raidId, long raidSeed, String mapId, String dimensionId, BlockPos pasteOrigin,
                            BlockPos defaultSpawnLocal, RaidLifecycleState state,
                            Map<String, ZoneRaidState> zones,
-                           List<ContainerAnchorActivation> activeContainers) {
+                           List<ContainerAnchorActivation> activeContainers,
+                           List<RaidVariantSelection> variantSelections) {
     public RaidManifest {
         defaultSpawnLocal = defaultSpawnLocal == null ? BlockPos.ZERO : defaultSpawnLocal;
         state = state == null ? RaidLifecycleState.CREATED : state;
+        variantSelections = variantSelections == null ? List.of() : List.copyOf(variantSelections);
     }
     public BlockPos toWorldPos(BlockPos localPos) { return pasteOrigin.offset(localPos); }
     public BlockPos toWorldPos(int[] localPos) {
@@ -23,6 +25,6 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
     public BlockPos defaultSpawnWorld() { return toWorldPos(defaultSpawnLocal); }
     public RaidManifest withState(RaidLifecycleState newState) {
         return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
-                newState, zones, activeContainers);
+                newState, zones, activeContainers, variantSelections);
     }
 }

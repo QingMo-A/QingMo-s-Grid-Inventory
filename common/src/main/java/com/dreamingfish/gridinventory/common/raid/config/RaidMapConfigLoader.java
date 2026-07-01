@@ -26,7 +26,8 @@ public final class RaidMapConfigLoader {
                 integer(map, "expected_players", 0), integer(map, "raid_time_seconds", 0),
                 zones(read(directory.resolve("zones.json")).getAsJsonArray()),
                 types(read(directory.resolve("container_types.json")).getAsJsonArray()),
-                anchors(read(directory.resolve("container_anchors.json")).getAsJsonArray()));
+                anchors(read(directory.resolve("container_anchors.json")).getAsJsonArray()),
+                variants(directory.resolve("variants.json")));
     }
 
     private static JsonElement read(Path path) throws IOException {
@@ -69,6 +70,33 @@ public final class RaidMapConfigLoader {
         return List.copyOf(result);
     }
 
+    private static List<RaidVariantGroupConfig> variants(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) return List.of();
+        List<RaidVariantGroupConfig> result = new ArrayList<>();
+        for (JsonElement groupElement : read(path).getAsJsonArray()) {
+            JsonObject group = groupElement.getAsJsonObject();
+            List<RaidVariantConfig> variants = new ArrayList<>();
+            if (group.has("variants") && group.get("variants").isJsonArray()) {
+                for (JsonElement variantElement : group.getAsJsonArray("variants")) {
+                    JsonObject variant = variantElement.getAsJsonObject();
+                    List<RaidBlockPatchConfig> patches = new ArrayList<>();
+                    if (variant.has("patches") && variant.get("patches").isJsonArray()) {
+                        for (JsonElement patchElement : variant.getAsJsonArray("patches")) {
+                            JsonObject patch = patchElement.getAsJsonObject();
+                            patches.add(new RaidBlockPatchConfig(flexibleIntArray(patch, "pos"),
+                                    string(patch, "block")));
+                        }
+                    }
+                    variants.add(new RaidVariantConfig(string(variant, "id"),
+                            integer(variant, "weight", 1), patches, strings(variant, "tags")));
+                }
+            }
+            result.add(new RaidVariantGroupConfig(string(group, "id"),
+                    integer(group, "choose", 1), variants));
+        }
+        return List.copyOf(result);
+    }
+
     private static IntRangeConfig range(JsonObject o) {
         return o == null ? new IntRangeConfig(0, 0)
                 : new IntRangeConfig(integer(o, "min", 0), integer(o, "max", 0));
@@ -105,6 +133,14 @@ public final class RaidMapConfigLoader {
 
     private static int[] optionalIntArray(JsonObject o, String key) {
         return o != null && o.has(key) && o.get(key).isJsonArray() ? intArray(o, key) : null;
+    }
+
+    private static int[] flexibleIntArray(JsonObject o, String key) {
+        if (o == null || !o.has(key) || !o.get(key).isJsonArray()) return null;
+        JsonArray array = o.getAsJsonArray(key);
+        int[] result = new int[array.size()];
+        for (int i = 0; i < array.size(); i++) result[i] = array.get(i).getAsInt();
+        return result;
     }
 
     private static List<String> strings(JsonObject o, String key) {

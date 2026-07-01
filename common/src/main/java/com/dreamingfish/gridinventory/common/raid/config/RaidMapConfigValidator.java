@@ -4,7 +4,6 @@ import java.util.*;
 
 public final class RaidMapConfigValidator {
     // TODO Phase 44C: validate anchor group limits and group coverage.
-    // TODO Phase 45A: load variant_groups.json.
     // TODO Phase 45B: load navigation.json and validate reachability.
     // TODO Phase 45B: load extraction_anchors.json and spawn_anchors.json.
     // TODO Phase 46A: load loose_loot_anchors.json.
@@ -38,7 +37,42 @@ public final class RaidMapConfigValidator {
             long available = map.containerAnchors().stream().filter(a -> a.enabled() && a.zone().equals(zone.id())).count();
             if (available < zone.activeContainers().min()) error(issues, "insufficient enabled anchors in zone " + zone.id());
         }
+        validateVariants(map, issues);
         return new RaidMapValidationResult(List.copyOf(issues));
+    }
+
+    private static void validateVariants(RaidMapConfig map, List<RaidMapValidationIssue> issues) {
+        Set<String> groupIds = new HashSet<>();
+        for (RaidVariantGroupConfig group : map.variantGroups()) {
+            if (group.id().isBlank() || !groupIds.add(group.id())) {
+                error(issues, "duplicate/empty variant group id: " + group.id());
+            }
+            if (group.choose() != 1) {
+                warn(issues, "First version only supports choose=1: " + group.id());
+            }
+            if (group.variants().isEmpty()) {
+                error(issues, "variant group has no variants: " + group.id());
+            }
+            Set<String> variantIds = new HashSet<>();
+            for (RaidVariantConfig variant : group.variants()) {
+                if (variant.id().isBlank() || !variantIds.add(variant.id())) {
+                    error(issues, "duplicate/empty variant id in group " + group.id() + ": " + variant.id());
+                }
+                if (variant.weight() <= 0) {
+                    warn(issues, "variant weight corrected to 1: " + group.id() + "/" + variant.id());
+                }
+                for (RaidBlockPatchConfig patch : variant.patches()) {
+                    if (patch.pos() == null || patch.pos().length != 3
+                            || !map.bounds().contains(patch.localBlockPos())) {
+                        error(issues, "variant patch outside bounds: " + group.id() + "/" + variant.id());
+                    }
+                    if (patch.block().isBlank()) {
+                        error(issues, "empty variant patch block: " + group.id() + "/" + variant.id());
+                    }
+                    // Runtime performs the cross-version BlockState property parsing and reports failures.
+                }
+            }
+        }
     }
 
     private static Set<String> unique(List<String> ids, String kind, List<RaidMapValidationIssue> issues) {
