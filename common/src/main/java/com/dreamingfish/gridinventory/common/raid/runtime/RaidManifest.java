@@ -1,6 +1,7 @@
 package com.dreamingfish.gridinventory.common.raid.runtime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 // TODO Phase 50A: implement raid dimension pool.
 // TODO Phase 50B: allocate one isolated raid dimension per active RaidInstance.
@@ -12,13 +13,15 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
                            List<ContainerAnchorActivation> activeContainers,
                            List<RaidVariantSelection> variantSelections,
                            List<RaidExtractionActivation> activeExtractions,
-                           List<RaidSpawnActivation> activeSpawns) {
+                           List<RaidSpawnActivation> activeSpawns,
+                           List<RaidExtractedPlayer> extractedPlayers) {
     public RaidManifest {
         defaultSpawnLocal = defaultSpawnLocal == null ? BlockPos.ZERO : defaultSpawnLocal;
         state = state == null ? RaidLifecycleState.CREATED : state;
         variantSelections = variantSelections == null ? List.of() : List.copyOf(variantSelections);
         activeExtractions = activeExtractions == null ? List.of() : List.copyOf(activeExtractions);
         activeSpawns = activeSpawns == null ? List.of() : List.copyOf(activeSpawns);
+        extractedPlayers = extractedPlayers == null ? List.of() : List.copyOf(extractedPlayers);
     }
     public BlockPos toWorldPos(BlockPos localPos) { return pasteOrigin.offset(localPos); }
     public BlockPos toWorldPos(int[] localPos) {
@@ -29,6 +32,19 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
     public BlockPos defaultSpawnWorld() { return toWorldPos(defaultSpawnLocal); }
     public RaidManifest withState(RaidLifecycleState newState) {
         return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
-                newState, zones, activeContainers, variantSelections, activeExtractions, activeSpawns);
+                newState, zones, activeContainers, variantSelections, activeExtractions, activeSpawns,
+                extractedPlayers);
+    }
+    public boolean isPlayerExtracted(UUID playerId) {
+        return playerId != null && extractedPlayers.stream()
+                .anyMatch(player -> playerId.equals(player.playerId()));
+    }
+    public RaidManifest withExtractedPlayer(RaidExtractedPlayer player) {
+        if (player == null || player.playerId() == null || isPlayerExtracted(player.playerId())) return this;
+        List<RaidExtractedPlayer> updated = new java.util.ArrayList<>(extractedPlayers);
+        updated.add(player);
+        return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
+                state, zones, activeContainers, variantSelections, activeExtractions, activeSpawns,
+                List.copyOf(updated));
     }
 }

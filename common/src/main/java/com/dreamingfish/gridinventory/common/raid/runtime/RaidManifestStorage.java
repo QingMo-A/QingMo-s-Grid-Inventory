@@ -135,6 +135,16 @@ public final class RaidManifestStorage {
             spawns.add(value);
         });
         root.add("active_spawns", spawns);
+        JsonArray extractedPlayers = new JsonArray();
+        manifest.extractedPlayers().forEach(player -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("player_id", player.playerId().toString());
+            value.addProperty("player_name", player.playerName());
+            value.addProperty("extraction_id", player.extractionId());
+            value.addProperty("extracted_at_millis", player.extractedAtMillis());
+            extractedPlayers.add(value);
+        });
+        root.add("extracted_players", extractedPlayers);
         return root;
     }
 
@@ -227,6 +237,20 @@ public final class RaidManifestStorage {
                 }
             }
         }
+        List<RaidExtractedPlayer> extractedPlayers = new ArrayList<>();
+        if (root.has("extracted_players") && root.get("extracted_players").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("extracted_players")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    UUID playerId = UUID.fromString(string(value, "player_id", ""));
+                    extractedPlayers.add(new RaidExtractedPlayer(playerId,
+                            string(value, "player_name", ""), string(value, "extraction_id", ""),
+                            longValue(value, "extracted_at_millis", 0L)));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid extracted player", exception);
+                }
+            }
+        }
         RaidLifecycleState state;
         try { state = RaidLifecycleState.valueOf(string(root, "state", "CREATED")); }
         catch (IllegalArgumentException ignored) { state = RaidLifecycleState.CREATED; }
@@ -234,7 +258,7 @@ public final class RaidManifestStorage {
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
                 Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants),
-                List.copyOf(extractions), List.copyOf(spawns));
+                List.copyOf(extractions), List.copyOf(spawns), List.copyOf(extractedPlayers));
     }
 
     private static JsonArray pos(BlockPos pos) {

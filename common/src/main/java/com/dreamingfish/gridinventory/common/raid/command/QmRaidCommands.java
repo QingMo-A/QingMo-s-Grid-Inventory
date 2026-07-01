@@ -78,6 +78,23 @@ public final class QmRaidCommands {
                         .then(Commands.argument("player", EntityArgument.player())
                                 .executes(c -> join(c.getSource(), StringArgumentType.getString(c, "raid"),
                                         EntityArgument.getPlayer(c, "player"))))))
+                .then(Commands.literal("extract")
+                        .then(Commands.literal("check")
+                                .then(Commands.argument("raid", StringArgumentType.word())
+                                        .executes(c -> extractionCheck(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"),
+                                                c.getSource().getPlayerOrException()))
+                                        .then(Commands.argument("player", EntityArgument.player())
+                                                .executes(c -> extractionCheck(c.getSource(),
+                                                        StringArgumentType.getString(c, "raid"),
+                                                        EntityArgument.getPlayer(c, "player"))))))
+                        .then(Commands.argument("raid", StringArgumentType.word())
+                                .executes(c -> extract(c.getSource(), StringArgumentType.getString(c, "raid"),
+                                        c.getSource().getPlayerOrException()))
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .executes(c -> extract(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"),
+                                                EntityArgument.getPlayer(c, "player"))))))
                 .then(Commands.literal("inspect").executes(c -> inspect(c.getSource()))));
     }
 
@@ -189,7 +206,8 @@ public final class QmRaidCommands {
                 + " activeContainers=" + raid.activeContainers().size()
                 + " variants=" + raid.variantSelections().size()
                 + " extractions=" + raid.activeExtractions().size()
-                + " spawns=" + raid.activeSpawns().size()), false);
+                + " spawns=" + raid.activeSpawns().size()
+                + " extractedPlayers=" + raid.extractedPlayers().size()), false);
         raid.variantSelections().forEach(selection -> source.sendSuccess(() -> Component.literal(
                 "variant " + selection.groupId() + "=" + selection.variantId()
                         + " tags=" + selection.tags() + " patches=" + selection.patches().size()), false));
@@ -217,6 +235,10 @@ public final class QmRaidCommands {
                     + " yaw=" + spawn.yaw() + " pitch=" + spawn.pitch()
                     + " tags=" + spawn.tags()), false);
         });
+        raid.extractedPlayers().stream().limit(10).forEach(player -> source.sendSuccess(
+                () -> Component.literal("extracted " + player.playerName()
+                        + " uuid=" + player.playerId() + " extraction=" + player.extractionId()
+                        + " at=" + player.extractedAtMillis()), false));
         raid.zones().values().forEach(zone -> source.sendSuccess(() -> Component.literal("zone " + zone.zoneId()
                 + " budget=" + zone.lootBudget() + " active=" + zone.activeContainerCount()
                 + " anchors=" + zone.anchorBudgets()), false));
@@ -276,7 +298,8 @@ public final class QmRaidCommands {
         source.sendSuccess(() -> Component.literal("Raid manifests loaded: " + RaidManifestRegistry.size()), false);
         RaidManifestRegistry.all().forEach(raid -> source.sendSuccess(() -> Component.literal("- "
                 + raid.raidId() + " map=" + raid.mapId() + " state=" + raid.state()
-                + " dimension=" + raid.dimensionId()), false));
+                + " dimension=" + raid.dimensionId()
+                + " extracted=" + raid.extractedPlayers().size()), false));
         return RaidManifestRegistry.size();
     }
     private static int reset(CommandSourceStack source, String value, boolean rebuild) {
@@ -361,12 +384,55 @@ public final class QmRaidCommands {
         String spawnId = activeSpawn != null ? activeSpawn.id() : "default_spawn_fallback";
         player.teleportTo(level, worldSpawn.getX() + 0.5D, worldSpawn.getY(), worldSpawn.getZ() + 0.5D,
                 yaw, pitch);
+        if (manifest.get().state() == RaidLifecycleState.APPLIED) {
+            RaidManifest running = manifest.get().withState(RaidLifecycleState.RUNNING);
+            RaidManifestRegistry.put(running);
+            saveManifest(source, running);
+        }
         source.sendSuccess(() -> Component.literal("Joined raid " + manifest.get().raidId() + " map="
                 + manifest.get().mapId() + " spawn=" + spawnId
                 + " localSpawn=" + localSpawn.toShortString()
                 + " worldSpawn=" + worldSpawn.toShortString()
                 + " player=" + player.getName().getString()), true);
         return 1;
+    }
+
+    private static int extract(CommandSourceStack source, String value, ServerPlayer player) {
+        Optional<RaidManifest> manifest = manifest(value);
+        if (manifest.isEmpty()) {
+            source.sendFailure(Component.literal("Raid not found: " + value));
+            return 0;
+        }
+        RaidExtractionAttemptResult result = RaidExtractionService.attempt(player, manifest.get());
+        if (!result.success()) {
+            source.sendFailure(Component.literal(result.message()));
+            return 0;
+        }
+        if (!saveManifest(source, result.updatedManifest())) return 0;
+        RaidManifestRegistry.put(result.updatedManifest());
+        source.sendSuccess(() -> Component.literal("Extracted player " + player.getName().getString()
+                + " from raid " + result.updatedManifest().raidId() + " " + result.message()), true);
+        // TODO Phase 49B: compare extracted players with a future participant registry before ending the raid.
+        return 1;
+    }
+
+    private static int extractionCheck(CommandSourceStack source, String value, ServerPlayer player) {
+        Optional<RaidManifest> manifest = manifest(value);
+        if (manifest.isEmpty()) {
+            source.sendFailure(Component.literal("Raid not found: " + value));
+            return 0;
+        }
+        if (!player.serverLevel().dimension().location().toString().equals(manifest.get().dimensionId())) {
+            source.sendFailure(Component.literal("Player is not in raid dimension."));
+            return 0;
+        }
+        RaidExtractionCheckResult result = RaidExtractionService.check(player, manifest.get());
+        source.sendSuccess(() -> Component.literal("Extraction check raid=" + manifest.get().raidId()
+                + " player=" + player.getName().getString()
+                + " inExtraction=" + result.inExtraction()
+                + " extraction=" + result.extractionId()
+                + " distance=" + result.distance() + " radius=" + result.radius()), false);
+        return result.inExtraction() ? 1 : 0;
     }
     private static net.minecraft.server.level.ServerLevel raidLevel(CommandSourceStack source, RaidManifest manifest) {
         ResourceLocation id = ResourceLocation.tryParse(manifest.dimensionId());
