@@ -4,6 +4,7 @@ import com.dreamingfish.gridinventory.common.blockentity.SearchableGridContainer
 import com.dreamingfish.gridinventory.common.raid.config.*;
 import com.dreamingfish.gridinventory.common.raid.runtime.*;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -11,6 +12,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -68,7 +70,21 @@ public final class QmRaidCommands {
                                                         .executes(c -> lootSimulate(c.getSource(),
                                                                 StringArgumentType.getString(c, "containerTypeId"),
                                                                 IntegerArgumentType.getInteger(c, "budget"),
-                                                                LongArgumentType.getLong(c, "seed")))))))
+                                                                LongArgumentType.getLong(c, "seed"),
+                                                                1.0D))
+                                                        .then(Commands.argument("qualityMultiplier",
+                                                                        DoubleArgumentType.doubleArg(0.01D))
+                                                                .executes(c -> lootSimulate(c.getSource(),
+                                                                        StringArgumentType.getString(c,
+                                                                                "containerTypeId"),
+                                                                        IntegerArgumentType.getInteger(c, "budget"),
+                                                                        LongArgumentType.getLong(c, "seed"),
+                                                                        DoubleArgumentType.getDouble(c,
+                                                                                "qualityMultiplier"))))))))
+                        .then(Commands.literal("candidates")
+                                .then(Commands.argument("containerTypeId", StringArgumentType.word())
+                                        .executes(c -> lootCandidates(c.getSource(),
+                                                StringArgumentType.getString(c, "containerTypeId")))))
                         .then(Commands.literal("inspect")
                                 .then(Commands.argument("itemId", StringArgumentType.word())
                                         .executes(c -> lootInspect(c.getSource(),
@@ -191,7 +207,7 @@ public final class QmRaidCommands {
     }
 
     private static int lootSimulate(
-            CommandSourceStack source, String containerTypeId, int budget, long seed) {
+            CommandSourceStack source, String containerTypeId, int budget, long seed, double qualityMultiplier) {
         Optional<RaidContainerTypeConfig> type = RaidMapConfigRegistry.all().stream()
                 .flatMap(map -> map.containerTypes().stream())
                 .filter(candidate -> candidate.id().equals(containerTypeId))
@@ -201,16 +217,24 @@ public final class QmRaidCommands {
             return 0;
         }
         RaidBudgetLootResult result = RaidBudgetLootGenerator.generate(new RaidBudgetLootContext(
-                "simulate", containerTypeId, budget, seed,
+                "simulate", containerTypeId, budget, qualityMultiplier, seed,
                 Math.max(1, type.get().columns() * type.get().rows()),
                 type.get().allowedCategories(), RaidLootItemDefinitionRegistry.enabled()));
         if (!result.generatedAny()) {
             source.sendFailure(Component.literal(
-                    "No eligible loot definitions for container type: " + containerTypeId));
+                    "No eligible loot definitions for container type: " + containerTypeId
+                            + " candidates=" + result.candidateCount()
+                            + " pointBudget=" + budget
+                            + " qualityMultiplier=" + qualityMultiplier
+                            + " effectiveBudget=" + result.requestedBudget()));
             return 0;
         }
         source.sendSuccess(() -> Component.literal("Simulated loot containerType=" + containerTypeId
-                + " budget=" + budget + " seed=" + seed + " generated=" + result.entries().size()
+                + " pointBudget=" + budget
+                + " qualityMultiplier=" + qualityMultiplier
+                + " effectiveBudget=" + result.requestedBudget()
+                + " seed=" + seed + " candidates=" + result.candidateCount()
+                + " generated=" + result.entries().size()
                 + " consumed=" + result.consumedBudget() + " remaining=" + result.remainingBudget()
                 + " attempts=" + result.attempts() + " warnings=" + result.warnings()), false);
         result.entries().forEach(entry -> source.sendSuccess(() -> Component.literal(
@@ -219,6 +243,36 @@ public final class QmRaidCommands {
                         + " category=" + entry.definition().category()
                         + " rarity=" + entry.definition().rarity()), false));
         return result.entries().size();
+    }
+
+    private static int lootCandidates(CommandSourceStack source, String containerTypeId) {
+        Optional<RaidContainerTypeConfig> type = RaidMapConfigRegistry.all().stream()
+                .flatMap(map -> map.containerTypes().stream())
+                .filter(candidate -> candidate.id().equals(containerTypeId))
+                .findFirst();
+        if (type.isEmpty()) {
+            source.sendFailure(Component.literal("Unknown container type: " + containerTypeId));
+            return 0;
+        }
+        var candidates = RaidBudgetLootGenerator.eligibleDefinitions(
+                RaidLootItemDefinitionRegistry.enabled(), type.get().allowedCategories());
+        source.sendSuccess(() -> Component.literal("Loot candidates containerType=" + containerTypeId
+                + " allowedCategories=" + type.get().allowedCategories()
+                + " candidates=" + candidates.size()), false);
+        if (candidates.isEmpty()) {
+            source.sendFailure(Component.literal("No eligible loot candidates for container type: "
+                    + containerTypeId));
+            return 0;
+        }
+        candidates.stream().limit(20).forEach(definition -> source.sendSuccess(() -> Component.literal(
+                definition.item() + " category=" + definition.category()
+                        + " rarity=" + definition.rarity()
+                        + " systemValue=" + definition.systemValue()
+                        + " spawnWeight=" + definition.spawnWeight()
+                        + " stack=" + definition.stackMin() + "-" + definition.stackMax()
+                        + " registered=" + BuiltInRegistries.ITEM.containsKey(definition.item())
+                        + " tags=" + definition.tags()), false));
+        return candidates.size();
     }
 
     private static String formatLootDefinition(RaidLootItemDefinitionConfig definition) {

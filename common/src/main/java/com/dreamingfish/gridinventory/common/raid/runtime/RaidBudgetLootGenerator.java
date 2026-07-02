@@ -12,28 +12,18 @@ public final class RaidBudgetLootGenerator {
 
     public static RaidBudgetLootResult generate(RaidBudgetLootContext context) {
         int warnings = 0;
-        List<RaidLootItemDefinitionConfig> candidates = new ArrayList<>();
-        Set<String> allowed = new HashSet<>(context.allowedCategories());
-        for (RaidLootItemDefinitionConfig definition : context.definitions()) {
-            if (!definition.enabled()) continue;
-            if (!allowed.isEmpty() && !allowed.contains(definition.category())) continue;
-            if (definition.systemValue() <= 0 || definition.item() == null) {
-                warnings++;
-                continue;
-            }
-            if (!BuiltInRegistries.ITEM.containsKey(definition.item())) {
-                warnings++;
-                continue;
-            }
-            candidates.add(definition);
-        }
-        if (context.pointBudget() <= 0 || context.maxStacks() <= 0 || candidates.isEmpty()) {
-            return empty(context.pointBudget(), warnings);
+        List<RaidLootItemDefinitionConfig> candidates = eligibleDefinitions(
+                context.definitions(), context.allowedCategories());
+        int budget = context.effectiveBudget();
+        int invalidDefinitions = invalidEligibleDefinitionCount(context.definitions(), context.allowedCategories());
+        warnings += invalidDefinitions;
+        if (budget <= 0 || context.maxStacks() <= 0 || candidates.isEmpty()) {
+            return empty(budget, warnings, candidates.size());
         }
 
         Random random = new Random(context.lootSeed());
         List<RaidBudgetLootEntry> entries = new ArrayList<>();
-        int remaining = context.pointBudget();
+        int remaining = budget;
         int attempts = 0;
         int maxAttempts = Math.max(64, context.maxStacks() * 16);
         while (remaining > 0 && entries.size() < context.maxStacks() && attempts < maxAttempts) {
@@ -60,9 +50,42 @@ public final class RaidBudgetLootGenerator {
             entries.add(new RaidBudgetLootEntry(stack, consumed, definition));
             remaining -= consumed;
         }
-        int consumed = context.pointBudget() - remaining;
-        return new RaidBudgetLootResult(entries, context.pointBudget(), consumed,
-                remaining, attempts, warnings);
+        int consumed = budget - remaining;
+        return new RaidBudgetLootResult(entries, budget, consumed,
+                remaining, attempts, warnings, candidates.size());
+    }
+
+    public static List<RaidLootItemDefinitionConfig> eligibleDefinitions(
+            List<RaidLootItemDefinitionConfig> definitions, List<String> allowedCategories) {
+        List<RaidLootItemDefinitionConfig> candidates = new ArrayList<>();
+        Set<String> allowed = new HashSet<>(allowedCategories == null ? List.of() : allowedCategories);
+        for (RaidLootItemDefinitionConfig definition : definitions == null ? List.<RaidLootItemDefinitionConfig>of() : definitions) {
+            if (!definition.enabled()) continue;
+            if (!allowed.isEmpty() && !allowed.contains(definition.category())) continue;
+            if (definition.systemValue() <= 0 || definition.item() == null) {
+                continue;
+            }
+            if (!BuiltInRegistries.ITEM.containsKey(definition.item())) {
+                continue;
+            }
+            candidates.add(definition);
+        }
+        return List.copyOf(candidates);
+    }
+
+    private static int invalidEligibleDefinitionCount(
+            List<RaidLootItemDefinitionConfig> definitions, List<String> allowedCategories) {
+        int invalid = 0;
+        Set<String> allowed = new HashSet<>(allowedCategories == null ? List.of() : allowedCategories);
+        for (RaidLootItemDefinitionConfig definition : definitions == null ? List.<RaidLootItemDefinitionConfig>of() : definitions) {
+            if (!definition.enabled()) continue;
+            if (!allowed.isEmpty() && !allowed.contains(definition.category())) continue;
+            if (definition.systemValue() <= 0 || definition.item() == null
+                    || !BuiltInRegistries.ITEM.containsKey(definition.item())) {
+                invalid++;
+            }
+        }
+        return invalid;
     }
 
     private static RaidLootItemDefinitionConfig weightedSelect(
@@ -77,7 +100,7 @@ public final class RaidBudgetLootGenerator {
         return candidates.get(candidates.size() - 1);
     }
 
-    private static RaidBudgetLootResult empty(int budget, int warnings) {
-        return new RaidBudgetLootResult(List.of(), budget, 0, budget, 0, warnings);
+    private static RaidBudgetLootResult empty(int budget, int warnings, int candidateCount) {
+        return new RaidBudgetLootResult(List.of(), budget, 0, budget, 0, warnings, candidateCount);
     }
 }

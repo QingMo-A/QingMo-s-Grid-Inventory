@@ -8,7 +8,8 @@ public record RaidBudgetLootResult(
         int consumedBudget,
         int remainingBudget,
         int attempts,
-        int warnings) {
+        int warnings,
+        int candidateCount) {
     public RaidBudgetLootResult {
         entries = entries == null ? List.of() : List.copyOf(entries);
     }

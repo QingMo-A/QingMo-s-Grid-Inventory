@@ -46,7 +46,7 @@ public final class ContainerLootServices {
                 int maxStacks = enabledCells(grid);
                 RaidBudgetLootContext budgetContext = new RaidBudgetLootContext(
                         context.mapId(), context.containerType(), context.pointBudget(),
-                        context.raidSeed(), maxStacks, type.get().allowedCategories(),
+                        context.qualityMultiplier(), context.lootSeed(), maxStacks, type.get().allowedCategories(),
                         RaidLootItemDefinitionRegistry.enabled());
                 try {
                     var generated = RaidBudgetLootGenerator.generate(budgetContext);
@@ -55,9 +55,11 @@ public final class ContainerLootServices {
                     int inserted = GridLootFiller.insertAll(grid, stacks);
                     if (generated.generatedAny() && inserted > 0) {
                         DFGridInventory.LOGGER.debug(
-                                "Raid budget loot generated mapId={} containerType={} budget={} consumed={} entries={}",
+                                "Raid budget loot generated mapId={} containerType={} pointBudget={} qualityMultiplier={} effectiveBudget={} consumedBudget={} entries={} candidates={}",
                                 context.mapId(), context.containerType(), context.pointBudget(),
-                                generated.consumedBudget(), generated.entries().size());
+                                context.qualityMultiplier(), budgetContext.effectiveBudget(),
+                                generated.consumedBudget(), generated.entries().size(),
+                                generated.candidateCount());
                         return new ContainerLootResult(true, stacks, "raid_budget", Optional.empty());
                     }
                     DFGridInventory.LOGGER.debug(
