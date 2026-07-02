@@ -35,6 +35,7 @@ public final class QmRaidCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         RaidMapConfigRegistry.reload(Path.of("config"));
+        RaidLootItemDefinitionRegistry.reload(Path.of("config"));
         dispatcher.register(Commands.literal("qmraid").requires(s -> s.hasPermission(2))
                 .then(Commands.literal("map")
                         .then(Commands.literal("reload").executes(c -> reload(c.getSource())))
@@ -52,6 +53,17 @@ public final class QmRaidCommands {
                                 .executes(c -> manifestSave(c.getSource(), StringArgumentType.getString(c, "raid")))))
                         .then(Commands.literal("load").then(Commands.argument("raidId", LongArgumentType.longArg())
                                 .executes(c -> manifestLoad(c.getSource(), LongArgumentType.getLong(c, "raidId"))))))
+                .then(Commands.literal("loot")
+                        .then(Commands.literal("reload").executes(c -> lootReload(c.getSource())))
+                        .then(Commands.literal("list").executes(c -> lootList(c.getSource())))
+                        .then(Commands.literal("validate").executes(c -> lootValidate(c.getSource())))
+                        .then(Commands.literal("categories").executes(c -> lootCategories(c.getSource())))
+                        .then(Commands.literal("rarities").executes(c -> lootRarities(c.getSource())))
+                        .then(Commands.literal("example").executes(c -> lootExample(c.getSource())))
+                        .then(Commands.literal("inspect")
+                                .then(Commands.argument("itemId", StringArgumentType.word())
+                                        .executes(c -> lootInspect(c.getSource(),
+                                                StringArgumentType.getString(c, "itemId"))))))
                 .then(Commands.literal("create").then(Commands.argument("mapId", StringArgumentType.word())
                         .executes(c -> create(c.getSource(), StringArgumentType.getString(c, "mapId"), System.currentTimeMillis()))
                         .then(Commands.argument("seed", LongArgumentType.longArg())
@@ -96,6 +108,86 @@ public final class QmRaidCommands {
                                                 StringArgumentType.getString(c, "raid"),
                                                 EntityArgument.getPlayer(c, "player"))))))
                 .then(Commands.literal("inspect").executes(c -> inspect(c.getSource()))));
+    }
+
+    private static int lootReload(CommandSourceStack source) {
+        RaidLootItemDefinitionRegistry.reload(Path.of("config"));
+        source.sendSuccess(() -> Component.literal("Loaded raid loot item definitions: total="
+                + RaidLootItemDefinitionRegistry.all().size()
+                + " enabled=" + RaidLootItemDefinitionRegistry.enabled().size()
+                + " errors=" + RaidLootItemDefinitionRegistry.validation().errors()), true);
+        return RaidLootItemDefinitionRegistry.validation().valid() ? 1 : 0;
+    }
+
+    private static int lootList(CommandSourceStack source) {
+        RaidLootItemDefinitionRegistry.all().stream().limit(20).forEach(definition ->
+                source.sendSuccess(() -> Component.literal(formatLootDefinition(definition)), false));
+        source.sendSuccess(() -> Component.literal("Raid loot item definitions: total="
+                + RaidLootItemDefinitionRegistry.all().size() + " showing="
+                + Math.min(20, RaidLootItemDefinitionRegistry.all().size())), false);
+        return RaidLootItemDefinitionRegistry.all().size();
+    }
+
+    private static int lootValidate(CommandSourceStack source) {
+        RaidLootItemDefinitionValidationResult result = RaidLootItemDefinitionRegistry.validation();
+        source.sendSuccess(() -> Component.literal("Raid loot item definitions validate: total="
+                + RaidLootItemDefinitionRegistry.all().size()
+                + " enabled=" + RaidLootItemDefinitionRegistry.enabled().size()
+                + " errors=" + result.errors() + " warnings=" + result.warnings()), false);
+        result.issues().forEach(issue -> source.sendSuccess(() -> Component.literal(
+                (issue.error() ? "ERROR: " : "WARN: ") + issue.message()), false));
+        return result.valid() ? 1 : 0;
+    }
+
+    private static int lootInspect(CommandSourceStack source, String value) {
+        ResourceLocation item = ResourceLocation.tryParse(value);
+        if (item == null) {
+            source.sendFailure(Component.literal("Invalid item id: " + value));
+            return 0;
+        }
+        Optional<RaidLootItemDefinitionConfig> definition = RaidLootItemDefinitionRegistry.get(item);
+        if (definition.isEmpty()) {
+            source.sendFailure(Component.literal("Unknown raid loot item definition: " + value));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(formatLootDefinition(definition.get())
+                + " combatScore=" + definition.get().combatScore()
+                + " survivalScore=" + definition.get().survivalScore()), false);
+        return 1;
+    }
+
+    private static int lootCategories(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.literal("Raid loot categories: "
+                + RaidLootItemDefinitionRegistry.categoryCounts()), false);
+        return RaidLootItemDefinitionRegistry.categoryCounts().size();
+    }
+
+    private static int lootRarities(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.literal("Raid loot rarities: "
+                + RaidLootItemDefinitionRegistry.rarityCounts()), false);
+        return RaidLootItemDefinitionRegistry.rarityCounts().size();
+    }
+
+    private static int lootExample(CommandSourceStack source) {
+        try {
+            Path path = RaidLootItemDefinitionExampleWriter.write(Path.of("config"));
+            RaidLootItemDefinitionRegistry.reload(Path.of("config"));
+            source.sendSuccess(() -> Component.literal("Created raid loot item definition example at " + path), true);
+            return 1;
+        } catch (IOException exception) {
+            source.sendFailure(Component.literal("Loot example not written (existing file is never overwritten): "
+                    + exception.getMessage()));
+            return 0;
+        }
+    }
+
+    private static String formatLootDefinition(RaidLootItemDefinitionConfig definition) {
+        return definition.item() + " enabled=" + definition.enabled()
+                + " category=" + definition.category() + " rarity=" + definition.rarity()
+                + " systemValue=" + definition.systemValue()
+                + " spawnWeight=" + definition.spawnWeight()
+                + " stack=" + definition.stackMin() + "-" + definition.stackMax()
+                + " tags=" + definition.tags();
     }
 
     private static int reload(CommandSourceStack source) {
