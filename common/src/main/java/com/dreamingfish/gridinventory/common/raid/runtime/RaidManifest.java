@@ -71,4 +71,12 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
                 newState, zones, activeContainers, variantSelections, activeExtractions, extractionStates, activeSpawns, activeLooseLoot,
                 List.of(), List.of());
     }
+    public RaidManifest withExtractionState(RaidExtractionRuntimeState extractionState) {
+        if (extractionState == null || extractionState.extractionId().isBlank()) return this;
+        Map<String, RaidExtractionRuntimeState> updated = new java.util.LinkedHashMap<>(extractionStates);
+        updated.put(extractionState.extractionId(), extractionState);
+        return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
+                state, zones, activeContainers, variantSelections, activeExtractions, Map.copyOf(updated),
+                activeSpawns, activeLooseLoot, extractedPlayers, participants);
+    }
 }

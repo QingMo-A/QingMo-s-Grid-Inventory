@@ -137,7 +137,25 @@ public final class QmRaidCommands {
                         .then(Commands.literal("rules")
                                 .then(Commands.argument("raid", StringArgumentType.word())
                                         .executes(c -> extractionRules(c.getSource(),
-                                                StringArgumentType.getString(c, "raid"))))))
+                                                StringArgumentType.getString(c, "raid")))))
+                        .then(Commands.literal("trigger").then(Commands.argument("raid", StringArgumentType.word())
+                                .then(Commands.argument("extractionId", StringArgumentType.word())
+                                        .executes(c -> extractionTrigger(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"),
+                                                StringArgumentType.getString(c, "extractionId"), null))
+                                        .then(Commands.argument("player", EntityArgument.player())
+                                                .executes(c -> extractionTrigger(c.getSource(),
+                                                        StringArgumentType.getString(c, "raid"),
+                                                        StringArgumentType.getString(c, "extractionId"),
+                                                        EntityArgument.getPlayer(c, "player")))))))
+                        .then(Commands.literal("countdowns").executes(c -> extractionCountdowns(c.getSource())))
+                        .then(Commands.literal("cancel").then(Commands.argument("player", EntityArgument.player())
+                                .executes(c -> extractionCancel(c.getSource(), EntityArgument.getPlayer(c, "player")))))
+                        .then(Commands.literal("cancel_global").then(Commands.argument("raid", StringArgumentType.word())
+                                .then(Commands.argument("extractionId", StringArgumentType.word())
+                                        .executes(c -> extractionCancelGlobal(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"),
+                                                StringArgumentType.getString(c, "extractionId")))))))
                 .then(Commands.literal("inspect").executes(c -> inspect(c.getSource()))));
     }
 
@@ -538,6 +556,49 @@ public final class QmRaidCommands {
                 : extraction.availability().type();
     }
 
+    private static int extractionTrigger(CommandSourceStack source, String raidValue,
+                                         String extractionId, ServerPlayer player) {
+        Optional<RaidManifest> raid = manifest(raidValue);
+        if (raid.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + raidValue)); return 0; }
+        String result = RaidExtractionCountdownService.trigger(source.getServer(), raid.get(), extractionId, player);
+        if (result.startsWith("Triggered")) { source.sendSuccess(() -> Component.literal(result), true); return 1; }
+        source.sendFailure(Component.literal(result)); return 0;
+    }
+
+    private static int extractionCountdowns(CommandSourceStack source) {
+        long now = source.getServer().overworld().getGameTime();
+        var players = RaidExtractionCountdownService.playerCountdowns();
+        source.sendSuccess(() -> Component.literal("Player countdowns: " + players.size()), false);
+        players.forEach(value -> source.sendSuccess(() -> Component.literal("player=" + value.playerName()
+                + " raid=" + value.raidId() + " extraction=" + value.extractionId()
+                + " elapsed=" + (now - value.startedGameTime()) / 20 + "s remaining="
+                + Math.max(0, value.requiredTicks() - (now - value.startedGameTime())) / 20 + "s"), false));
+        var globals = RaidExtractionCountdownService.globalCountdowns();
+        source.sendSuccess(() -> Component.literal("Global countdowns: " + globals.size()), false);
+        globals.forEach(value -> source.sendSuccess(() -> Component.literal("raid=" + value.raidId()
+                + " extraction=" + value.extractionId() + " elapsed=" + (now - value.startedGameTime()) / 20
+                + "s remaining=" + Math.max(0, value.requiredTicks() - (now - value.startedGameTime())) / 20
+                + "s triggeredBy=" + value.triggeredByName()), false));
+        return players.size() + globals.size();
+    }
+
+    private static int extractionCancel(CommandSourceStack source, ServerPlayer player) {
+        RaidExtractionCountdownService.clearPlayer(player.getUUID());
+        source.sendSuccess(() -> Component.literal("Cancelled extraction countdown for "
+                + player.getName().getString()), true);
+        return 1;
+    }
+
+    private static int extractionCancelGlobal(CommandSourceStack source, String raidValue, String extractionId) {
+        Optional<RaidManifest> raid = manifest(raidValue);
+        if (raid.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + raidValue)); return 0; }
+        boolean cancelled = RaidExtractionCountdownService.cancelGlobal(
+                source.getServer(), raid.get().raidId(), extractionId);
+        if (!cancelled) { source.sendFailure(Component.literal("Global countdown not found.")); return 0; }
+        source.sendSuccess(() -> Component.literal("Cancelled global extraction " + extractionId), true);
+        return 1;
+    }
+
     private static int navigationPreview(CommandSourceStack source, String value) {
         Optional<RaidManifest> manifest = manifest(value);
         if (manifest.isEmpty()) {
@@ -610,6 +671,7 @@ public final class QmRaidCommands {
             return 0;
         }
         RaidManifest updated = manifest.get().withClearedRunState(RaidLifecycleState.CREATED);
+        RaidExtractionCountdownService.clearRaid(updated.raidId());
         RaidManifestRegistry.put(updated);
         saveManifest(source, updated);
         source.sendSuccess(() -> Component.literal("Reset raid " + updated.raidId()
@@ -714,18 +776,12 @@ public final class QmRaidCommands {
             source.sendFailure(Component.literal(result.message()));
             return 0;
         }
-        boolean hadParticipants = !manifest.get().participants().isEmpty();
         RaidManifest updated = result.updatedManifest();
         if (!updated.isParticipant(player.getUUID())) {
             updated = updated.withParticipant(new RaidParticipant(
                     player.getUUID(), player.getName().getString(), System.currentTimeMillis()));
         }
-        if (hadParticipants && allParticipantsExtracted(updated)) {
-            updated = updated.withState(RaidLifecycleState.ENDED);
-        } else if (updated.state() == RaidLifecycleState.CREATED
-                || updated.state() == RaidLifecycleState.APPLIED) {
-            updated = updated.withState(RaidLifecycleState.RUNNING);
-        }
+        updated = RaidExtractionCompletion.finalizeAfterExtraction(updated);
         if (!saveManifest(source, updated)) return 0;
         RaidManifestRegistry.put(updated);
         RaidManifest saved = updated;
@@ -733,11 +789,6 @@ public final class QmRaidCommands {
                 + " from raid " + saved.raidId() + " " + result.message()
                 + " state=" + saved.state()), true);
         return 1;
-    }
-
-    private static boolean allParticipantsExtracted(RaidManifest manifest) {
-        return !manifest.participants().isEmpty() && manifest.participants().stream()
-                .allMatch(participant -> manifest.isPlayerExtracted(participant.playerId()));
     }
 
     private static int extractionCheck(CommandSourceStack source, String value, ServerPlayer player) {

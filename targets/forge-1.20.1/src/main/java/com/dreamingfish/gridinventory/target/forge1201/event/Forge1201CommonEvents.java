@@ -10,6 +10,7 @@ import com.dreamingfish.gridinventory.common.size.GridItemSizeLoader;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeSyncManager;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.common.raid.command.QmRaidCommands;
+import com.dreamingfish.gridinventory.common.raid.runtime.RaidExtractionCountdownService;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -56,6 +57,11 @@ public final class Forge1201CommonEvents {
         }
         initializeEquippedStorage(player, EquipmentSlot.CHEST);
         initializeEquippedStorage(player, EquipmentSlot.LEGS);
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) RaidExtractionCountdownService.serverTick(event.getServer());
     }
 
     @SubscribeEvent

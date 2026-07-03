@@ -10,6 +10,7 @@ import com.dreamingfish.gridinventory.common.folding.BackpackFoldingSyncManager;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentStorageLoader;
 import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionLoader;
 import com.dreamingfish.gridinventory.common.raid.command.QmRaidCommands;
+import com.dreamingfish.gridinventory.common.raid.runtime.RaidExtractionCountdownService;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 import com.dreamingfish.gridinventory.platform.neoforge.NeoForgeGridInventoryPlatform;
 import com.dreamingfish.gridinventory.target.neoforge1211.protocol.NeoForge1211ProtocolCompat;
@@ -30,6 +31,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 @Mod(DFGridInventoryMod.MODID)
 public class DFGridInventoryMod {
@@ -67,6 +69,11 @@ public class DFGridInventoryMod {
     @SubscribeEvent
     public void registerCommands(RegisterCommandsEvent event) {
         QmRaidCommands.register(event.getDispatcher());
+    }
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        RaidExtractionCountdownService.serverTick(event.getServer());
     }
 
     @SubscribeEvent
