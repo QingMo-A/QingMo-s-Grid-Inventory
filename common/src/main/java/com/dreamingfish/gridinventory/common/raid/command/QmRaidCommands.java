@@ -572,13 +572,20 @@ public final class QmRaidCommands {
         players.forEach(value -> source.sendSuccess(() -> Component.literal("player=" + value.playerName()
                 + " raid=" + value.raidId() + " extraction=" + value.extractionId()
                 + " elapsed=" + (now - value.startedGameTime()) / 20 + "s remaining="
-                + Math.max(0, value.requiredTicks() - (now - value.startedGameTime())) / 20 + "s"), false));
+                + Math.max(0, value.requiredTicks() - (now - value.startedGameTime())) / 20 + "s"
+                + " lastSeenAgo=" + Math.max(0, now - value.lastSeenGameTime()) / 20 + "s"), false));
         var globals = RaidExtractionCountdownService.globalCountdowns();
         source.sendSuccess(() -> Component.literal("Global countdowns: " + globals.size()), false);
-        globals.forEach(value -> source.sendSuccess(() -> Component.literal("raid=" + value.raidId()
-                + " extraction=" + value.extractionId() + " elapsed=" + (now - value.startedGameTime()) / 20
-                + "s remaining=" + Math.max(0, value.requiredTicks() - (now - value.startedGameTime())) / 20
-                + "s triggeredBy=" + value.triggeredByName()), false));
+        globals.forEach(value -> {
+            RaidExtractionRuntimeState state = RaidManifestRegistry.get(value.raidId())
+                    .map(raid -> raid.extractionStates().get(value.extractionId())).orElse(null);
+            source.sendSuccess(() -> Component.literal("raid=" + value.raidId()
+                    + " extraction=" + value.extractionId() + " elapsed=" + (now - value.startedGameTime()) / 20
+                    + "s remaining=" + Math.max(0, value.requiredTicks() - (now - value.startedGameTime())) / 20
+                    + "s triggeredBy=" + value.triggeredByName()
+                    + " state=" + (state == null ? "missing" : state.state())
+                    + " remainingUses=" + (state == null ? "unknown" : state.remainingUses())), false);
+        });
         return players.size() + globals.size();
     }
 
@@ -672,9 +679,10 @@ public final class QmRaidCommands {
         }
         RaidManifest updated = manifest.get().withClearedRunState(RaidLifecycleState.CREATED);
         RaidExtractionCountdownService.clearRaid(updated.raidId());
-        RaidManifestRegistry.put(updated);
-        saveManifest(source, updated);
-        source.sendSuccess(() -> Component.literal("Reset raid " + updated.raidId()
+        RaidManifest resetManifest = RaidExtractionCountdownService.normalizeClearedRaid(updated);
+        RaidManifestRegistry.put(resetManifest);
+        saveManifest(source, resetManifest);
+        source.sendSuccess(() -> Component.literal("Reset raid " + resetManifest.raidId()
                 + ": clearedBlocks=" + result.clearedBlocks()
                 + " templateApplied=" + result.templateApplied()
                 + " templateMissing=" + result.templateMissing()
@@ -684,8 +692,8 @@ public final class QmRaidCommands {
                 + " participantsCleared=true extractedPlayersCleared=true state=CREATED"), true);
         if (!rebuild) return 1;
         // Reset restored the base template; rebuild reapplies frozen variants before resources.
-        RaidWorldApplyResult applied = RaidWorldApplier.applyGeneratedStateOnly(targetLevel, map.get(), updated);
-        RaidManifest rebuilt = updated.withState(RaidLifecycleState.APPLIED);
+        RaidWorldApplyResult applied = RaidWorldApplier.applyGeneratedStateOnly(targetLevel, map.get(), resetManifest);
+        RaidManifest rebuilt = resetManifest.withState(RaidLifecycleState.APPLIED);
         RaidManifestRegistry.put(rebuilt);
         saveManifest(source, rebuilt);
         source.sendSuccess(() -> Component.literal("Rebuilt raid " + rebuilt.raidId()

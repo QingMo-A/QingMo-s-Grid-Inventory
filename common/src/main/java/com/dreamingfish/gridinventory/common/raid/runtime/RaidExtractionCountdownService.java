@@ -39,7 +39,8 @@ public final class RaidExtractionCountdownService {
         if (extraction == null || !"player".equals(extraction.timer().type())
                 || !extraction.trigger().isNone() || !"always".equals(extraction.availability().type())
                 || state != null && state.exhausted()) {
-            PLAYER_COUNTDOWNS.remove(player.getUUID()); return;
+            cancelPlayerCountdown(player, current, "extraction is no longer available");
+            return;
         }
         if (current == null || current.raidId() != raid.raidId()
                 || !current.extractionId().equals(extraction.id())) {
@@ -62,9 +63,14 @@ public final class RaidExtractionCountdownService {
                 updated = RaidExtractionCompletion.finalizeAfterExtraction(updated);
                 persist(server, updated);
                 player.sendSystemMessage(Component.literal("Extracted via " + extraction.id() + "."));
+            } else {
+                player.sendSystemMessage(Component.literal("Extraction cancelled: " + attempt.message()));
             }
             PLAYER_COUNTDOWNS.remove(player.getUUID());
         } else {
+            PLAYER_COUNTDOWNS.put(player.getUUID(), new RaidExtractionPlayerCountdown(
+                    current.raidId(), current.playerId(), current.playerName(), current.extractionId(),
+                    current.startedGameTime(), now, current.requiredTicks()));
             int remaining = (int) Math.ceil((current.requiredTicks() - (now - current.startedGameTime())) / 20.0D);
             player.sendSystemMessage(Component.literal("Extracting via " + extraction.id() + ": " + remaining + "s"));
         }
@@ -95,32 +101,58 @@ public final class RaidExtractionCountdownService {
     }
 
     private static void finishGlobal(MinecraftServer server, RaidExtractionGlobalCountdown countdown) {
-        RaidManifest raid = RaidManifestRegistry.get(countdown.raidId()).orElse(null);
-        if (raid == null) { GLOBAL_COUNTDOWNS.remove(globalKey(countdown.raidId(), countdown.extractionId())); return; }
-        RaidExtractionActivation extraction = raid.activeExtractions().stream()
-                .filter(value -> value.id().equals(countdown.extractionId())).findFirst().orElse(null);
-        if (extraction == null) return;
-        RaidManifest updated = raid;
-        int successes = 0;
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (!updated.isParticipant(player.getUUID()) || updated.isPlayerExtracted(player.getUUID())) continue;
-            RaidExtractionCheckResult check = RaidExtractionService.check(player, updated);
-            if (!check.inExtraction() || !check.extractionId().equals(extraction.id())) continue;
-            RaidExtractionAttemptResult attempt = RaidExtractionService.attempt(player, updated);
-            if (attempt.success()) { updated = attempt.updatedManifest(); successes++; player.sendSystemMessage(Component.literal("Extracted via " + extraction.id() + ".")); }
+        String key = globalKey(countdown.raidId(), countdown.extractionId());
+        try {
+            RaidManifest raid = RaidManifestRegistry.get(countdown.raidId()).orElse(null);
+            if (!isRunnableRaid(raid)) return;
+            RaidExtractionActivation extraction = raid.activeExtractions().stream()
+                    .filter(value -> value.id().equals(countdown.extractionId())).findFirst().orElse(null);
+            if (extraction == null) {
+                DFGridInventory.LOGGER.warn("Cancelling dangling global extraction countdown raidId={} extractionId={}",
+                        countdown.raidId(), countdown.extractionId());
+                return;
+            }
+            RaidManifest updated = raid;
+            int successes = 0;
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                if (!isEligibleGlobalPlayer(player, updated)) continue;
+                RaidExtractionCheckResult check = RaidExtractionService.check(player, updated);
+                if (!check.inExtraction() || !check.extractionId().equals(extraction.id())) continue;
+                RaidExtractionAttemptResult attempt = RaidExtractionService.attempt(player, updated);
+                if (attempt.success()) {
+                    updated = attempt.updatedManifest();
+                    successes++;
+                    player.sendSystemMessage(Component.literal("Extracted via " + extraction.id() + "."));
+                }
+            }
+            RaidExtractionRuntimeState old = updated.extractionStates().get(extraction.id());
+            int remaining = old == null ? extraction.useLimit() : old.remainingUses();
+            if ("success".equals(extraction.consumeUseOn()) && successes > 0 && remaining > 0) remaining--;
+            updated = updated.withExtractionState(new RaidExtractionRuntimeState(extraction.id(),
+                    remaining == 0 ? "EXHAUSTED" : "READY", remaining, -1L, null));
+            persist(server, RaidExtractionCompletion.finalizeAfterExtraction(updated));
+        } catch (Exception exception) {
+            DFGridInventory.LOGGER.warn("Failed to finish global extraction countdown raidId={} extractionId={}",
+                    countdown.raidId(), countdown.extractionId(), exception);
+        } finally {
+            GLOBAL_COUNTDOWNS.remove(key);
         }
-        RaidExtractionRuntimeState old = updated.extractionStates().get(extraction.id());
-        int remaining = old == null ? extraction.useLimit() : old.remainingUses();
-        if ("success".equals(extraction.consumeUseOn()) && successes > 0 && remaining > 0) remaining--;
-        updated = updated.withExtractionState(new RaidExtractionRuntimeState(extraction.id(),
-                remaining == 0 ? "EXHAUSTED" : "READY", remaining, -1L, null));
-        persist(server, RaidExtractionCompletion.finalizeAfterExtraction(updated));
-        GLOBAL_COUNTDOWNS.remove(globalKey(countdown.raidId(), countdown.extractionId()));
     }
 
     public static void clearRaid(long raidId) {
         PLAYER_COUNTDOWNS.values().removeIf(value -> value.raidId() == raidId);
         GLOBAL_COUNTDOWNS.values().removeIf(value -> value.raidId() == raidId);
+    }
+    public static RaidManifest normalizeClearedRaid(RaidManifest raid) {
+        RaidManifest updated = raid;
+        for (RaidExtractionRuntimeState state : raid.extractionStates().values()) {
+            if (!"TRIGGERED".equals(state.state()) && state.triggeredAtGameTime() < 0
+                    && state.triggeredBy() == null) continue;
+            updated = updated.withExtractionState(new RaidExtractionRuntimeState(state.extractionId(),
+                    state.remainingUses() == 0 ? "EXHAUSTED" : "READY",
+                    state.remainingUses(), -1L, null));
+        }
+        return updated;
     }
     public static void clearPlayer(UUID playerId) { PLAYER_COUNTDOWNS.remove(playerId); }
     public static boolean cancelGlobal(MinecraftServer server, long raidId, String extractionId) {
@@ -140,6 +172,19 @@ public final class RaidExtractionCountdownService {
         return RaidManifestRegistry.all().stream().filter(raid -> raid.state() == RaidLifecycleState.APPLIED || raid.state() == RaidLifecycleState.RUNNING)
                 .filter(raid -> raid.dimensionId().equals(dimension) && raid.isParticipant(player.getUUID()))
                 .max(Comparator.comparingLong(RaidManifest::raidId));
+    }
+    private static boolean isRunnableRaid(RaidManifest raid) {
+        return raid != null && (raid.state() == RaidLifecycleState.APPLIED
+                || raid.state() == RaidLifecycleState.RUNNING);
+    }
+    private static boolean isEligibleGlobalPlayer(ServerPlayer player, RaidManifest raid) {
+        return player.serverLevel().dimension().location().toString().equals(raid.dimensionId())
+                && raid.isParticipant(player.getUUID()) && !raid.isPlayerExtracted(player.getUUID());
+    }
+    private static void cancelPlayerCountdown(
+            ServerPlayer player, RaidExtractionPlayerCountdown countdown, String reason) {
+        if (countdown != null) player.sendSystemMessage(Component.literal("Extraction cancelled: " + reason + "."));
+        PLAYER_COUNTDOWNS.remove(player.getUUID());
     }
     private static void persist(MinecraftServer server, RaidManifest manifest) {
         RaidManifestRegistry.put(manifest);
