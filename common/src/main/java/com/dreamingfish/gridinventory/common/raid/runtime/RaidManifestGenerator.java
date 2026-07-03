@@ -46,7 +46,6 @@ public final class RaidManifestGenerator {
                 List.of(), List.of());
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
-        // TODO Phase 46A: activate loose loot anchors and generate LooseLootManifest.
         // TODO Phase 47A: generate mob spawn manifest and event manifest.
     }
 

@@ -21,7 +21,6 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
                             Map<String, IntRangeConfig> looseLootGroupCounts,
                             List<RaidLooseLootAnchorConfig> looseLootAnchors) {
     // TODO Phase 48B: apply origin offset to all local anchor positions for multi-instance raids.
-    // TODO Phase 48C: restore placeholder blocks on raid reset.
     public RaidMapConfig {
         dimension = dimension == null || dimension.isBlank() ? "minecraft:overworld" : dimension;
         origin = valid(origin) ? origin.clone() : new int[]{0, 0, 0};

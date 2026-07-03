@@ -283,7 +283,7 @@ public final class QmRaidCommands {
         if (map.isEmpty()) { source.sendFailure(Component.literal("Map config not loaded: " + manifest.get().mapId())); return 0; }
         var types = map.get().containerTypes().stream().collect(
                 java.util.stream.Collectors.toMap(RaidContainerTypeConfig::id, type -> type, (a, b) -> a));
-        int stacks = 0, consumed = 0;
+        int stacks = 0, consumed = 0, warnings = 0, candidates = 0, printed = 0;
         for (RaidLooseLootActivation anchor : manifest.get().activeLooseLoot()) {
             RaidContainerTypeConfig type = types.get(anchor.containerType());
             if (type == null) continue;
@@ -293,14 +293,20 @@ public final class QmRaidCommands {
                     type.allowedCategories(), RaidLootItemDefinitionRegistry.enabled()));
             stacks += result.entries().size();
             consumed += result.consumedBudget();
-            result.entries().stream().limit(20).forEach(entry -> source.sendSuccess(() -> Component.literal(
-                    "anchor " + anchor.anchorId() + " item " + entry.definition().item()
-                            + " x" + entry.stack().getCount() + " value=" + entry.consumedValue()), false));
+            warnings += result.warnings();
+            candidates += result.candidateCount();
+            for (RaidBudgetLootEntry entry : result.entries()) {
+                if (printed++ >= 50) continue;
+                source.sendSuccess(() -> Component.literal("anchor " + anchor.anchorId()
+                        + " item " + entry.definition().item() + " x" + entry.stack().getCount()
+                        + " value=" + entry.consumedValue()), false);
+            }
         }
-        int finalStacks = stacks, finalConsumed = consumed;
+        int finalStacks = stacks, finalConsumed = consumed, finalWarnings = warnings, finalCandidates = candidates;
         source.sendSuccess(() -> Component.literal("Loose loot preview raid=" + manifest.get().raidId()
                 + " anchors=" + manifest.get().activeLooseLoot().size()
-                + " stacks=" + finalStacks + " consumed=" + finalConsumed), false);
+                + " stacks=" + finalStacks + " consumed=" + finalConsumed
+                + " warnings=" + finalWarnings + " candidates=" + finalCandidates), false);
         return stacks;
     }
 
@@ -390,7 +396,8 @@ public final class QmRaidCommands {
                 + " activeContainers=" + manifest.activeContainers().size()
                 + " variants=" + manifest.variantSelections().size()
                 + " extractions=" + manifest.activeExtractions().size()
-                + " spawns=" + manifest.activeSpawns().size()), true);
+                + " spawns=" + manifest.activeSpawns().size()
+                + " looseLoot=" + manifest.activeLooseLoot().size()), true);
         if (manifest.activeSpawns().isEmpty()) {
             source.sendSuccess(() -> Component.literal(
                     "WARN: raid has no active spawns; join will use default_spawn fallback."), true);
@@ -521,8 +528,10 @@ public final class QmRaidCommands {
                 + " variantPatchesApplied=" + result.variantPatchesApplied()
                 + " activePlaced=" + result.activePlaced() + " activeRebound=" + result.activeRebound()
                 + " inactiveCleared=" + result.inactiveCleared()
+                + " looseLootEntitiesCleared=" + result.looseLootEntitiesCleared()
                 + " looseLootAnchorsApplied=" + result.looseLootAnchorsApplied()
                 + " looseLootStacksSpawned=" + result.looseLootStacksSpawned()
+                + " looseLootConsumedBudget=" + result.looseLootConsumedBudget()
                 + " warnings=" + result.warnings()), true);
         return result.activePlaced() + result.activeRebound();
     }
@@ -532,7 +541,8 @@ public final class QmRaidCommands {
                 + raid.raidId() + " map=" + raid.mapId() + " state=" + raid.state()
                 + " dimension=" + raid.dimensionId()
                 + " participants=" + raid.participants().size()
-                + " extracted=" + raid.extractedPlayers().size()), false));
+                + " extracted=" + raid.extractedPlayers().size()
+                + " looseLoot=" + raid.activeLooseLoot().size()), false));
         return RaidManifestRegistry.size();
     }
     private static int reset(CommandSourceStack source, String value, boolean rebuild) {
@@ -569,8 +579,10 @@ public final class QmRaidCommands {
                 + ": variantPatchesApplied=" + applied.variantPatchesApplied()
                 + " activePlaced=" + applied.activePlaced() + " activeRebound=" + applied.activeRebound()
                 + " inactiveCleared=" + applied.inactiveCleared()
+                + " looseLootEntitiesCleared=" + applied.looseLootEntitiesCleared()
                 + " looseLootAnchorsApplied=" + applied.looseLootAnchorsApplied()
                 + " looseLootStacksSpawned=" + applied.looseLootStacksSpawned()
+                + " looseLootConsumedBudget=" + applied.looseLootConsumedBudget()
                 + " warnings=" + applied.warnings()
                 + " state=APPLIED"), true);
         return applied.activePlaced() + applied.activeRebound();
