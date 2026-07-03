@@ -153,7 +153,8 @@ public final class RaidMapConfigLoader {
                     integer(anchor, "weight", 1), bool(anchor, "enabled", true),
                     bool(anchor, "always_active", false), strings(anchor, "requires_tags"),
                     strings(anchor, "forbidden_tags"), string(anchor, "display_name"),
-                    strings(anchor, "tags")));
+                    strings(anchor, "tags"), availability(anchor), trigger(anchor), timer(anchor),
+                    integer(anchor, "use_limit", -1), string(anchor, "consume_use_on")));
         }
         return List.copyOf(result);
     }
@@ -171,6 +172,28 @@ public final class RaidMapConfigLoader {
                     string(anchor, "display_name"), strings(anchor, "tags")));
         }
         return List.copyOf(result);
+    }
+
+    private static RaidExtractionAvailabilityConfig availability(JsonObject anchor) {
+        if (!anchor.has("availability")) return RaidExtractionAvailabilityConfig.always();
+        JsonObject value = anchor.getAsJsonObject("availability");
+        return new RaidExtractionAvailabilityConfig(string(value, "type"), integer(value, "seconds", 0));
+    }
+    private static RaidExtractionTimerConfig timer(JsonObject anchor) {
+        if (!anchor.has("timer")) return RaidExtractionTimerConfig.defaultPlayer();
+        JsonObject value = anchor.getAsJsonObject("timer");
+        return new RaidExtractionTimerConfig(string(value, "type"), integer(value, "seconds", 0), string(value, "leave_behavior"));
+    }
+    private static RaidExtractionTriggerConfig trigger(JsonObject anchor) {
+        if (!anchor.has("trigger")) return RaidExtractionTriggerConfig.none();
+        JsonObject value = anchor.getAsJsonObject("trigger");
+        List<RaidItemRequirementConfig> requirements = new ArrayList<>();
+        if (value.has("requirements")) for (JsonElement element : value.getAsJsonArray("requirements")) {
+            JsonObject item = element.getAsJsonObject();
+            requirements.add(new RaidItemRequirementConfig(ResourceLocation.tryParse(string(item, "item")),
+                    integer(item, "count", 0)));
+        }
+        return new RaidExtractionTriggerConfig(string(value, "type"), string(value, "switch_id"), requirements);
     }
 
     private static Map<String, IntRangeConfig> ranges(JsonObject root, String key) {

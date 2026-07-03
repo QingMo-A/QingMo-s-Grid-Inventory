@@ -87,19 +87,10 @@ public final class RaidMapExampleWriter {
                 """);
         writeNew(directory.resolve("extraction_anchors.json"), """
                 [
-                  {
-                    "id": "exit_a",
-                    "node": "exit_a",
-                    "pos": [24, 1, 0],
-                    "radius": 3.0,
-                    "weight": 100,
-                    "enabled": true,
-                    "always_active": true,
-                    "requires_tags": [],
-                    "forbidden_tags": [],
-                    "display_name": "Example Exit A",
-                    "tags": ["extraction"]
-                  }
+                  {"id":"exit_a","node":"exit_a","pos":[24,1,0],"radius":3.0,"weight":100,"enabled":true,"always_active":true,"requires_tags":[],"forbidden_tags":[],"display_name":"Always Exit","tags":["extraction"],"availability":{"type":"always"},"trigger":{"type":"none"},"timer":{"type":"player","seconds":5,"leave_behavior":"reset"},"use_limit":-1,"consume_use_on":"trigger"},
+                  {"id":"late_exit","node":"exit_a","pos":[22,1,2],"radius":3.0,"weight":100,"enabled":true,"always_active":true,"requires_tags":[],"forbidden_tags":[],"display_name":"Late Exit","tags":["extraction","late"],"availability":{"type":"raid_remaining_lte","seconds":600},"trigger":{"type":"none"},"timer":{"type":"player","seconds":8,"leave_behavior":"reset"},"use_limit":-1,"consume_use_on":"trigger"},
+                  {"id":"elevator_exit","node":"exit_a","pos":[22,1,-2],"radius":3.0,"weight":100,"enabled":true,"always_active":true,"requires_tags":[],"forbidden_tags":[],"display_name":"Elevator Exit","tags":["extraction","switch"],"availability":{"type":"always"},"trigger":{"type":"switch","switch_id":"elevator_power_switch"},"timer":{"type":"global","seconds":30,"leave_behavior":"ignore"},"use_limit":1,"consume_use_on":"trigger"},
+                  {"id":"delivery_exit","node":"exit_a","pos":[20,1,0],"radius":3.0,"weight":100,"enabled":true,"always_active":true,"requires_tags":[],"forbidden_tags":[],"display_name":"Delivery Exit","tags":["extraction","item_turn_in"],"availability":{"type":"always"},"trigger":{"type":"item_turn_in","requirements":[{"item":"minecraft:emerald","count":3}]},"timer":{"type":"global","seconds":45,"leave_behavior":"ignore"},"use_limit":2,"consume_use_on":"success"}
                 ]
                 """);
         writeNew(directory.resolve("spawn_anchors.json"), """

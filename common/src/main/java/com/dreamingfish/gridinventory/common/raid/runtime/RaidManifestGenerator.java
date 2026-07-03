@@ -12,6 +12,11 @@ public final class RaidManifestGenerator {
         List<RaidVariantSelection> variants = selectVariants(map, seed);
         List<RaidSpawnActivation> spawns = selectSpawns(map, variants, seed);
         List<RaidExtractionActivation> extractions = selectExtractions(map, variants, seed);
+        Map<String, RaidExtractionRuntimeState> extractionStates = new LinkedHashMap<>();
+        extractions.forEach(extraction -> extractionStates.put(extraction.id(),
+                new RaidExtractionRuntimeState(extraction.id(),
+                        extraction.useLimit() == 0 ? "EXHAUSTED" : "READY",
+                        extraction.useLimit(), -1L, null)));
         List<RaidLooseLootActivation> looseLoot = selectLooseLoot(map, variants, seed);
         Map<String, ZoneRaidState> zones = new LinkedHashMap<>();
         List<ContainerAnchorActivation> activations = new ArrayList<>();
@@ -42,7 +47,8 @@ public final class RaidManifestGenerator {
         }
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
                 map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
-                Map.copyOf(zones), List.copyOf(activations), variants, extractions, spawns, looseLoot,
+                Map.copyOf(zones), List.copyOf(activations), variants, extractions,
+                Map.copyOf(extractionStates), spawns, looseLoot,
                 List.of(), List.of());
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
@@ -140,7 +146,9 @@ public final class RaidManifestGenerator {
         Set<String> ids = new HashSet<>();
         return selected.stream().filter(anchor -> ids.add(anchor.id()))
                 .map(anchor -> new RaidExtractionActivation(anchor.id(), anchor.node(),
-                        anchor.localBlockPos(), anchor.effectiveRadius(), anchor.displayName(), anchor.tags()))
+                        anchor.localBlockPos(), anchor.effectiveRadius(), anchor.displayName(), anchor.tags(),
+                        anchor.availability(), anchor.trigger(), anchor.timer(),
+                        anchor.useLimit(), anchor.consumeUseOn()))
                 .toList();
     }
 

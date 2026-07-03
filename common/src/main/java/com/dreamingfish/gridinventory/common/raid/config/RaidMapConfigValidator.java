@@ -173,6 +173,40 @@ public final class RaidMapConfigValidator {
                             + anchor.id() + "/" + anchor.node());
                 }
             }
+            String availability = anchor.availability().type();
+            if (!Set.of("always", "raid_remaining_lte").contains(availability)) {
+                error(issues, "unknown extraction availability type: " + anchor.id() + "/" + availability);
+            } else if ("raid_remaining_lte".equals(availability) && anchor.availability().seconds() <= 0) {
+                error(issues, "raid_remaining_lte extraction requires seconds > 0: " + anchor.id());
+            }
+            String trigger = anchor.trigger().type();
+            if (!Set.of("none", "switch", "item_turn_in").contains(trigger)) {
+                error(issues, "unknown extraction trigger type: " + anchor.id() + "/" + trigger);
+            } else if ("switch".equals(trigger) && anchor.trigger().switchId().isBlank()) {
+                error(issues, "switch extraction requires switch_id: " + anchor.id());
+            } else if ("item_turn_in".equals(trigger)) {
+                if (anchor.trigger().requirements().isEmpty()) {
+                    error(issues, "item_turn_in extraction requires items: " + anchor.id());
+                }
+                anchor.trigger().requirements().forEach(requirement -> {
+                    if (requirement.item() == null || requirement.count() <= 0) {
+                        error(issues, "invalid extraction item requirement: " + anchor.id());
+                    }
+                });
+            }
+            String timer = anchor.timer().type();
+            if (!Set.of("player", "global").contains(timer)) error(issues, "unknown extraction timer type: " + anchor.id());
+            if (!Set.of("reset", "ignore").contains(anchor.timer().leaveBehavior())) {
+                error(issues, "unknown extraction leave_behavior: " + anchor.id());
+            }
+            if (anchor.timer().seconds() <= 0) error(issues, "extraction timer seconds must be > 0: " + anchor.id());
+            if ("player".equals(timer) && !"reset".equals(anchor.timer().leaveBehavior())) warn(issues, "player extraction timer should reset on leave: " + anchor.id());
+            if ("global".equals(timer) && !"ignore".equals(anchor.timer().leaveBehavior())) warn(issues, "global extraction timer should ignore leave: " + anchor.id());
+            if ("none".equals(trigger) && "global".equals(timer)) warn(issues, "global timer without trigger will not start until future systems trigger it: " + anchor.id());
+            if (Set.of("switch", "item_turn_in").contains(trigger) && !"global".equals(timer)) warn(issues, "triggered extraction should use global timer: " + anchor.id());
+            if (anchor.useLimit() < -1) error(issues, "extraction use_limit must be -1 or >= 0: " + anchor.id());
+            if (anchor.useLimit() == 0) warn(issues, "extraction use_limit=0 is exhausted: " + anchor.id());
+            if (!Set.of("trigger", "success").contains(anchor.consumeUseOn())) error(issues, "unknown consume_use_on: " + anchor.id());
         }
         long enabled = map.extractionAnchors().stream().filter(RaidExtractionAnchorConfig::enabled).count();
         if (map.extractionActiveCount().min() > enabled) {

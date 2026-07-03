@@ -15,7 +15,12 @@ public record RaidExtractionAnchorConfig(
         List<String> requiresTags,
         List<String> forbiddenTags,
         String displayName,
-        List<String> tags) {
+        List<String> tags,
+        RaidExtractionAvailabilityConfig availability,
+        RaidExtractionTriggerConfig trigger,
+        RaidExtractionTimerConfig timer,
+        int useLimit,
+        String consumeUseOn) {
     public RaidExtractionAnchorConfig {
         id = id == null ? "" : id;
         node = node == null ? "" : node;
@@ -24,6 +29,10 @@ public record RaidExtractionAnchorConfig(
         forbiddenTags = forbiddenTags == null ? List.of() : List.copyOf(forbiddenTags);
         displayName = displayName == null ? "" : displayName;
         tags = tags == null ? List.of() : List.copyOf(tags);
+        availability = availability == null ? RaidExtractionAvailabilityConfig.always() : availability;
+        trigger = trigger == null ? RaidExtractionTriggerConfig.none() : trigger;
+        timer = timer == null ? RaidExtractionTimerConfig.defaultPlayer() : timer;
+        consumeUseOn = consumeUseOn == null || consumeUseOn.isBlank() ? "trigger" : consumeUseOn;
     }
 
     public BlockPos localBlockPos() {

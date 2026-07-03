@@ -119,9 +119,25 @@ public final class RaidManifestStorage {
             value.addProperty("radius", extraction.radius());
             value.addProperty("display_name", extraction.displayName());
             value.add("tags", GSON.toJsonTree(extraction.tags()));
+            value.add("availability", GSON.toJsonTree(extraction.availability()));
+            value.add("trigger", GSON.toJsonTree(extraction.trigger()));
+            value.add("timer", GSON.toJsonTree(extraction.timer()));
+            value.addProperty("use_limit", extraction.useLimit());
+            value.addProperty("consume_use_on", extraction.consumeUseOn());
             extractions.add(value);
         });
         root.add("active_extractions", extractions);
+        JsonArray extractionStates = new JsonArray();
+        manifest.extractionStates().values().forEach(state -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("extraction_id", state.extractionId());
+            value.addProperty("state", state.state());
+            value.addProperty("remaining_uses", state.remainingUses());
+            value.addProperty("triggered_at_game_time", state.triggeredAtGameTime());
+            value.addProperty("triggered_by", state.triggeredBy() == null ? "" : state.triggeredBy().toString());
+            extractionStates.add(value);
+        });
+        root.add("extraction_states", extractionStates);
         JsonArray spawns = new JsonArray();
         manifest.activeSpawns().forEach(spawn -> {
             JsonObject value = new JsonObject();
@@ -234,7 +250,11 @@ public final class RaidManifestStorage {
                     }
                     extractions.add(new RaidExtractionActivation(id, string(value, "node", ""),
                             readRequiredPos(value, "local_pos"), decimal(value, "radius", 3.0D),
-                            string(value, "display_name", ""), tags));
+                            string(value, "display_name", ""), tags,
+                            GSON.fromJson(value.get("availability"), com.dreamingfish.gridinventory.common.raid.config.RaidExtractionAvailabilityConfig.class),
+                            GSON.fromJson(value.get("trigger"), com.dreamingfish.gridinventory.common.raid.config.RaidExtractionTriggerConfig.class),
+                            GSON.fromJson(value.get("timer"), com.dreamingfish.gridinventory.common.raid.config.RaidExtractionTimerConfig.class),
+                            integer(value, "use_limit", -1), string(value, "consume_use_on", "trigger")));
                 } catch (Exception exception) {
                     DFGridInventory.LOGGER.warn("Skipping damaged raid extraction activation", exception);
                 }
@@ -310,12 +330,42 @@ public final class RaidManifestStorage {
         RaidLifecycleState state;
         try { state = RaidLifecycleState.valueOf(string(root, "state", "CREATED")); }
         catch (IllegalArgumentException ignored) { state = RaidLifecycleState.CREATED; }
+        Map<String, RaidExtractionRuntimeState> extractionStates = defaultExtractionStates(extractions);
+        if (root.has("extraction_states") && root.get("extraction_states").isJsonArray()) {
+            Map<String, RaidExtractionRuntimeState> loaded = new LinkedHashMap<>(extractionStates);
+            for (JsonElement element : root.getAsJsonArray("extraction_states")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    String id = string(value, "extraction_id", "");
+                    if (id.isBlank()) throw new JsonParseException("Empty extraction state id");
+                    String triggeredBy = string(value, "triggered_by", "");
+                    loaded.put(id, new RaidExtractionRuntimeState(id, string(value, "state", "READY"),
+                            integer(value, "remaining_uses", -1),
+                            longValue(value, "triggered_at_game_time", -1L),
+                            triggeredBy.isBlank() ? null : UUID.fromString(triggeredBy)));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid extraction state", exception);
+                }
+            }
+            extractionStates = Map.copyOf(loaded);
+        }
         return new RaidManifest(longValue(root, "raid_id", 0L), longValue(root, "raid_seed", 0L),
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
                 Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants),
-                List.copyOf(extractions), List.copyOf(spawns), List.copyOf(looseLoot), List.copyOf(extractedPlayers),
+                List.copyOf(extractions), extractionStates, List.copyOf(spawns),
+                List.copyOf(looseLoot), List.copyOf(extractedPlayers),
                 List.copyOf(participants));
+    }
+
+    private static Map<String, RaidExtractionRuntimeState> defaultExtractionStates(
+            List<RaidExtractionActivation> extractions) {
+        Map<String, RaidExtractionRuntimeState> result = new LinkedHashMap<>();
+        extractions.forEach(extraction -> result.put(extraction.id(),
+                new RaidExtractionRuntimeState(extraction.id(),
+                        extraction.useLimit() == 0 ? "EXHAUSTED" : "READY",
+                        extraction.useLimit(), -1L, null)));
+        return Map.copyOf(result);
     }
 
     private static JsonArray pos(BlockPos pos) {

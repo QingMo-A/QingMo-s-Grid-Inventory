@@ -132,7 +132,12 @@ public final class QmRaidCommands {
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .executes(c -> extract(c.getSource(),
                                                 StringArgumentType.getString(c, "raid"),
-                                                EntityArgument.getPlayer(c, "player"))))))
+                                        EntityArgument.getPlayer(c, "player"))))))
+                .then(Commands.literal("extraction")
+                        .then(Commands.literal("rules")
+                                .then(Commands.argument("raid", StringArgumentType.word())
+                                        .executes(c -> extractionRules(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"))))))
                 .then(Commands.literal("inspect").executes(c -> inspect(c.getSource()))));
     }
 
@@ -444,11 +449,19 @@ public final class QmRaidCommands {
         }
         raid.activeExtractions().forEach(extraction -> {
             BlockPos worldPos = raid.toWorldPos(extraction.localPos());
+            RaidExtractionRuntimeState runtime = raid.extractionStates().get(extraction.id());
             source.sendSuccess(() -> Component.literal("extraction " + extraction.id()
                     + " node=" + extraction.node()
                     + " local=" + extraction.localPos().toShortString()
                     + " world=" + worldPos.toShortString()
-                    + " radius=" + extraction.radius() + " tags=" + extraction.tags()), false);
+                    + " radius=" + extraction.radius() + " tags=" + extraction.tags()
+                    + " availability=" + extraction.availability().type()
+                    + " trigger=" + triggerSummary(extraction)
+                    + " timer=" + extraction.timer().type() + "/" + extraction.timer().seconds() + "s"
+                    + " leave=" + extraction.timer().leaveBehavior()
+                    + " useLimit=" + extraction.useLimit() + " consumeUseOn=" + extraction.consumeUseOn()
+                    + " runtimeState=" + (runtime == null ? "READY" : runtime.state())
+                    + " remainingUses=" + (runtime == null ? extraction.useLimit() : runtime.remainingUses())), false);
         });
         raid.activeSpawns().forEach(spawn -> {
             BlockPos worldPos = raid.toWorldPos(spawn.localPos());
@@ -485,6 +498,34 @@ public final class QmRaidCommands {
                     + " world=" + worldPos.toShortString()), false);
         });
         return 1;
+    }
+
+    private static int extractionRules(CommandSourceStack source, String value) {
+        Optional<RaidManifest> manifest = manifest(value);
+        if (manifest.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + value)); return 0; }
+        RaidManifest raid = manifest.get();
+        source.sendSuccess(() -> Component.literal("Extraction rules raid=" + raid.raidId()
+                + " active=" + raid.activeExtractions().size()), false);
+        raid.activeExtractions().forEach(extraction -> {
+            RaidExtractionRuntimeState runtime = raid.extractionStates().get(extraction.id());
+            source.sendSuccess(() -> Component.literal("- " + extraction.id()
+                    + " availability=" + extraction.availability().type()
+                    + " trigger=" + triggerSummary(extraction)
+                    + " timer=" + extraction.timer().type() + "/" + extraction.timer().seconds() + "s"
+                    + " leave=" + extraction.timer().leaveBehavior() + " uses=" + extraction.useLimit()
+                    + " consume=" + extraction.consumeUseOn()
+                    + " state=" + (runtime == null ? "READY" : runtime.state())
+                    + " remaining=" + (runtime == null ? extraction.useLimit() : runtime.remainingUses())), false);
+        });
+        return raid.activeExtractions().size();
+    }
+
+    private static String triggerSummary(RaidExtractionActivation extraction) {
+        if ("switch".equals(extraction.trigger().type())) return "switch/" + extraction.trigger().switchId();
+        if ("item_turn_in".equals(extraction.trigger().type())) return "item_turn_in requirements="
+                + extraction.trigger().requirements().stream()
+                .map(item -> item.item() + " x" + item.count()).toList();
+        return extraction.trigger().type();
     }
 
     private static int navigationPreview(CommandSourceStack source, String value) {
