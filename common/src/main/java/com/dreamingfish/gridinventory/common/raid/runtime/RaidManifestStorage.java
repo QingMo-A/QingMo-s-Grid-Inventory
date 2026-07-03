@@ -1,6 +1,9 @@
 package com.dreamingfish.gridinventory.common.raid.runtime;
 
 import com.dreamingfish.gridinventory.DFGridInventory;
+import com.dreamingfish.gridinventory.common.raid.config.RaidExtractionAvailabilityConfig;
+import com.dreamingfish.gridinventory.common.raid.config.RaidExtractionTimerConfig;
+import com.dreamingfish.gridinventory.common.raid.config.RaidExtractionTriggerConfig;
 import com.google.gson.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -251,9 +254,8 @@ public final class RaidManifestStorage {
                     extractions.add(new RaidExtractionActivation(id, string(value, "node", ""),
                             readRequiredPos(value, "local_pos"), decimal(value, "radius", 3.0D),
                             string(value, "display_name", ""), tags,
-                            GSON.fromJson(value.get("availability"), com.dreamingfish.gridinventory.common.raid.config.RaidExtractionAvailabilityConfig.class),
-                            GSON.fromJson(value.get("trigger"), com.dreamingfish.gridinventory.common.raid.config.RaidExtractionTriggerConfig.class),
-                            GSON.fromJson(value.get("timer"), com.dreamingfish.gridinventory.common.raid.config.RaidExtractionTimerConfig.class),
+                            readExtractionAvailability(value), readExtractionTrigger(value),
+                            readExtractionTimer(value),
                             integer(value, "use_limit", -1), string(value, "consume_use_on", "trigger")));
                 } catch (Exception exception) {
                     DFGridInventory.LOGGER.warn("Skipping damaged raid extraction activation", exception);
@@ -338,6 +340,10 @@ public final class RaidManifestStorage {
                     JsonObject value = element.getAsJsonObject();
                     String id = string(value, "extraction_id", "");
                     if (id.isBlank()) throw new JsonParseException("Empty extraction state id");
+                    if (!loaded.containsKey(id)) {
+                        DFGridInventory.LOGGER.warn("Skipping extraction state for unknown extraction id={}", id);
+                        continue;
+                    }
                     String triggeredBy = string(value, "triggered_by", "");
                     loaded.put(id, new RaidExtractionRuntimeState(id, string(value, "state", "READY"),
                             integer(value, "remaining_uses", -1),
@@ -362,10 +368,50 @@ public final class RaidManifestStorage {
             List<RaidExtractionActivation> extractions) {
         Map<String, RaidExtractionRuntimeState> result = new LinkedHashMap<>();
         extractions.forEach(extraction -> result.put(extraction.id(),
-                new RaidExtractionRuntimeState(extraction.id(),
-                        extraction.useLimit() == 0 ? "EXHAUSTED" : "READY",
-                        extraction.useLimit(), -1L, null)));
+                RaidExtractionRuntimeState.ready(extraction.id(), extraction.useLimit())));
         return Map.copyOf(result);
+    }
+
+    private static RaidExtractionAvailabilityConfig readExtractionAvailability(JsonObject value) {
+        try {
+            if (!value.has("availability") || !value.get("availability").isJsonObject()) {
+                return RaidExtractionAvailabilityConfig.always();
+            }
+            RaidExtractionAvailabilityConfig parsed = GSON.fromJson(
+                    value.getAsJsonObject("availability"), RaidExtractionAvailabilityConfig.class);
+            return parsed == null ? RaidExtractionAvailabilityConfig.always() : parsed;
+        } catch (Exception exception) {
+            DFGridInventory.LOGGER.warn("Using default extraction availability", exception);
+            return RaidExtractionAvailabilityConfig.always();
+        }
+    }
+
+    private static RaidExtractionTriggerConfig readExtractionTrigger(JsonObject value) {
+        try {
+            if (!value.has("trigger") || !value.get("trigger").isJsonObject()) {
+                return RaidExtractionTriggerConfig.none();
+            }
+            RaidExtractionTriggerConfig parsed = GSON.fromJson(
+                    value.getAsJsonObject("trigger"), RaidExtractionTriggerConfig.class);
+            return parsed == null ? RaidExtractionTriggerConfig.none() : parsed;
+        } catch (Exception exception) {
+            DFGridInventory.LOGGER.warn("Using default extraction trigger", exception);
+            return RaidExtractionTriggerConfig.none();
+        }
+    }
+
+    private static RaidExtractionTimerConfig readExtractionTimer(JsonObject value) {
+        try {
+            if (!value.has("timer") || !value.get("timer").isJsonObject()) {
+                return RaidExtractionTimerConfig.defaultPlayer();
+            }
+            RaidExtractionTimerConfig parsed = GSON.fromJson(
+                    value.getAsJsonObject("timer"), RaidExtractionTimerConfig.class);
+            return parsed == null ? RaidExtractionTimerConfig.defaultPlayer() : parsed;
+        } catch (Exception exception) {
+            DFGridInventory.LOGGER.warn("Using default extraction timer", exception);
+            return RaidExtractionTimerConfig.defaultPlayer();
+        }
     }
 
     private static JsonArray pos(BlockPos pos) {

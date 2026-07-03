@@ -455,13 +455,15 @@ public final class QmRaidCommands {
                     + " local=" + extraction.localPos().toShortString()
                     + " world=" + worldPos.toShortString()
                     + " radius=" + extraction.radius() + " tags=" + extraction.tags()
-                    + " availability=" + extraction.availability().type()
+                    + " availability=" + availabilitySummary(extraction)
                     + " trigger=" + triggerSummary(extraction)
                     + " timer=" + extraction.timer().type() + "/" + extraction.timer().seconds() + "s"
                     + " leave=" + extraction.timer().leaveBehavior()
                     + " useLimit=" + extraction.useLimit() + " consumeUseOn=" + extraction.consumeUseOn()
                     + " runtimeState=" + (runtime == null ? "READY" : runtime.state())
-                    + " remainingUses=" + (runtime == null ? extraction.useLimit() : runtime.remainingUses())), false);
+                    + " remainingUses=" + (runtime == null ? extraction.useLimit() : runtime.remainingUses())
+                    + " triggeredAt=" + (runtime == null ? -1L : runtime.triggeredAtGameTime())
+                    + " triggeredBy=" + (runtime == null || runtime.triggeredBy() == null ? "" : runtime.triggeredBy())), false);
         });
         raid.activeSpawns().forEach(spawn -> {
             BlockPos worldPos = raid.toWorldPos(spawn.localPos());
@@ -509,13 +511,15 @@ public final class QmRaidCommands {
         raid.activeExtractions().forEach(extraction -> {
             RaidExtractionRuntimeState runtime = raid.extractionStates().get(extraction.id());
             source.sendSuccess(() -> Component.literal("- " + extraction.id()
-                    + " availability=" + extraction.availability().type()
+                    + " availability=" + availabilitySummary(extraction)
                     + " trigger=" + triggerSummary(extraction)
                     + " timer=" + extraction.timer().type() + "/" + extraction.timer().seconds() + "s"
-                    + " leave=" + extraction.timer().leaveBehavior() + " uses=" + extraction.useLimit()
-                    + " consume=" + extraction.consumeUseOn()
+                    + " leave=" + extraction.timer().leaveBehavior() + " useLimit=" + extraction.useLimit()
+                    + " consumeUseOn=" + extraction.consumeUseOn()
                     + " state=" + (runtime == null ? "READY" : runtime.state())
-                    + " remaining=" + (runtime == null ? extraction.useLimit() : runtime.remainingUses())), false);
+                    + " remaining=" + (runtime == null ? extraction.useLimit() : runtime.remainingUses())
+                    + " triggeredAt=" + (runtime == null ? -1L : runtime.triggeredAtGameTime())
+                    + " triggeredBy=" + (runtime == null || runtime.triggeredBy() == null ? "" : runtime.triggeredBy())), false);
         });
         return raid.activeExtractions().size();
     }
@@ -526,6 +530,12 @@ public final class QmRaidCommands {
                 + extraction.trigger().requirements().stream()
                 .map(item -> item.item() + " x" + item.count()).toList();
         return extraction.trigger().type();
+    }
+
+    private static String availabilitySummary(RaidExtractionActivation extraction) {
+        return "raid_remaining_lte".equals(extraction.availability().type())
+                ? extraction.availability().type() + "/" + extraction.availability().seconds() + "s"
+                : extraction.availability().type();
     }
 
     private static int navigationPreview(CommandSourceStack source, String value) {

@@ -14,9 +14,7 @@ public final class RaidManifestGenerator {
         List<RaidExtractionActivation> extractions = selectExtractions(map, variants, seed);
         Map<String, RaidExtractionRuntimeState> extractionStates = new LinkedHashMap<>();
         extractions.forEach(extraction -> extractionStates.put(extraction.id(),
-                new RaidExtractionRuntimeState(extraction.id(),
-                        extraction.useLimit() == 0 ? "EXHAUSTED" : "READY",
-                        extraction.useLimit(), -1L, null)));
+                RaidExtractionRuntimeState.ready(extraction.id(), extraction.useLimit())));
         List<RaidLooseLootActivation> looseLoot = selectLooseLoot(map, variants, seed);
         Map<String, ZoneRaidState> zones = new LinkedHashMap<>();
         List<ContainerAnchorActivation> activations = new ArrayList<>();
