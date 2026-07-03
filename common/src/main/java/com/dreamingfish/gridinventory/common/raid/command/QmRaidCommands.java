@@ -155,7 +155,37 @@ public final class QmRaidCommands {
                                 .then(Commands.argument("extractionId", StringArgumentType.word())
                                         .executes(c -> extractionCancelGlobal(c.getSource(),
                                                 StringArgumentType.getString(c, "raid"),
-                                                StringArgumentType.getString(c, "extractionId")))))))
+                                                StringArgumentType.getString(c, "extractionId"))))))
+                        .then(Commands.literal("switch").then(Commands.argument("raid", StringArgumentType.word())
+                                .then(Commands.argument("switchId", StringArgumentType.word())
+                                        .executes(c -> extractionSwitch(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"),
+                                                StringArgumentType.getString(c, "switchId"),
+                                                c.getSource().getPlayerOrException()))
+                                        .then(Commands.argument("player", EntityArgument.player())
+                                                .executes(c -> extractionSwitch(c.getSource(),
+                                                        StringArgumentType.getString(c, "raid"),
+                                                        StringArgumentType.getString(c, "switchId"),
+                                                        EntityArgument.getPlayer(c, "player")))))))
+                        .then(Commands.literal("turn_in").then(Commands.argument("raid", StringArgumentType.word())
+                                .then(Commands.argument("extractionId", StringArgumentType.word())
+                                        .executes(c -> extractionTurnIn(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"),
+                                                StringArgumentType.getString(c, "extractionId"),
+                                                c.getSource().getPlayerOrException(), false))
+                                        .then(Commands.literal("simulate").executes(c -> extractionTurnIn(c.getSource(),
+                                                StringArgumentType.getString(c, "raid"),
+                                                StringArgumentType.getString(c, "extractionId"),
+                                                c.getSource().getPlayerOrException(), true)))
+                                        .then(Commands.argument("player", EntityArgument.player())
+                                                .executes(c -> extractionTurnIn(c.getSource(),
+                                                        StringArgumentType.getString(c, "raid"),
+                                                        StringArgumentType.getString(c, "extractionId"),
+                                                        EntityArgument.getPlayer(c, "player"), false))
+                                                .then(Commands.literal("simulate").executes(c -> extractionTurnIn(c.getSource(),
+                                                        StringArgumentType.getString(c, "raid"),
+                                                        StringArgumentType.getString(c, "extractionId"),
+                                                        EntityArgument.getPlayer(c, "player"), true))))))))
                 .then(Commands.literal("inspect").executes(c -> inspect(c.getSource()))));
     }
 
@@ -483,6 +513,13 @@ public final class QmRaidCommands {
                     + " triggeredAt=" + (runtime == null ? -1L : runtime.triggeredAtGameTime())
                     + " triggeredBy=" + (runtime == null || runtime.triggeredBy() == null ? "" : runtime.triggeredBy())), false);
         });
+        raid.activeExtractionSwitches().forEach(extractionSwitch -> {
+            BlockPos worldPos = raid.toWorldPos(extractionSwitch.localPos());
+            source.sendSuccess(() -> Component.literal("switch " + extractionSwitch.id()
+                    + " local=" + extractionSwitch.localPos().toShortString()
+                    + " world=" + worldPos.toShortString() + " radius=" + extractionSwitch.radius()
+                    + " tags=" + extractionSwitch.tags()), false);
+        });
         raid.activeSpawns().forEach(spawn -> {
             BlockPos worldPos = raid.toWorldPos(spawn.localPos());
             source.sendSuccess(() -> Component.literal("spawn " + spawn.id()
@@ -530,7 +567,7 @@ public final class QmRaidCommands {
             RaidExtractionRuntimeState runtime = raid.extractionStates().get(extraction.id());
             source.sendSuccess(() -> Component.literal("- " + extraction.id()
                     + " availability=" + availabilitySummary(extraction)
-                    + " trigger=" + triggerSummary(extraction)
+                    + " trigger=" + triggerSummary(extraction) + switchRuleSummary(raid, extraction)
                     + " timer=" + extraction.timer().type() + "/" + extraction.timer().seconds() + "s"
                     + " leave=" + extraction.timer().leaveBehavior() + " useLimit=" + extraction.useLimit()
                     + " consumeUseOn=" + extraction.consumeUseOn()
@@ -554,6 +591,13 @@ public final class QmRaidCommands {
         return "raid_remaining_lte".equals(extraction.availability().type())
                 ? extraction.availability().type() + "/" + extraction.availability().seconds() + "s"
                 : extraction.availability().type();
+    }
+    private static String switchRuleSummary(RaidManifest raid, RaidExtractionActivation extraction) {
+        if (!extraction.trigger().isSwitch()) return "";
+        RaidExtractionSwitchActivation value = raid.activeExtractionSwitches().stream()
+                .filter(item -> item.id().equals(extraction.trigger().switchId())).findFirst().orElse(null);
+        return value == null ? " activeSwitch=false"
+                : " activeSwitch=true switchWorld=" + raid.toWorldPos(value.localPos()).toShortString();
     }
 
     private static int extractionTrigger(CommandSourceStack source, String raidValue,
@@ -603,6 +647,26 @@ public final class QmRaidCommands {
                 source.getServer(), raid.get().raidId(), extractionId);
         if (!cancelled) { source.sendFailure(Component.literal("Global countdown not found.")); return 0; }
         source.sendSuccess(() -> Component.literal("Cancelled global extraction " + extractionId), true);
+        return 1;
+    }
+    private static int extractionSwitch(
+            CommandSourceStack source, String raidValue, String switchId, ServerPlayer player) {
+        Optional<RaidManifest> raid = manifest(raidValue);
+        if (raid.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + raidValue)); return 0; }
+        RaidExtractionTriggerResult result = RaidExtractionTriggerService.triggerSwitch(
+                source.getServer(), player, raid.get(), switchId);
+        if (!result.success()) { source.sendFailure(Component.literal(result.message())); return 0; }
+        source.sendSuccess(() -> Component.literal(result.message()), true);
+        return 1;
+    }
+    private static int extractionTurnIn(CommandSourceStack source, String raidValue,
+                                        String extractionId, ServerPlayer player, boolean simulate) {
+        Optional<RaidManifest> raid = manifest(raidValue);
+        if (raid.isEmpty()) { source.sendFailure(Component.literal("Raid not found: " + raidValue)); return 0; }
+        RaidExtractionTriggerResult result = RaidExtractionTriggerService.turnInItems(
+                source.getServer(), player, raid.get(), extractionId, simulate);
+        if (!result.success()) { source.sendFailure(Component.literal(result.message())); return 0; }
+        source.sendSuccess(() -> Component.literal(result.message()), true);
         return 1;
     }
 

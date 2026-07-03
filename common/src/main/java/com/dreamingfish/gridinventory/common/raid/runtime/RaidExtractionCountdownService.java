@@ -77,17 +77,13 @@ public final class RaidExtractionCountdownService {
     }
 
     public static String trigger(MinecraftServer server, RaidManifest raid, String extractionId, ServerPlayer player) {
+        String eligibility = canTrigger(raid, extractionId);
+        if (eligibility != null) return eligibility;
         RaidExtractionActivation extraction = raid.activeExtractions().stream()
                 .filter(value -> value.id().equals(extractionId)).findFirst().orElse(null);
-        if (extraction == null) return "Extraction not found.";
-        if (!"global".equals(extraction.timer().type())) return "Extraction is not a global timer extraction.";
-        if (!extraction.trigger().requiresGlobalTimer()) return "Extraction has no global trigger.";
-        if (!"always".equals(extraction.availability().type())) return "Timed availability needs raid clock in future phase.";
         RaidExtractionRuntimeState old = raid.extractionStates().getOrDefault(extractionId,
                 RaidExtractionRuntimeState.ready(extractionId, extraction.useLimit()));
-        if (old.exhausted()) return "Extraction is exhausted.";
         String key = globalKey(raid.raidId(), extractionId);
-        if (GLOBAL_COUNTDOWNS.containsKey(key)) return "Extraction countdown already running.";
         int remaining = old.remainingUses();
         if ("trigger".equals(extraction.consumeUseOn()) && remaining > 0) remaining--;
         long now = server.overworld().getGameTime();
@@ -98,6 +94,21 @@ public final class RaidExtractionCountdownService {
                 extraction.timer().seconds() * 20, player == null ? null : player.getUUID(),
                 player == null ? "" : player.getName().getString()));
         return "Triggered extraction " + extractionId + " countdown=" + extraction.timer().seconds() + "s";
+    }
+    public static String canTrigger(RaidManifest raid, String extractionId) {
+        RaidExtractionActivation extraction = raid.activeExtractions().stream()
+                .filter(value -> value.id().equals(extractionId)).findFirst().orElse(null);
+        if (extraction == null) return "Extraction not found.";
+        if (!"global".equals(extraction.timer().type())) return "Extraction is not a global timer extraction.";
+        if (!extraction.trigger().requiresGlobalTimer()) return "Extraction has no global trigger.";
+        if (!"always".equals(extraction.availability().type())) return "Timed availability needs raid clock in future phase.";
+        RaidExtractionRuntimeState state = raid.extractionStates().getOrDefault(extractionId,
+                RaidExtractionRuntimeState.ready(extractionId, extraction.useLimit()));
+        if (state.exhausted()) return "Extraction is exhausted.";
+        if (GLOBAL_COUNTDOWNS.containsKey(globalKey(raid.raidId(), extractionId))) {
+            return "Extraction countdown already running.";
+        }
+        return null;
     }
 
     private static void finishGlobal(MinecraftServer server, RaidExtractionGlobalCountdown countdown) {

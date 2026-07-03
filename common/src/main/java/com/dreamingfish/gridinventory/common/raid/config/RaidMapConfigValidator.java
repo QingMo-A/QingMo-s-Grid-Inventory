@@ -38,11 +38,28 @@ public final class RaidMapConfigValidator {
         validateVariants(map, issues);
         validateNavigation(map, issues);
         validateExtractions(map, issues);
+        validateExtractionSwitches(map, issues);
         validateSpawns(map, issues);
         validateLooseLoot(map, types, issues);
         validateRange("spawn_active_count", map.spawnActiveCount(), issues);
         validateRange("extraction_active_count", map.extractionActiveCount(), issues);
         return new RaidMapValidationResult(List.copyOf(issues));
+    }
+    private static void validateExtractionSwitches(RaidMapConfig map, List<RaidMapValidationIssue> issues) {
+        Set<String> ids = unique(map.extractionSwitches().stream()
+                .map(RaidExtractionSwitchConfig::id).toList(), "extraction switch", issues);
+        for (RaidExtractionSwitchConfig value : map.extractionSwitches()) {
+            if (value.pos() == null || value.pos().length != 3
+                    || !map.bounds().contains(value.localBlockPos())) {
+                error(issues, "extraction switch outside bounds: " + value.id());
+            }
+            if (value.radius() <= 0) warn(issues, "extraction switch radius corrected to 3.0: " + value.id());
+        }
+        for (RaidExtractionAnchorConfig extraction : map.extractionAnchors()) {
+            if (extraction.trigger().isSwitch() && !ids.contains(extraction.trigger().switchId())) {
+                error(issues, "switch extraction references unknown switch_id: " + extraction.trigger().switchId());
+            }
+        }
     }
 
     private static void validateLooseLoot(RaidMapConfig map, Set<String> types,

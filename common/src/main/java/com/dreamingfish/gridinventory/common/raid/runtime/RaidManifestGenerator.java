@@ -12,6 +12,7 @@ public final class RaidManifestGenerator {
         List<RaidVariantSelection> variants = selectVariants(map, seed);
         List<RaidSpawnActivation> spawns = selectSpawns(map, variants, seed);
         List<RaidExtractionActivation> extractions = selectExtractions(map, variants, seed);
+        List<RaidExtractionSwitchActivation> extractionSwitches = selectExtractionSwitches(map, variants);
         Map<String, RaidExtractionRuntimeState> extractionStates = new LinkedHashMap<>();
         extractions.forEach(extraction -> extractionStates.put(extraction.id(),
                 RaidExtractionRuntimeState.ready(extraction.id(), extraction.useLimit())));
@@ -46,11 +47,21 @@ public final class RaidManifestGenerator {
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
                 map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
                 Map.copyOf(zones), List.copyOf(activations), variants, extractions,
-                Map.copyOf(extractionStates), spawns, looseLoot,
+                Map.copyOf(extractionStates), extractionSwitches, spawns, looseLoot,
                 List.of(), List.of());
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
         // TODO Phase 47A: generate mob spawn manifest and event manifest.
+    }
+    private static List<RaidExtractionSwitchActivation> selectExtractionSwitches(
+            RaidMapConfig map, List<RaidVariantSelection> variants) {
+        Set<String> tags = variants.stream().flatMap(value -> value.tags().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        return map.extractionSwitches().stream().filter(RaidExtractionSwitchConfig::enabled)
+                .filter(value -> tags.containsAll(value.requiresTags()))
+                .filter(value -> value.forbiddenTags().stream().noneMatch(tags::contains))
+                .map(value -> new RaidExtractionSwitchActivation(value.id(), value.localBlockPos(),
+                        value.effectiveRadius(), value.displayName(), value.tags())).toList();
     }
 
     private static List<RaidLooseLootActivation> selectLooseLoot(

@@ -130,6 +130,17 @@ public final class RaidManifestStorage {
             extractions.add(value);
         });
         root.add("active_extractions", extractions);
+        JsonArray switches = new JsonArray();
+        manifest.activeExtractionSwitches().forEach(extractionSwitch -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("id", extractionSwitch.id());
+            value.add("local_pos", pos(extractionSwitch.localPos()));
+            value.addProperty("radius", extractionSwitch.radius());
+            value.addProperty("display_name", extractionSwitch.displayName());
+            value.add("tags", GSON.toJsonTree(extractionSwitch.tags()));
+            switches.add(value);
+        });
+        root.add("active_extraction_switches", switches);
         JsonArray extractionStates = new JsonArray();
         manifest.extractionStates().values().forEach(state -> {
             JsonObject value = new JsonObject();
@@ -263,6 +274,22 @@ public final class RaidManifestStorage {
             }
         }
         List<RaidSpawnActivation> spawns = new ArrayList<>();
+        List<RaidExtractionSwitchActivation> switches = new ArrayList<>();
+        if (root.has("active_extraction_switches") && root.get("active_extraction_switches").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("active_extraction_switches")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    String id = string(value, "id", "");
+                    if (id.isBlank()) throw new JsonParseException("Empty extraction switch id");
+                    List<String> tags = new ArrayList<>();
+                    if (value.has("tags")) value.getAsJsonArray("tags").forEach(tag -> tags.add(tag.getAsString()));
+                    switches.add(new RaidExtractionSwitchActivation(id, readRequiredPos(value, "local_pos"),
+                            decimal(value, "radius", 3.0D), string(value, "display_name", ""), tags));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid extraction switch", exception);
+                }
+            }
+        }
         if (root.has("active_spawns") && root.get("active_spawns").isJsonArray()) {
             for (JsonElement element : root.getAsJsonArray("active_spawns")) {
                 try {
@@ -359,7 +386,7 @@ public final class RaidManifestStorage {
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
                 Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants),
-                List.copyOf(extractions), extractionStates, List.copyOf(spawns),
+                List.copyOf(extractions), extractionStates, List.copyOf(switches), List.copyOf(spawns),
                 List.copyOf(looseLoot), List.copyOf(extractedPlayers),
                 List.copyOf(participants));
     }

@@ -40,7 +40,8 @@ public final class RaidMapConfigLoader {
                 spawnCount == null ? new IntRangeConfig(1, 1) : range(spawnCount),
                 spawns(directory.resolve("spawn_anchors.json")),
                 ranges(map, "loose_loot_group_counts"),
-                looseLoot(directory.resolve("loose_loot_anchors.json")));
+                looseLoot(directory.resolve("loose_loot_anchors.json")),
+                extractionSwitches(directory.resolve("extraction_switches.json")));
     }
 
     private static JsonElement read(Path path) throws IOException {
@@ -215,6 +216,18 @@ public final class RaidMapConfigLoader {
                     integer(anchor, "weight", 1), bool(anchor, "enabled", true),
                     bool(anchor, "always_active", false), strings(anchor, "requires_tags"),
                     strings(anchor, "forbidden_tags"), strings(anchor, "tags")));
+        }
+        return List.copyOf(result);
+    }
+    private static List<RaidExtractionSwitchConfig> extractionSwitches(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) return List.of();
+        List<RaidExtractionSwitchConfig> result = new ArrayList<>();
+        for (JsonElement element : read(path).getAsJsonArray()) {
+            JsonObject value = element.getAsJsonObject();
+            result.add(new RaidExtractionSwitchConfig(string(value, "id"), flexibleIntArray(value, "pos"),
+                    decimal(value, "radius", 3.0D), bool(value, "enabled", true),
+                    strings(value, "requires_tags"), strings(value, "forbidden_tags"),
+                    string(value, "display_name"), strings(value, "tags")));
         }
         return List.copyOf(result);
     }

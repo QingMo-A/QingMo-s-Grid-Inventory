@@ -93,6 +93,20 @@ public final class RaidMapExampleWriter {
                   {"id":"delivery_exit","node":"exit_a","pos":[20,1,0],"radius":3.0,"weight":100,"enabled":true,"always_active":true,"requires_tags":[],"forbidden_tags":[],"display_name":"Delivery Exit","tags":["extraction","item_turn_in"],"availability":{"type":"always"},"trigger":{"type":"item_turn_in","requirements":[{"item":"minecraft:emerald","count":3}]},"timer":{"type":"global","seconds":45,"leave_behavior":"ignore"},"use_limit":2,"consume_use_on":"success"}
                 ]
                 """);
+        writeNew(directory.resolve("extraction_switches.json"), """
+                [
+                  {
+                    "id": "elevator_power_switch",
+                    "pos": [18, 1, -3],
+                    "radius": 2.5,
+                    "enabled": true,
+                    "requires_tags": [],
+                    "forbidden_tags": [],
+                    "display_name": "Elevator Power Switch",
+                    "tags": ["switch", "elevator"]
+                  }
+                ]
+                """);
         writeNew(directory.resolve("spawn_anchors.json"), """
                 [
                   {

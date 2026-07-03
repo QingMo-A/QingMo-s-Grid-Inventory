@@ -19,7 +19,8 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
                             IntRangeConfig spawnActiveCount,
                             List<RaidSpawnAnchorConfig> spawnAnchors,
                             Map<String, IntRangeConfig> looseLootGroupCounts,
-                            List<RaidLooseLootAnchorConfig> looseLootAnchors) {
+                            List<RaidLooseLootAnchorConfig> looseLootAnchors,
+                            List<RaidExtractionSwitchConfig> extractionSwitches) {
     // TODO Phase 48B: apply origin offset to all local anchor positions for multi-instance raids.
     public RaidMapConfig {
         dimension = dimension == null || dimension.isBlank() ? "minecraft:overworld" : dimension;
@@ -33,6 +34,7 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
         spawnAnchors = spawnAnchors == null ? List.of() : List.copyOf(spawnAnchors);
         looseLootGroupCounts = looseLootGroupCounts == null ? Map.of() : Map.copyOf(looseLootGroupCounts);
         looseLootAnchors = looseLootAnchors == null ? List.of() : List.copyOf(looseLootAnchors);
+        extractionSwitches = extractionSwitches == null ? List.of() : List.copyOf(extractionSwitches);
     }
 
     public BlockPos pasteOriginPos() { return pos(origin, BlockPos.ZERO); }
