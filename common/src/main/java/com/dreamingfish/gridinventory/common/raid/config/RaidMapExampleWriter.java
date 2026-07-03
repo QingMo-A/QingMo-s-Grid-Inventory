@@ -25,7 +25,10 @@ public final class RaidMapExampleWriter {
                   "expected_players": 4,
                   "raid_time_seconds": 1800,
                   "extraction_active_count": {"min": 1, "max": 1},
-                  "spawn_active_count": {"min": 1, "max": 1}
+                  "spawn_active_count": {"min": 1, "max": 1},
+                  "loose_loot_group_counts": {
+                    "office_desks": {"min": 1, "max": 2}
+                  }
                 }
                 """.formatted(mapId, dimension, origin.getX(), origin.getY(), origin.getZ()));
         writeNew(directory.resolve("zones.json"), """
@@ -114,6 +117,38 @@ public final class RaidMapExampleWriter {
                     "forbidden_tags": [],
                     "display_name": "Example Spawn",
                     "tags": ["spawn"]
+                  }
+                ]
+                """);
+        writeNew(directory.resolve("loose_loot_anchors.json"), """
+                [
+                  {
+                    "id": "desk_loot_01",
+                    "group_id": "office_desks",
+                    "pos": [8, 1, 4],
+                    "container_type": "generic_crate",
+                    "point_budget": 300,
+                    "quality_multiplier": 1.0,
+                    "weight": 100,
+                    "enabled": true,
+                    "always_active": false,
+                    "requires_tags": [],
+                    "forbidden_tags": [],
+                    "tags": ["desk", "office"]
+                  },
+                  {
+                    "id": "desk_loot_02",
+                    "group_id": "office_desks",
+                    "pos": [10, 1, 4],
+                    "container_type": "generic_crate",
+                    "point_budget": 400,
+                    "quality_multiplier": 1.1,
+                    "weight": 75,
+                    "enabled": true,
+                    "always_active": false,
+                    "requires_tags": ["open"],
+                    "forbidden_tags": ["blocked"],
+                    "tags": ["desk", "office"]
                   }
                 ]
                 """);

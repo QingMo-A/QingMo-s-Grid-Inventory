@@ -135,6 +135,20 @@ public final class RaidManifestStorage {
             spawns.add(value);
         });
         root.add("active_spawns", spawns);
+        JsonArray looseLoot = new JsonArray();
+        manifest.activeLooseLoot().forEach(anchor -> {
+            JsonObject value = new JsonObject();
+            value.addProperty("anchor_id", anchor.anchorId());
+            value.addProperty("group_id", anchor.groupId());
+            value.add("local_pos", pos(anchor.localPos()));
+            value.addProperty("container_type", anchor.containerType());
+            value.addProperty("point_budget", anchor.pointBudget());
+            value.addProperty("quality_multiplier", anchor.qualityMultiplier());
+            value.addProperty("loot_seed", anchor.lootSeed());
+            value.add("tags", GSON.toJsonTree(anchor.tags()));
+            looseLoot.add(value);
+        });
+        root.add("active_loose_loot", looseLoot);
         JsonArray extractedPlayers = new JsonArray();
         manifest.extractedPlayers().forEach(player -> {
             JsonObject value = new JsonObject();
@@ -247,6 +261,26 @@ public final class RaidManifestStorage {
             }
         }
         List<RaidExtractedPlayer> extractedPlayers = new ArrayList<>();
+        List<RaidLooseLootActivation> looseLoot = new ArrayList<>();
+        if (root.has("active_loose_loot") && root.get("active_loose_loot").isJsonArray()) {
+            for (JsonElement element : root.getAsJsonArray("active_loose_loot")) {
+                try {
+                    JsonObject value = element.getAsJsonObject();
+                    String id = string(value, "anchor_id", "");
+                    if (id.isBlank()) throw new JsonParseException("Empty loose loot anchor id");
+                    List<String> tags = new ArrayList<>();
+                    if (value.has("tags") && value.get("tags").isJsonArray()) {
+                        value.getAsJsonArray("tags").forEach(tag -> tags.add(tag.getAsString()));
+                    }
+                    looseLoot.add(new RaidLooseLootActivation(id, string(value, "group_id", ""),
+                            readRequiredPos(value, "local_pos"), string(value, "container_type", ""),
+                            integer(value, "point_budget", 0), decimal(value, "quality_multiplier", 1.0D),
+                            longValue(value, "loot_seed", 0L), tags));
+                } catch (Exception exception) {
+                    DFGridInventory.LOGGER.warn("Skipping damaged raid loose loot activation", exception);
+                }
+            }
+        }
         if (root.has("extracted_players") && root.get("extracted_players").isJsonArray()) {
             for (JsonElement element : root.getAsJsonArray("extracted_players")) {
                 try {
@@ -280,7 +314,7 @@ public final class RaidManifestStorage {
                 string(root, "map_id", ""), string(root, "dimension_id", "minecraft:overworld"),
                 readPos(root, "paste_origin"), readPos(root, "default_spawn_local"), state,
                 Map.copyOf(zones), List.copyOf(containers), List.copyOf(variants),
-                List.copyOf(extractions), List.copyOf(spawns), List.copyOf(extractedPlayers),
+                List.copyOf(extractions), List.copyOf(spawns), List.copyOf(looseLoot), List.copyOf(extractedPlayers),
                 List.copyOf(participants));
     }
 

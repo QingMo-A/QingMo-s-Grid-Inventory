@@ -38,7 +38,9 @@ public final class RaidMapConfigLoader {
                 extractionCount == null ? new IntRangeConfig(1, 1) : range(extractionCount),
                 extractions(directory.resolve("extraction_anchors.json")),
                 spawnCount == null ? new IntRangeConfig(1, 1) : range(spawnCount),
-                spawns(directory.resolve("spawn_anchors.json")));
+                spawns(directory.resolve("spawn_anchors.json")),
+                ranges(map, "loose_loot_group_counts"),
+                looseLoot(directory.resolve("loose_loot_anchors.json")));
     }
 
     private static JsonElement read(Path path) throws IOException {
@@ -167,6 +169,29 @@ public final class RaidMapConfigLoader {
                     bool(anchor, "enabled", true), bool(anchor, "always_active", false),
                     strings(anchor, "requires_tags"), strings(anchor, "forbidden_tags"),
                     string(anchor, "display_name"), strings(anchor, "tags")));
+        }
+        return List.copyOf(result);
+    }
+
+    private static Map<String, IntRangeConfig> ranges(JsonObject root, String key) {
+        if (!root.has(key) || !root.get(key).isJsonObject()) return Map.of();
+        Map<String, IntRangeConfig> result = new LinkedHashMap<>();
+        root.getAsJsonObject(key).entrySet().forEach(entry ->
+                result.put(entry.getKey(), range(entry.getValue().getAsJsonObject())));
+        return Map.copyOf(result);
+    }
+
+    private static List<RaidLooseLootAnchorConfig> looseLoot(Path path) throws IOException {
+        if (!Files.isRegularFile(path)) return List.of();
+        List<RaidLooseLootAnchorConfig> result = new ArrayList<>();
+        for (JsonElement element : read(path).getAsJsonArray()) {
+            JsonObject anchor = element.getAsJsonObject();
+            result.add(new RaidLooseLootAnchorConfig(string(anchor, "id"), string(anchor, "group_id"),
+                    flexibleIntArray(anchor, "pos"), string(anchor, "container_type"),
+                    integer(anchor, "point_budget", 0), decimal(anchor, "quality_multiplier", 1.0D),
+                    integer(anchor, "weight", 1), bool(anchor, "enabled", true),
+                    bool(anchor, "always_active", false), strings(anchor, "requires_tags"),
+                    strings(anchor, "forbidden_tags"), strings(anchor, "tags")));
         }
         return List.copyOf(result);
     }

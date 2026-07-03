@@ -27,8 +27,9 @@ public final class RaidWorldResetter {
             DFGridInventory.LOGGER.warn(
                     "Raid reset refused mapId={} raidId={} localMin={} localMax={} volume={} maxVolume={}",
                     manifest.mapId(), manifest.raidId(), localMin, localMax, volume, MAX_RESET_VOLUME);
-            return new RaidWorldResetResult(true, 0, false, false, 0, 1);
+            return new RaidWorldResetResult(true, 0, false, false, 0, 0, 1);
         }
+        RaidLooseLootCleanResult looseLoot = RaidLooseLootCleaner.clean(level, map, manifest);
         BlockPos worldMin = manifest.toWorldPos(localMin);
         BlockPos worldMax = manifest.toWorldPos(localMax);
         int cleared = 0;
@@ -52,6 +53,6 @@ public final class RaidWorldResetter {
             placeholders++;
         }
         return new RaidWorldResetResult(false, cleared, template.applied(), template.missing(),
-                placeholders, template.missing() ? 1 : 0);
+                placeholders, looseLoot.entitiesCleared(), template.missing() ? 1 : 0);
     }
 }

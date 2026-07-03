@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
+import java.util.Map;
 
 public record RaidMapConfig(String id, String displayName, String dimension, ResourceLocation template,
                             int[] origin, int[] defaultSpawn,
@@ -16,7 +17,9 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
                             IntRangeConfig extractionActiveCount,
                             List<RaidExtractionAnchorConfig> extractionAnchors,
                             IntRangeConfig spawnActiveCount,
-                            List<RaidSpawnAnchorConfig> spawnAnchors) {
+                            List<RaidSpawnAnchorConfig> spawnAnchors,
+                            Map<String, IntRangeConfig> looseLootGroupCounts,
+                            List<RaidLooseLootAnchorConfig> looseLootAnchors) {
     // TODO Phase 48B: apply origin offset to all local anchor positions for multi-instance raids.
     // TODO Phase 48C: restore placeholder blocks on raid reset.
     public RaidMapConfig {
@@ -29,6 +32,8 @@ public record RaidMapConfig(String id, String displayName, String dimension, Res
         extractionAnchors = extractionAnchors == null ? List.of() : List.copyOf(extractionAnchors);
         spawnActiveCount = spawnActiveCount == null ? new IntRangeConfig(1, 1) : spawnActiveCount;
         spawnAnchors = spawnAnchors == null ? List.of() : List.copyOf(spawnAnchors);
+        looseLootGroupCounts = looseLootGroupCounts == null ? Map.of() : Map.copyOf(looseLootGroupCounts);
+        looseLootAnchors = looseLootAnchors == null ? List.of() : List.copyOf(looseLootAnchors);
     }
 
     public BlockPos pasteOriginPos() { return pos(origin, BlockPos.ZERO); }

@@ -93,11 +93,12 @@ public final class RaidWorldApplier {
         }
         // TODO Phase 45C: apply structure variants for large local map changes.
         // TODO Phase 45B: enable extraction points from RaidManifest.
-        // TODO Phase 46A: spawn/static-render loose loot nodes from LooseLootManifest.
         // TODO Phase 48A: restore/reset raid instance world after raid ends.
         // TODO Phase 50A: allocate unique pasteOrigin and/or isolated dimension per RaidInstance.
+        RaidLooseLootApplyResult looseLoot = RaidLooseLootApplier.apply(level, map, manifest);
         return new RaidWorldApplyResult(template.applied(), template.missing(), variants.patchesApplied(),
-                placed, rebound, cleared, warnings);
+                placed, rebound, cleared, looseLoot.anchorsApplied(), looseLoot.stacksSpawned(),
+                looseLoot.consumedBudget(), warnings + looseLoot.warnings());
     }
 
     private static RaidTemplateApplyResult skippedTemplate() {

@@ -14,6 +14,7 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
                            List<RaidVariantSelection> variantSelections,
                            List<RaidExtractionActivation> activeExtractions,
                            List<RaidSpawnActivation> activeSpawns,
+                           List<RaidLooseLootActivation> activeLooseLoot,
                            List<RaidExtractedPlayer> extractedPlayers,
                            List<RaidParticipant> participants) {
     public RaidManifest {
@@ -22,6 +23,7 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
         variantSelections = variantSelections == null ? List.of() : List.copyOf(variantSelections);
         activeExtractions = activeExtractions == null ? List.of() : List.copyOf(activeExtractions);
         activeSpawns = activeSpawns == null ? List.of() : List.copyOf(activeSpawns);
+        activeLooseLoot = activeLooseLoot == null ? List.of() : List.copyOf(activeLooseLoot);
         extractedPlayers = extractedPlayers == null ? List.of() : List.copyOf(extractedPlayers);
         participants = participants == null ? List.of() : List.copyOf(participants);
     }
@@ -34,7 +36,7 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
     public BlockPos defaultSpawnWorld() { return toWorldPos(defaultSpawnLocal); }
     public RaidManifest withState(RaidLifecycleState newState) {
         return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
-                newState, zones, activeContainers, variantSelections, activeExtractions, activeSpawns,
+                newState, zones, activeContainers, variantSelections, activeExtractions, activeSpawns, activeLooseLoot,
                 extractedPlayers, participants);
     }
     public boolean isPlayerExtracted(UUID playerId) {
@@ -46,7 +48,7 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
         List<RaidExtractedPlayer> updated = new java.util.ArrayList<>(extractedPlayers);
         updated.add(player);
         return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
-                state, zones, activeContainers, variantSelections, activeExtractions, activeSpawns,
+                state, zones, activeContainers, variantSelections, activeExtractions, activeSpawns, activeLooseLoot,
                 List.copyOf(updated), participants);
     }
     public boolean isParticipant(UUID playerId) {
@@ -59,12 +61,12 @@ public record RaidManifest(long raidId, long raidSeed, String mapId, String dime
         List<RaidParticipant> updated = new java.util.ArrayList<>(participants);
         updated.add(participant);
         return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
-                state, zones, activeContainers, variantSelections, activeExtractions, activeSpawns,
+                state, zones, activeContainers, variantSelections, activeExtractions, activeSpawns, activeLooseLoot,
                 extractedPlayers, List.copyOf(updated));
     }
     public RaidManifest withClearedRunState(RaidLifecycleState newState) {
         return new RaidManifest(raidId, raidSeed, mapId, dimensionId, pasteOrigin, defaultSpawnLocal,
-                newState, zones, activeContainers, variantSelections, activeExtractions, activeSpawns,
+                newState, zones, activeContainers, variantSelections, activeExtractions, activeSpawns, activeLooseLoot,
                 List.of(), List.of());
     }
 }

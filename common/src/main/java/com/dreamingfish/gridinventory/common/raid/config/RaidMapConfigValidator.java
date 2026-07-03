@@ -5,7 +5,6 @@ import java.util.*;
 public final class RaidMapConfigValidator {
     // TODO Phase 44C: validate anchor group limits and group coverage.
     // TODO Phase 49C: load participant/team spawn rules.
-    // TODO Phase 46A: load loose_loot_anchors.json.
     // TODO Phase 44D: load item value config with spawn_cost/sell_value/combat_score/rarity_weight.
     private RaidMapConfigValidator() {
     }
@@ -40,9 +39,44 @@ public final class RaidMapConfigValidator {
         validateNavigation(map, issues);
         validateExtractions(map, issues);
         validateSpawns(map, issues);
+        validateLooseLoot(map, types, issues);
         validateRange("spawn_active_count", map.spawnActiveCount(), issues);
         validateRange("extraction_active_count", map.extractionActiveCount(), issues);
         return new RaidMapValidationResult(List.copyOf(issues));
+    }
+
+    private static void validateLooseLoot(RaidMapConfig map, Set<String> types,
+                                          List<RaidMapValidationIssue> issues) {
+        Set<String> ids = new HashSet<>();
+        Set<String> groups = new HashSet<>();
+        for (RaidLooseLootAnchorConfig anchor : map.looseLootAnchors()) {
+            if (anchor.id().isBlank() || !ids.add(anchor.id())) {
+                error(issues, "duplicate/empty loose loot anchor id: " + anchor.id());
+            }
+            if (anchor.groupId().isBlank()) error(issues, "empty loose loot group: " + anchor.id());
+            else groups.add(anchor.groupId());
+            if (anchor.pos() == null || anchor.pos().length != 3
+                    || !map.bounds().contains(anchor.localBlockPos())) {
+                error(issues, "loose loot anchor outside bounds: " + anchor.id());
+            }
+            if (anchor.containerType().isBlank() || !types.contains(anchor.containerType())) {
+                error(issues, "unknown container type for loose loot anchor " + anchor.id());
+            }
+            if (anchor.pointBudget() <= 0) warn(issues, "loose loot point_budget <= 0: " + anchor.id());
+            if (anchor.qualityMultiplier() <= 0) warn(issues, "loose loot quality_multiplier corrected to 1: " + anchor.id());
+            if (anchor.weight() <= 0) warn(issues, "loose loot weight corrected to 1: " + anchor.id());
+            if (anchor.enabled() && !anchor.alwaysActive()
+                    && !map.looseLootGroupCounts().containsKey(anchor.groupId())) {
+                warn(issues, "loose loot group has no count rule and will only spawn always_active anchors: "
+                        + anchor.groupId());
+            }
+        }
+        map.looseLootGroupCounts().forEach((group, range) -> {
+            if (range.min() < 0 || range.max() < range.min()) {
+                error(issues, "invalid loose loot group count range: " + group);
+            }
+            if (!groups.contains(group)) warn(issues, "loose loot count rule references unknown group: " + group);
+        });
     }
 
     private static void validateVariants(RaidMapConfig map, List<RaidMapValidationIssue> issues) {

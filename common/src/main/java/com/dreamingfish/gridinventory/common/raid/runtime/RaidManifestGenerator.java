@@ -12,6 +12,7 @@ public final class RaidManifestGenerator {
         List<RaidVariantSelection> variants = selectVariants(map, seed);
         List<RaidSpawnActivation> spawns = selectSpawns(map, variants, seed);
         List<RaidExtractionActivation> extractions = selectExtractions(map, variants, seed);
+        List<RaidLooseLootActivation> looseLoot = selectLooseLoot(map, variants, seed);
         Map<String, ZoneRaidState> zones = new LinkedHashMap<>();
         List<ContainerAnchorActivation> activations = new ArrayList<>();
         Map<String, RaidContainerTypeConfig> types = new HashMap<>();
@@ -41,12 +42,50 @@ public final class RaidManifestGenerator {
         }
         return new RaidManifest(raidId, seed, map.id(), map.dimension(), map.pasteOriginPos(),
                 map.defaultSpawnLocalPos(), RaidLifecycleState.CREATED,
-                Map.copyOf(zones), List.copyOf(activations), variants, extractions, spawns,
+                Map.copyOf(zones), List.copyOf(activations), variants, extractions, spawns, looseLoot,
                 List.of(), List.of());
         // TODO Phase 44D: allocate global rare items before normal container loot.
         // TODO Phase 44D: generate ContainerLootManifest from pointBudget instead of fallback loot table.
         // TODO Phase 46A: activate loose loot anchors and generate LooseLootManifest.
         // TODO Phase 47A: generate mob spawn manifest and event manifest.
+    }
+
+    private static List<RaidLooseLootActivation> selectLooseLoot(
+            RaidMapConfig map, List<RaidVariantSelection> variants, long seed) {
+        Set<String> tags = variants.stream().flatMap(v -> v.tags().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        List<RaidLooseLootAnchorConfig> eligible = map.looseLootAnchors().stream()
+                .filter(RaidLooseLootAnchorConfig::enabled)
+                .filter(a -> tags.containsAll(a.requiresTags()))
+                .filter(a -> a.forbiddenTags().stream().noneMatch(tags::contains)).toList();
+        Random random = new Random(seed ^ map.id().hashCode() ^ 0x4C4F4F53454C4F4FL);
+        List<RaidLooseLootAnchorConfig> selected = new ArrayList<>(
+                eligible.stream().filter(RaidLooseLootAnchorConfig::alwaysActive).toList());
+        Map<String, List<RaidLooseLootAnchorConfig>> groups = new TreeMap<>();
+        eligible.stream().filter(a -> !a.alwaysActive())
+                .forEach(a -> groups.computeIfAbsent(a.groupId(), ignored -> new ArrayList<>()).add(a));
+        groups.forEach((group, candidates) -> {
+            IntRangeConfig range = map.looseLootGroupCounts().getOrDefault(group, new IntRangeConfig(0, 0));
+            selected.addAll(weightedLooseSample(candidates, Math.min(roll(random, range), candidates.size()), random));
+        });
+        Set<String> ids = new HashSet<>();
+        return selected.stream().filter(a -> ids.add(a.id()))
+                .map(a -> new RaidLooseLootActivation(a.id(), a.groupId(), a.localBlockPos(),
+                        a.containerType(), a.pointBudget(), a.effectiveQualityMultiplier(), random.nextLong(), a.tags()))
+                .toList();
+    }
+
+    private static List<RaidLooseLootAnchorConfig> weightedLooseSample(
+            List<RaidLooseLootAnchorConfig> source, int count, Random random) {
+        List<RaidLooseLootAnchorConfig> pool = new ArrayList<>(source), result = new ArrayList<>();
+        while (result.size() < count && !pool.isEmpty()) {
+            int roll = random.nextInt(pool.stream().mapToInt(RaidLooseLootAnchorConfig::effectiveWeight).sum());
+            for (int i = 0; i < pool.size(); i++) {
+                roll -= pool.get(i).effectiveWeight();
+                if (roll < 0) { result.add(pool.remove(i)); break; }
+            }
+        }
+        return result;
     }
 
     private static List<RaidVariantSelection> selectVariants(RaidMapConfig map, long seed) {
