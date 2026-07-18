@@ -124,7 +124,7 @@
       "target": "minecraft:totem_of_undying",
       "width": 1,
       "height": 2,
-      "rotatable": false
+      "rotatable": true
     }
   ]
 }
