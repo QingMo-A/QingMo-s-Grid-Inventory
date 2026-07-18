@@ -12,6 +12,7 @@ import com.dreamingfish.gridinventory.common.data.NamedGridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerAccess;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
+import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -42,7 +43,7 @@ public final class NestedContainerWindowManager {
     private long lastRefreshNanos;
 
     public boolean open(ItemStack stack, NestedContainerPath path, int mouseX, int mouseY, int screenWidth, int screenHeight) {
-        if (stack.isEmpty() || !NestedContainerAccess.hasOpenableContainer(stack)) {
+        if (stack.isEmpty() || GridBackpackItem.isFolded(stack) || !NestedContainerAccess.hasOpenableContainer(stack)) {
             return false;
         }
         for (Window window : windows) {
