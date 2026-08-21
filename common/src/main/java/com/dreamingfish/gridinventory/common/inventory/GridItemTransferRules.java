@@ -33,6 +33,9 @@ public final class GridItemTransferRules {
         if (target instanceof GridItemTarget.NestedEquipmentStoragePlacement nested) {
             return nested.ownerPath().depth() + 1;
         }
+        if (target instanceof GridItemTarget.PlayerGridPlacement) {
+            return 0;
+        }
         return 0;
     }
 
@@ -47,6 +50,9 @@ public final class GridItemTransferRules {
             return placement.folded();
         }
         if (target instanceof GridItemTarget.NestedEquipmentStoragePlacement placement) {
+            return placement.folded();
+        }
+        if (target instanceof GridItemTarget.PlayerGridPlacement placement) {
             return placement.folded();
         }
         return null;

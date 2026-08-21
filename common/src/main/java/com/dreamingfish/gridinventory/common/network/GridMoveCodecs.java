@@ -60,6 +60,12 @@ public final class GridMoveCodecs {
             buf.writeVarInt(value.tabIndex());
             buf.writeVarInt(value.itemIndex());
             buf.writeVarInt(value.count());
+        } else if (source instanceof GridItemSource.PlayerGridEntry value) {
+            buf.writeVarInt(8);
+            buf.writeUUID(value.entryId());
+        } else if (source instanceof GridItemSource.MenuCarried value) {
+            buf.writeVarInt(9);
+            buf.writeVarInt(value.containerId());
         } else {
             throw new DecoderException("Unsupported grid item source: " + source);
         }
@@ -78,6 +84,8 @@ public final class GridMoveCodecs {
             case 5 -> new GridItemSource.AccessorySlot(buf.readUtf(MAX_STRING_LENGTH), buf.readVarInt());
             case 6 -> new GridItemSource.GroundItem(buf.readVarInt());
             case 7 -> new GridItemSource.CreativeItem(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+            case 8 -> new GridItemSource.PlayerGridEntry(buf.readUUID());
+            case 9 -> new GridItemSource.MenuCarried(buf.readVarInt());
             default -> throw new DecoderException("Invalid grid item source type: " + type);
         };
     }
@@ -107,6 +115,13 @@ public final class GridMoveCodecs {
             buf.writeVarInt(5);
             buf.writeUtf(value.identifier(), MAX_STRING_LENGTH);
             buf.writeVarInt(value.index());
+        } else if (target instanceof GridItemTarget.PlayerGridPlacement value) {
+            buf.writeVarInt(6);
+            writePlacement(buf, value.x(), value.y(), value.rotated(), value.folded());
+        } else if (target instanceof GridItemTarget.MenuSlot value) {
+            buf.writeVarInt(7);
+            buf.writeVarInt(value.containerId());
+            buf.writeVarInt(value.slotIndex());
         } else {
             throw new DecoderException("Unsupported grid item target: " + target);
         }
@@ -127,6 +142,9 @@ public final class GridMoveCodecs {
                     buf.readUtf(MAX_STRING_LENGTH), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
                     buf.readBoolean());
             case 5 -> new GridItemTarget.AccessorySlot(buf.readUtf(MAX_STRING_LENGTH), buf.readVarInt());
+            case 6 -> new GridItemTarget.PlayerGridPlacement(buf.readVarInt(), buf.readVarInt(),
+                    buf.readBoolean(), buf.readBoolean());
+            case 7 -> new GridItemTarget.MenuSlot(buf.readVarInt(), buf.readVarInt());
             default -> throw new DecoderException("Invalid grid item target type: " + type);
         };
     }

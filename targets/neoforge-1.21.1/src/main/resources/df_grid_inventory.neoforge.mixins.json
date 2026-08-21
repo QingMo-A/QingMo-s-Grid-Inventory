@@ -6,6 +6,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
+    "client.AbstractContainerScreenMixin",
     "client.MinecraftMixin",
     "client.InventoryScreenMixin",
     "client.SlotAccessor"

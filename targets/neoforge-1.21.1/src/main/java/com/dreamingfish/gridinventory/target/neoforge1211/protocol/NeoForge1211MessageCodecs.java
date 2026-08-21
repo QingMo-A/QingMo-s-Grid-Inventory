@@ -229,6 +229,11 @@ public final class NeoForge1211MessageCodecs {
                 return OpenPlayerGridInventoryMessage.INSTANCE;
             }
         });
+        register(GridMessages.REQUEST_EXTERNAL_PLAYER_GRID, codec(
+                (m, b) -> {
+                },
+                b -> RequestExternalPlayerGridMessage.INSTANCE
+        ));
         register(GridMessages.PICKUP_GROUND_ITEM_INTO_EQUIPMENT_STORAGE, codec(
                 (m, b) -> { b.writeVarInt(m.entityId()); b.writeEnum(m.equipmentSlot()); b.writeUtf(m.containerId()); b.writeVarInt(m.targetX()); b.writeVarInt(m.targetY()); b.writeBoolean(m.rotated()); },
                 b -> new PickupGroundItemIntoEquipmentStorageMessage(b.readVarInt(), b.readEnum(EquipmentSlot.class), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readBoolean())
@@ -304,6 +309,10 @@ public final class NeoForge1211MessageCodecs {
                 return new SyncGridInventoryMessage(GridInventoryData.decode(buf));
             }
         });
+        register(GridMessages.SYNC_EXTERNAL_PLAYER_GRID, codec(
+                (m, b) -> m.data().encode(b),
+                b -> new SyncExternalPlayerGridMessage(GridInventoryData.decode(b))
+        ));
         register(GridMessages.SYNC_SEARCHABLE_CONTAINER_GRID, codec(
                 (m, b) -> { b.writeBlockPos(m.blockPos()); m.data().encode(b); },
                 b -> new SyncSearchableContainerGridMessage(b.readBlockPos(), GridInventoryData.decode(b))

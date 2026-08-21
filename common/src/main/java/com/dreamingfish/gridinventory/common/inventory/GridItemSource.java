@@ -12,7 +12,9 @@ public sealed interface GridItemSource permits
         GridItemSource.NestedEquipmentStorageEntry,
         GridItemSource.AccessorySlot,
         GridItemSource.GroundItem,
-        GridItemSource.CreativeItem {
+        GridItemSource.CreativeItem,
+        GridItemSource.PlayerGridEntry,
+        GridItemSource.MenuCarried {
 
     record PlayerSlot(int slot) implements GridItemSource {
     }
@@ -36,5 +38,11 @@ public sealed interface GridItemSource permits
     }
 
     record CreativeItem(int tabIndex, int itemIndex, int count) implements GridItemSource {
+    }
+
+    record PlayerGridEntry(UUID entryId) implements GridItemSource {
+    }
+
+    record MenuCarried(int containerId) implements GridItemSource {
     }
 }

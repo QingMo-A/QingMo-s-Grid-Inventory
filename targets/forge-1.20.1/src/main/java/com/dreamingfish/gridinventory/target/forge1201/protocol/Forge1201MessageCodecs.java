@@ -41,6 +41,8 @@ import com.dreamingfish.gridinventory.common.network.MovePlayerSlotToSearchableC
 import com.dreamingfish.gridinventory.common.network.MoveSearchableContainerEntryMessage;
 import com.dreamingfish.gridinventory.common.network.MoveSearchableContainerEntryToPlayerSlotMessage;
 import com.dreamingfish.gridinventory.common.network.OpenPlayerGridInventoryMessage;
+import com.dreamingfish.gridinventory.common.network.RequestExternalPlayerGridMessage;
+import com.dreamingfish.gridinventory.common.network.SyncExternalPlayerGridMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoEquipmentStorageMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.PickupGroundItemIntoGridMessage;
@@ -104,6 +106,11 @@ public final class Forge1201MessageCodecs {
                 (message, buf) -> {
                 },
                 buf -> OpenPlayerGridInventoryMessage.INSTANCE
+        ));
+        register(GridMessages.REQUEST_EXTERNAL_PLAYER_GRID, codec(
+                (message, buf) -> {
+                },
+                buf -> RequestExternalPlayerGridMessage.INSTANCE
         ));
         register(GridMessages.CREATIVE_INSERT_INTO_GRID, codec(
                 (message, buf) -> { buf.writeVarInt(message.tabIndex()); buf.writeVarInt(message.itemIndex()); buf.writeVarInt(message.count()); buf.writeVarInt(message.targetX()); buf.writeVarInt(message.targetY()); buf.writeBoolean(message.rotated()); buf.writeBoolean(message.folded()); },
@@ -174,6 +181,10 @@ public final class Forge1201MessageCodecs {
         register(GridMessages.SYNC_GRID_INVENTORY, codec(
                 (message, buf) -> message.data().encode(buf),
                 buf -> new SyncGridInventoryMessage(GridInventoryData.decode(buf))
+        ));
+        register(GridMessages.SYNC_EXTERNAL_PLAYER_GRID, codec(
+                (message, buf) -> message.data().encode(buf),
+                buf -> new SyncExternalPlayerGridMessage(GridInventoryData.decode(buf))
         ));
         register(GridMessages.SYNC_SEARCHABLE_CONTAINER_GRID, codec(
                 (message, buf) -> {

@@ -8,7 +8,9 @@ public sealed interface GridItemTarget permits
         GridItemTarget.EquipmentStoragePlacement,
         GridItemTarget.NestedGridPlacement,
         GridItemTarget.NestedEquipmentStoragePlacement,
-        GridItemTarget.AccessorySlot {
+        GridItemTarget.AccessorySlot,
+        GridItemTarget.PlayerGridPlacement,
+        GridItemTarget.MenuSlot {
 
     record PlayerSlot(int slot) implements GridItemTarget {
     }
@@ -29,5 +31,11 @@ public sealed interface GridItemTarget permits
     }
 
     record AccessorySlot(String identifier, int index) implements GridItemTarget {
+    }
+
+    record PlayerGridPlacement(int x, int y, boolean rotated, boolean folded) implements GridItemTarget {
+    }
+
+    record MenuSlot(int containerId, int slotIndex) implements GridItemTarget {
     }
 }
