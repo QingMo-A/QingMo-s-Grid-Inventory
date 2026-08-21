@@ -6,6 +6,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -103,33 +104,32 @@ public final class VanillaCreativeSidebarPanel {
             searchFocused = false;
             return false;
         }
-        if (button != 0 && button != 1) {
-            return false;
+        if (button != 0) {
+            searchFocused = false;
+            return true;
         }
-        if (button == 0) {
-            if (itemScrollbar.mouseClicked(mouseX, mouseY, button) || mouseClickedTabScrollbar(mouseX, mouseY, button)) {
-                searchFocused = false;
-                return true;
-            }
-            Optional<Integer> tab = hoveredTabIndex((int) mouseX, (int) mouseY);
-            if (tab.isPresent()) {
-                selectedTab = tab.get();
-                tabScroll = clampTabScroll(tabScroll);
-                resetItemScroll();
-                searchFocused = false;
-                return true;
-            }
-            if (inSearch(mouseX, mouseY)) {
-                searchFocused = true;
-                return true;
-            }
+        if (itemScrollbar.mouseClicked(mouseX, mouseY, button) || mouseClickedTabScrollbar(mouseX, mouseY, button)) {
+            searchFocused = false;
+            return true;
+        }
+        Optional<Integer> tab = hoveredTabIndex((int) mouseX, (int) mouseY);
+        if (tab.isPresent()) {
+            selectedTab = tab.get();
+            tabScroll = clampTabScroll(tabScroll);
+            resetItemScroll();
+            searchFocused = false;
+            return true;
+        }
+        if (inSearch(mouseX, mouseY)) {
+            searchFocused = true;
+            return true;
         }
         searchFocused = false;
         Optional<Integer> slot = hoveredSlot((int) mouseX, (int) mouseY);
         if (slot.isPresent()) {
             CreativeItemReference reference = visibleItems().get(slot.get());
             ItemStack draggedStack = reference.stack().copy();
-            draggedStack.setCount(button == 0 ? draggedStack.getMaxStackSize() : 1);
+            draggedStack.setCount(Screen.hasShiftDown() ? draggedStack.getMaxStackSize() : 1);
             draggedItem = new CreativeItemReference(reference.tabIndex(), reference.itemIndex(), draggedStack);
             return true;
         }
@@ -140,7 +140,7 @@ public final class VanillaCreativeSidebarPanel {
         if (itemScrollbar.mouseDragged(mouseX, mouseY, button) || mouseDraggedTabScrollbar(mouseX, mouseY, button)) {
             return true;
         }
-        return (button == 0 || button == 1) && draggedItem != null;
+        return button == 0 && draggedItem != null;
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
@@ -148,7 +148,7 @@ public final class VanillaCreativeSidebarPanel {
         if (releasedScrollbar) {
             return true;
         }
-        return (button == 0 || button == 1) && draggedItem != null;
+        return button == 0 && draggedItem != null;
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaY) {

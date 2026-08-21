@@ -70,8 +70,7 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         SidebarDragKind sidebarDragKind = rightSidebarPanel.dragKind();
-        if ((button == 0 || (button == 1 && sidebarDragKind == SidebarDragKind.CREATIVE_ITEM))
-                && sidebarDragKind != SidebarDragKind.NONE) {
+        if (button == 0 && sidebarDragKind != SidebarDragKind.NONE) {
             Optional<ContainerGridSidebarPanel.GridPlacementHit> placement =
                     rightSidebarPanel.containerPlacementAt((int) mouseX, (int) mouseY);
             if (placement.isPresent()) {
@@ -141,8 +140,7 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         SidebarDragKind sidebarDragKind = rightSidebarPanel.dragKind();
-        if ((button == 0 || (button == 1 && sidebarDragKind == SidebarDragKind.CREATIVE_ITEM))
-                && sidebarDragKind != SidebarDragKind.NONE) {
+        if (button == 0 && sidebarDragKind != SidebarDragKind.NONE) {
             rightSidebarPanel.switchToContainerTabIfHovered(mouseX, mouseY);
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);

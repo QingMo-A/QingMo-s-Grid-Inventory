@@ -254,10 +254,10 @@ public final class ExternalContainerSidebar {
                     sendMove(menu, dragSource, new GridItemTarget.MenuSlot(menu.containerId, slotIndex));
                     sent = true;
                 }
-            } else if (tab == Tab.GRID && dragSource instanceof GridItemSource.PlayerGridEntry) {
-                Optional<PocketHit> hit = pocketHit((int) mouseX, (int) mouseY);
-                if (hit.isPresent()) {
-                    sendMove(menu, dragSource, pocketTarget(hit.get(), dragStack));
+            } else if (expanded && contains(mouseX, mouseY)) {
+                Optional<GridItemTarget> target = sidebarTarget((int) mouseX, (int) mouseY, dragStack);
+                if (target.isPresent()) {
+                    sendMove(menu, dragSource, target.get());
                     sent = true;
                 }
             }
@@ -277,6 +277,16 @@ public final class ExternalContainerSidebar {
     public boolean mouseDragged(double mouseX, double mouseY, int button) {
         if (!active || !expanded) {
             return false;
+        }
+        if (button == 0 && inEquipmentTab(mouseX, mouseY)) {
+            tab = Tab.EQUIPMENT;
+            preferredTab = tab;
+            return true;
+        }
+        if (button == 0 && inGridTab(mouseX, mouseY)) {
+            tab = Tab.GRID;
+            preferredTab = tab;
+            return true;
         }
         if (gridPanel.mouseDragged(mouseX, mouseY, button)
                 || equipmentPanel.mouseDragged(mouseX, mouseY, button)) {

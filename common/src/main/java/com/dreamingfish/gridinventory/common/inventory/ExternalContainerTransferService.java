@@ -21,16 +21,20 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public final class ExternalContainerTransferService {
     private ExternalContainerTransferService() {
     }
 
     public static boolean supports(GridItemSource source, GridItemTarget target) {
-        return target instanceof GridItemTarget.MenuSlot
-                || source instanceof GridItemSource.MenuCarried
-                || source instanceof GridItemSource.PlayerGridEntry
-                && target instanceof GridItemTarget.PlayerGridPlacement;
+        if (target instanceof GridItemTarget.MenuSlot) {
+            return isSidebarSource(source);
+        }
+        if (source instanceof GridItemSource.MenuCarried) {
+            return isSidebarTarget(target);
+        }
+        return isSidebarSource(source) && isSidebarTarget(target);
     }
 
     public static boolean move(ServerPlayer player, AbstractContainerMenu menu, GridItemSource source,
@@ -42,9 +46,174 @@ public final class ExternalContainerTransferService {
         if (source instanceof GridItemSource.MenuCarried carried) {
             return moveCarried(player, menu, carried, target, safeOptions);
         }
-        if (source instanceof GridItemSource.PlayerGridEntry entry
-                && target instanceof GridItemTarget.PlayerGridPlacement placement) {
-            return moveWithinPlayerGrid(player, entry, placement);
+        if (isSidebarSource(source) && isSidebarTarget(target)) {
+            boolean moved = moveWithinSidebar(player, source, target, safeOptions);
+            if (moved) {
+                player.getInventory().setChanged();
+                menu.broadcastChanges();
+            }
+            return moved;
+        }
+        return false;
+    }
+
+    private static boolean moveWithinSidebar(ServerPlayer player, GridItemSource source, GridItemTarget target,
+                                             GridMoveOptions options) {
+        if (target instanceof GridItemTarget.PlayerGridPlacement placement) {
+            return moveToPlayerGrid(player, source, placement, options);
+        }
+        if (target instanceof GridItemTarget.EquipmentStoragePlacement placement) {
+            return moveToEquipmentStorage(player, source, placement, options);
+        }
+        if (target instanceof GridItemTarget.PlayerSlot slot) {
+            return moveToPlayerSlot(player, source, slot.slot(), options);
+        }
+        if (target instanceof GridItemTarget.AccessorySlot slot) {
+            return moveToAccessory(player, source, slot);
+        }
+        return false;
+    }
+
+    private static boolean moveToPlayerGrid(ServerPlayer player, GridItemSource source,
+                                            GridItemTarget.PlayerGridPlacement target,
+                                            GridMoveOptions options) {
+        GridInventoryData grid = playerGridCopy(player);
+        boolean moved;
+        if (source instanceof GridItemSource.PlayerGridEntry entry) {
+            moved = moveWithinGrid(grid, entry.entryId(), target.x(), target.y(), target.rotated(),
+                    target.folded(), options.safeCount(), 0);
+        } else {
+            moved = moveSourceIntoGrid(player, source, grid, target.x(), target.y(), target.rotated(),
+                    target.folded(), options.safeCount(), 0);
+        }
+        if (moved) {
+            savePlayerGrid(player, grid);
+        }
+        return moved;
+    }
+
+    private static boolean moveToEquipmentStorage(ServerPlayer player, GridItemSource source,
+                                                  GridItemTarget.EquipmentStoragePlacement target,
+                                                  GridMoveOptions options) {
+        if (source instanceof GridItemSource.PlayerSlot slot
+                && equipmentPlayerSlotOrInvalid(target.slot()) == slot.slot()) {
+            return false;
+        }
+        if (source instanceof GridItemSource.AccessorySlot slot
+                && GridEquipmentSlots.isBack(target.slot())
+                && "back".equals(slot.identifier()) && slot.index() == 0) {
+            return false;
+        }
+        if (source instanceof GridItemSource.EquipmentStorageEntry entry
+                && entry.slot() == target.slot()) {
+            return moveWithinEquipmentStorage(player, entry, target, options.safeCount());
+        }
+        Optional<EquipmentStorageEdit> edit = equipmentStorage(player, target.slot(), target.containerId());
+        if (edit.isEmpty()) {
+            return false;
+        }
+        boolean moved = moveSourceIntoGrid(player, source, edit.get().inventory(), target.x(), target.y(),
+                target.rotated(), target.folded(), options.safeCount(), 1);
+        if (moved) {
+            saveEquipmentStorage(player, target.slot(), edit.get().storage());
+        }
+        return moved;
+    }
+
+    private static boolean moveWithinEquipmentStorage(ServerPlayer player,
+                                                      GridItemSource.EquipmentStorageEntry source,
+                                                      GridItemTarget.EquipmentStoragePlacement target,
+                                                      int requested) {
+        Optional<EquipmentStorageEdit> edit = equipmentStorage(player, target.slot(), target.containerId());
+        if (edit.isEmpty()) {
+            return false;
+        }
+        Optional<GridInventoryData> sourceInventory = edit.get().storage().containers().stream()
+                .filter(container -> container.id().equals(source.containerId()))
+                .map(NamedGridInventoryData::inventory)
+                .findFirst();
+        if (sourceInventory.isEmpty()) {
+            return false;
+        }
+        boolean moved = sourceInventory.get() == edit.get().inventory()
+                ? moveWithinGrid(sourceInventory.get(), source.entryId(), target.x(), target.y(), target.rotated(),
+                target.folded(), requested, 1)
+                : moveBetweenGrids(sourceInventory.get(), source.entryId(), edit.get().inventory(),
+                target.x(), target.y(), target.rotated(), target.folded(), requested, 1);
+        if (moved) {
+            saveEquipmentStorage(player, target.slot(), edit.get().storage());
+        }
+        return moved;
+    }
+
+    private static boolean moveToPlayerSlot(ServerPlayer player, GridItemSource source, int targetSlot,
+                                            GridMoveOptions options) {
+        if (source instanceof GridItemSource.PlayerSlot playerSlot) {
+            return moveBetweenPlayerSlots(player, playerSlot.slot(), targetSlot, options.targetFolded());
+        }
+        if (!isFreePlayerSlot(targetSlot)) {
+            return false;
+        }
+        Optional<SourceHandle> resolved = resolveSource(player, source);
+        if (resolved.isEmpty()) {
+            return false;
+        }
+        ItemStack moved = prepareFolded(resolved.get().stack().copyWithCount(
+                Math.min(resolved.get().stack().getCount(), options.safeCount())), options.targetFolded());
+        if (moved.isEmpty() || !mayInsertIntoPlayerSlot(player, targetSlot, moved)) {
+            return false;
+        }
+        ItemStack existing = player.getInventory().getItem(targetSlot);
+        int limit = playerSlotLimit(player, targetSlot, moved);
+        int accepted;
+        if (existing.isEmpty()) {
+            accepted = Math.min(moved.getCount(), limit);
+        } else if (GridItemStacks.sameItemSameData(existing, moved)) {
+            accepted = Math.min(moved.getCount(), Math.max(0, limit - existing.getCount()));
+        } else {
+            return false;
+        }
+        if (accepted <= 0 || !resolved.get().remove(accepted)) {
+            return false;
+        }
+        if (existing.isEmpty()) {
+            player.getInventory().setItem(targetSlot, moved.copyWithCount(accepted));
+        } else {
+            existing.grow(accepted);
+        }
+        syncPlayerSlot(player, targetSlot);
+        return true;
+    }
+
+    private static boolean moveToAccessory(ServerPlayer player, GridItemSource source,
+                                           GridItemTarget.AccessorySlot target) {
+        if (source instanceof GridItemSource.PlayerSlot slot) {
+            return isFreePlayerSlot(slot.slot()) && GridInventoryServices.accessories()
+                    .movePlayerSlotToAccessory(player, slot.slot(), target.identifier(), target.index());
+        }
+        if (source instanceof GridItemSource.PlayerGridEntry entry) {
+            GridInventoryData grid = playerGridCopy(player);
+            boolean moved = GridInventoryServices.accessories().moveGridEntryToAccessory(
+                    player, grid, entry.entryId(), target.identifier(), target.index());
+            if (moved) {
+                savePlayerGrid(player, grid);
+            }
+            return moved;
+        }
+        if (source instanceof GridItemSource.EquipmentStorageEntry entry) {
+            Optional<EquipmentStorageEdit> edit = equipmentStorage(player, entry.slot(), entry.containerId());
+            if (edit.isEmpty()) {
+                return false;
+            }
+            boolean moved = GridInventoryServices.accessories().moveEquipmentEntryToAccessory(
+                    player, edit.get().inventory(), entry.entryId(), target.identifier(), target.index());
+            if (moved) {
+                saveEquipmentStorage(player, entry.slot(), edit.get().storage());
+            }
+            return moved;
+        }
+        if (source instanceof GridItemSource.AccessorySlot slot) {
+            return moveBetweenAccessories(player, slot, target);
         }
         return false;
     }
@@ -173,7 +342,7 @@ public final class ExternalContainerTransferService {
             return false;
         }
         ItemStack existing = player.getInventory().getItem(playerSlot);
-        int limit = playerSlot >= 36 ? 1 : Math.min(player.getInventory().getMaxStackSize(), moved.getMaxStackSize());
+        int limit = playerSlotLimit(player, playerSlot, moved);
         int accepted;
         if (existing.isEmpty()) {
             accepted = Math.min(moved.getCount(), limit);
@@ -193,25 +362,174 @@ public final class ExternalContainerTransferService {
         return accepted > 0;
     }
 
-    private static boolean moveWithinPlayerGrid(ServerPlayer player, GridItemSource.PlayerGridEntry source,
-                                                GridItemTarget.PlayerGridPlacement target) {
-        GridInventoryData grid = playerGridCopy(player);
-        Optional<GridEntry> entry = grid.getEntry(source.entryId());
-        if (entry.isEmpty()) {
+    private static boolean moveSourceIntoGrid(ServerPlayer player, GridItemSource source,
+                                              GridInventoryData targetInventory, int targetX, int targetY,
+                                              boolean rotated, boolean folded, int requested, int targetDepth) {
+        Optional<SourceHandle> resolved = resolveSource(player, source);
+        if (resolved.isEmpty()) {
             return false;
         }
-        ItemStack prepared = prepareFolded(entry.get().stack(), target.folded());
+        int amount = Math.min(resolved.get().stack().getCount(), requested);
+        if (source instanceof GridItemSource.PlayerSlot && !GridStackMerger.itemsStackableInGrid()) {
+            amount = Math.min(amount, 1);
+        }
+        ItemStack moved = prepareFolded(resolved.get().stack().copyWithCount(amount), folded);
+        if (moved.isEmpty()) {
+            return false;
+        }
+        int inserted = GridExplicitInsertHelper.insertOrMergeAt(targetInventory, moved, targetX, targetY,
+                rotated, targetDepth);
+        return inserted > 0 && resolved.get().remove(inserted);
+    }
+
+    private static boolean moveWithinGrid(GridInventoryData inventory, UUID sourceEntryId,
+                                          int targetX, int targetY, boolean rotated, boolean folded,
+                                          int requested, int targetDepth) {
+        Optional<GridEntry> source = inventory.getEntry(sourceEntryId);
+        if (source.isEmpty()) {
+            return false;
+        }
+        int amount = Math.min(source.get().stack().getCount(), requested);
+        ItemStack moved = prepareFolded(source.get().stack().copyWithCount(amount), folded);
+        if (moved.isEmpty()) {
+            return false;
+        }
+        Optional<GridEntry> destination = inventory.getEntries().stream()
+                .filter(entry -> !entry.entryId().equals(sourceEntryId))
+                .filter(entry -> entry.contains(targetX, targetY))
+                .findFirst();
+        if (destination.isPresent()) {
+            ItemStack targetStack = destination.get().stack();
+            if (!GridStackMerger.itemsStackableInGrid()
+                    || !GridItemStacks.sameItemSameData(targetStack, moved)
+                    || targetStack.getCount() >= targetStack.getMaxStackSize()) {
+                return false;
+            }
+            int accepted = Math.min(amount, targetStack.getMaxStackSize() - targetStack.getCount());
+            ItemStack removed = inventory.extract(sourceEntryId, accepted);
+            Optional<GridEntry> updatedDestination = inventory.getEntry(destination.get().entryId());
+            if (removed.getCount() != accepted || updatedDestination.isEmpty()) {
+                return false;
+            }
+            updatedDestination.get().stack().grow(accepted);
+            inventory.setChanged();
+            return true;
+        }
+        if (amount == source.get().stack().getCount()) {
+            if (!GridPlacementValidator.canPlace(inventory, moved, targetX, targetY, rotated,
+                    sourceEntryId, targetDepth)) {
+                return false;
+            }
+            if (source.get().stack().getItem() instanceof GridBackpackItem) {
+                GridInventoryServices.itemStackData().setBackpackFolded(source.get().stack(),
+                        GridBackpackItem.isFolded(moved));
+            }
+            return inventory.move(sourceEntryId, targetX, targetY, rotated);
+        }
+        ItemStack removed = inventory.extract(sourceEntryId, amount);
+        if (removed.getCount() != amount) {
+            return false;
+        }
+        int inserted = GridExplicitInsertHelper.insertOrMergeAt(inventory, moved, targetX, targetY,
+                rotated, targetDepth);
+        return inserted == amount;
+    }
+
+    private static boolean moveBetweenGrids(GridInventoryData sourceInventory, UUID sourceEntryId,
+                                            GridInventoryData targetInventory, int targetX, int targetY,
+                                            boolean rotated, boolean folded, int requested, int targetDepth) {
+        Optional<GridEntry> source = sourceInventory.getEntry(sourceEntryId);
+        if (source.isEmpty()) {
+            return false;
+        }
+        int amount = Math.min(source.get().stack().getCount(), requested);
+        ItemStack moved = prepareFolded(source.get().stack().copyWithCount(amount), folded);
+        if (moved.isEmpty()) {
+            return false;
+        }
+        int inserted = GridExplicitInsertHelper.insertOrMergeAt(targetInventory, moved, targetX, targetY,
+                rotated, targetDepth);
+        if (inserted <= 0) {
+            return false;
+        }
+        ItemStack removed = sourceInventory.extract(sourceEntryId, inserted);
+        return removed.getCount() == inserted;
+    }
+
+    private static boolean moveBetweenPlayerSlots(ServerPlayer player, int sourceSlot, int targetSlot,
+                                                  boolean targetFolded) {
+        if (!isFreePlayerSlot(sourceSlot) || !isFreePlayerSlot(targetSlot)) {
+            return false;
+        }
+        ItemStack source = player.getInventory().getItem(sourceSlot);
+        if (source.isEmpty() || !mayInsertIntoPlayerSlot(player, targetSlot, source)) {
+            return false;
+        }
+        ItemStack prepared = prepareFolded(source.copy(), targetFolded);
         if (prepared.isEmpty()) {
             return false;
         }
-        if (entry.get().stack().getItem() instanceof GridBackpackItem) {
-            GridInventoryServices.itemStackData().setBackpackFolded(entry.get().stack(),
-                    GridBackpackItem.isFolded(prepared));
+        if (sourceSlot == targetSlot) {
+            player.getInventory().setItem(sourceSlot, prepared);
+            syncPlayerSlot(player, sourceSlot);
+            return true;
         }
-        if (!grid.move(source.entryId(), target.x(), target.y(), target.rotated())) {
+        ItemStack target = player.getInventory().getItem(targetSlot);
+        int targetLimit = playerSlotLimit(player, targetSlot, prepared);
+        if (target.isEmpty()) {
+            int accepted = Math.min(prepared.getCount(), targetLimit);
+            player.getInventory().setItem(targetSlot, prepared.copyWithCount(accepted));
+            source.shrink(accepted);
+        } else if (GridItemStacks.sameItemSameData(target, prepared)) {
+            int accepted = Math.min(source.getCount(), Math.max(0, targetLimit - target.getCount()));
+            if (accepted <= 0) {
+                return false;
+            }
+            target.grow(accepted);
+            source.shrink(accepted);
+        } else {
+            int sourceLimit = playerSlotLimit(player, sourceSlot, target);
+            if (!mayInsertIntoPlayerSlot(player, sourceSlot, target)
+                    || prepared.getCount() > targetLimit || target.getCount() > sourceLimit) {
+                return false;
+            }
+            player.getInventory().setItem(sourceSlot, target.copy());
+            player.getInventory().setItem(targetSlot, prepared);
+        }
+        syncPlayerSlot(player, sourceSlot);
+        syncPlayerSlot(player, targetSlot);
+        return true;
+    }
+
+    private static boolean moveBetweenAccessories(ServerPlayer player, GridItemSource.AccessorySlot source,
+                                                  GridItemTarget.AccessorySlot target) {
+        if (source.identifier().equals(target.identifier()) && source.index() == target.index()) {
             return false;
         }
-        savePlayerGrid(player, grid);
+        Optional<ItemStack> sourceStack = GridInventoryServices.accessories()
+                .getAccessoryStack(player, source.identifier(), source.index());
+        Optional<ItemStack> targetStack = GridInventoryServices.accessories()
+                .getAccessoryStack(player, target.identifier(), target.index());
+        if (sourceStack.isEmpty() || sourceStack.get().isEmpty()
+                || targetStack.isPresent() && !targetStack.get().isEmpty()) {
+            return false;
+        }
+        ItemStack remainder = sourceStack.get().copy();
+        if (!GridInventoryServices.accessories().insertStackIntoAccessory(
+                player, remainder, target.identifier(), target.index())) {
+            return false;
+        }
+        Optional<ItemStack> currentSource = GridInventoryServices.accessories()
+                .getAccessoryStack(player, source.identifier(), source.index());
+        if (currentSource.isEmpty()
+                || !GridItemStacks.sameItemSameData(currentSource.get(), sourceStack.get())
+                || currentSource.get().getCount() != sourceStack.get().getCount()) {
+            GridInventoryServices.accessories().setAccessoryStack(
+                    player, target.identifier(), target.index(), ItemStack.EMPTY);
+            return false;
+        }
+        GridInventoryServices.accessories().setAccessoryStack(
+                player, source.identifier(), source.index(), remainder);
         return true;
     }
 
@@ -345,8 +663,37 @@ public final class ExternalContainerTransferService {
         return stack;
     }
 
+    private static boolean isSidebarSource(GridItemSource source) {
+        return source instanceof GridItemSource.PlayerGridEntry
+                || source instanceof GridItemSource.EquipmentStorageEntry
+                || source instanceof GridItemSource.PlayerSlot
+                || source instanceof GridItemSource.AccessorySlot;
+    }
+
+    private static boolean isSidebarTarget(GridItemTarget target) {
+        return target instanceof GridItemTarget.PlayerGridPlacement
+                || target instanceof GridItemTarget.EquipmentStoragePlacement
+                || target instanceof GridItemTarget.PlayerSlot
+                || target instanceof GridItemTarget.AccessorySlot;
+    }
+
     private static boolean isFreePlayerSlot(int slot) {
         return slot >= 0 && slot <= 8 || slot >= 36 && slot <= 40;
+    }
+
+    private static int playerSlotLimit(ServerPlayer player, int slot, ItemStack stack) {
+        int limit = Math.min(player.getInventory().getMaxStackSize(), stack.getMaxStackSize());
+        return slot >= 36 && slot <= 39 ? Math.min(limit, 1) : limit;
+    }
+
+    private static int equipmentPlayerSlotOrInvalid(EquipmentSlot slot) {
+        return switch (slot) {
+            case HEAD -> 39;
+            case CHEST -> 38;
+            case LEGS -> 37;
+            case FEET -> 36;
+            default -> -1;
+        };
     }
 
     private static boolean mayInsertIntoPlayerSlot(ServerPlayer player, int slot, ItemStack stack) {

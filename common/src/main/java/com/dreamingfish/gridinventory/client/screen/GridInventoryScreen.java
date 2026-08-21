@@ -682,7 +682,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nestedWindows.mouseReleased(button)) {
             return true;
         }
-        if ((button == 0 || button == 1) && rightSidebarPanel.dragKind() == SidebarDragKind.CREATIVE_ITEM) {
+        if (button == 0 && rightSidebarPanel.dragKind() == SidebarDragKind.CREATIVE_ITEM) {
             handleCreativeItemRelease((int) mouseX, (int) mouseY);
             rightSidebarPanel.clearDrag();
             return true;
