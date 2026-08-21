@@ -8,6 +8,10 @@ public final class VanillaContainerScreenLayout {
     public static final int HIDDEN_SLOT_COORDINATE = -10_000;
     public static final int BOTTOM_CAP_SOURCE_Y = 215;
     public static final int BOTTOM_CAP_HEIGHT = 7;
+    public static final int RECIPE_BOOK_WIDTH = 147;
+    public static final int RECIPE_BOOK_HEIGHT = 166;
+
+    private static final int RECIPE_BOOK_WIDE_OFFSET_X = 86;
 
     private static final int STANDARD_BODY_HEIGHT = 83;
     private static final int HOPPER_BODY_HEIGHT = 50;
@@ -71,6 +75,32 @@ public final class VanillaContainerScreenLayout {
         }
         graphics.blit(texture, x + width - CAP_LEFT_WIDTH, y, CAP_RIGHT_SOURCE_X,
                 BOTTOM_CAP_SOURCE_Y, CAP_LEFT_WIDTH, BOTTOM_CAP_HEIGHT);
+    }
+
+    public static int alignedRecipeBookScreenHeight(int screenHeight, int imageHeight) {
+        if (imageHeight >= RECIPE_BOOK_HEIGHT) {
+            return screenHeight;
+        }
+        return RECIPE_BOOK_HEIGHT + alignedRecipeBookTop(screenHeight, imageHeight) * 2;
+    }
+
+    public static boolean isInsideAlignedRecipeBook(double mouseX, double mouseY,
+                                                    int screenWidth, int screenHeight, int imageHeight,
+                                                    boolean widthTooNarrow) {
+        int recipeLeft = (screenWidth - RECIPE_BOOK_WIDTH) / 2
+                - (widthTooNarrow ? 0 : RECIPE_BOOK_WIDE_OFFSET_X);
+        int recipeTop = alignedRecipeBookTop(screenHeight, imageHeight);
+        return mouseX >= recipeLeft && mouseY >= recipeTop
+                && mouseX < recipeLeft + RECIPE_BOOK_WIDTH
+                && mouseY < recipeTop + RECIPE_BOOK_HEIGHT;
+    }
+
+    private static int alignedRecipeBookTop(int screenHeight, int imageHeight) {
+        if (imageHeight >= RECIPE_BOOK_HEIGHT) {
+            return Math.max(0, (screenHeight - RECIPE_BOOK_HEIGHT) / 2);
+        }
+        int menuTop = Math.max(0, (screenHeight - imageHeight) / 2);
+        return Math.min(menuTop, Math.max(0, screenHeight - RECIPE_BOOK_HEIGHT));
     }
 
     private static Layout compact(int bodyHeight, boolean decorateInRenderBg) {
