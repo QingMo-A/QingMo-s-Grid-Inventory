@@ -233,7 +233,7 @@ public class SearchableGridContainerMenu extends GridInventoryMenu {
         if (!validContainerAccess()) {
             return false;
         }
-        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, creativeGridCount(count), folded);
         if (stack.isEmpty()) {
             return false;
         }

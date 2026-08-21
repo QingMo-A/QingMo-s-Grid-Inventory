@@ -99,30 +99,38 @@ public final class VanillaCreativeSidebarPanel {
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0 || !contains(mouseX, mouseY)) {
+        if (!contains(mouseX, mouseY)) {
             searchFocused = false;
             return false;
         }
-        if (itemScrollbar.mouseClicked(mouseX, mouseY, button) || mouseClickedTabScrollbar(mouseX, mouseY, button)) {
-            searchFocused = false;
-            return true;
+        if (button != 0 && button != 1) {
+            return false;
         }
-        Optional<Integer> tab = hoveredTabIndex((int) mouseX, (int) mouseY);
-        if (tab.isPresent()) {
-            selectedTab = tab.get();
-            tabScroll = clampTabScroll(tabScroll);
-            resetItemScroll();
-            searchFocused = false;
-            return true;
-        }
-        if (inSearch(mouseX, mouseY)) {
-            searchFocused = true;
-            return true;
+        if (button == 0) {
+            if (itemScrollbar.mouseClicked(mouseX, mouseY, button) || mouseClickedTabScrollbar(mouseX, mouseY, button)) {
+                searchFocused = false;
+                return true;
+            }
+            Optional<Integer> tab = hoveredTabIndex((int) mouseX, (int) mouseY);
+            if (tab.isPresent()) {
+                selectedTab = tab.get();
+                tabScroll = clampTabScroll(tabScroll);
+                resetItemScroll();
+                searchFocused = false;
+                return true;
+            }
+            if (inSearch(mouseX, mouseY)) {
+                searchFocused = true;
+                return true;
+            }
         }
         searchFocused = false;
         Optional<Integer> slot = hoveredSlot((int) mouseX, (int) mouseY);
         if (slot.isPresent()) {
-            draggedItem = visibleItems().get(slot.get());
+            CreativeItemReference reference = visibleItems().get(slot.get());
+            ItemStack draggedStack = reference.stack().copy();
+            draggedStack.setCount(button == 0 ? draggedStack.getMaxStackSize() : 1);
+            draggedItem = new CreativeItemReference(reference.tabIndex(), reference.itemIndex(), draggedStack);
             return true;
         }
         return true;
@@ -132,7 +140,7 @@ public final class VanillaCreativeSidebarPanel {
         if (itemScrollbar.mouseDragged(mouseX, mouseY, button) || mouseDraggedTabScrollbar(mouseX, mouseY, button)) {
             return true;
         }
-        return button == 0 && draggedItem != null;
+        return (button == 0 || button == 1) && draggedItem != null;
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
@@ -140,7 +148,7 @@ public final class VanillaCreativeSidebarPanel {
         if (releasedScrollbar) {
             return true;
         }
-        return button == 0 && draggedItem != null;
+        return (button == 0 || button == 1) && draggedItem != null;
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double deltaY) {
@@ -276,7 +284,7 @@ public final class VanillaCreativeSidebarPanel {
                 && mouseY >= tabTop() && mouseY < tabTop() + TAB_BAR_HEIGHT;
     }
 
-    private boolean contains(double mouseX, double mouseY) {
+    public boolean contains(double mouseX, double mouseY) {
         return mouseX >= left && mouseY >= top && mouseX < left + width && mouseY < top + height;
     }
 

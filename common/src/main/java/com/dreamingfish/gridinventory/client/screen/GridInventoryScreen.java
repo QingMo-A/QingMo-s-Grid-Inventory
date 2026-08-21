@@ -34,6 +34,7 @@ import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.DropCurioMessage;
 import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
+import com.dreamingfish.gridinventory.common.network.CreativeDiscardItemMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
 import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
@@ -681,7 +682,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nestedWindows.mouseReleased(button)) {
             return true;
         }
-        if (button == 0 && rightSidebarPanel.dragKind() == SidebarDragKind.CREATIVE_ITEM) {
+        if ((button == 0 || button == 1) && rightSidebarPanel.dragKind() == SidebarDragKind.CREATIVE_ITEM) {
             handleCreativeItemRelease((int) mouseX, (int) mouseY);
             rightSidebarPanel.clearDrag();
             return true;
@@ -697,6 +698,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 return true;
             }
             clearPendingDrag();
+            return true;
+        }
+        if (button == 0 && rightSidebarPanel.isCreativePagePoint(mouseX, mouseY)
+                && discardDraggedItemIntoCreative()) {
             return true;
         }
         if (menu.isPlayerGrid()) {
@@ -939,6 +944,27 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    private boolean discardDraggedItemIntoCreative() {
+        GridItemSource source;
+        if (draggingCurioSlot != null) {
+            source = curioDragSource();
+        } else if (draggingEquipmentEntry != null) {
+            source = equipmentDragSource();
+        } else if (draggingNestedEntry != null) {
+            source = nestedDragSource();
+        } else if (draggingEntry != null) {
+            source = gridDragSource();
+        } else if (!selectedPlayerStack.isEmpty() && lastPlayerSlot >= 0) {
+            source = playerSlotSource(lastPlayerSlot);
+        } else {
+            return false;
+        }
+        GridInventoryServices.network().sendToServer(new CreativeDiscardItemMessage(source));
+        playReleaseSound(true, false, false);
+        clearDragState();
+        return true;
     }
 
     private GridItemSource nestedDragSource() {

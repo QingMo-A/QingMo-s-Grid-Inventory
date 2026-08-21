@@ -106,6 +106,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
         return gridTargetDepth();
     }
 
+    public boolean transactionCanCreativeDiscard() {
+        return playerInventory.player.isCreative() && !playerInventory.player.isSpectator();
+    }
+
     public GridInventoryData transactionMenuGridCopy() {
         return gridData.copy();
     }
@@ -669,7 +673,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
 
     public boolean creativeInsertIntoGrid(int tabIndex, int itemIndex, int count, int targetX, int targetY,
                                           boolean rotated, boolean folded) {
-        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, creativeGridCount(count), folded);
         if (stack.isEmpty()) {
             return false;
         }
@@ -685,7 +689,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     public boolean creativeInsertIntoEquipmentStorage(int tabIndex, int itemIndex, int count, EquipmentSlot equipmentSlot,
                                                       String containerId, int targetX, int targetY,
                                                       boolean rotated, boolean folded) {
-        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, creativeGridCount(count), folded);
         Optional<EquipmentStorageEdit> target = editableEquipmentInventory(equipmentSlot, containerId);
         if (stack.isEmpty() || target.isEmpty()) {
             return false;
@@ -702,7 +706,7 @@ public class GridInventoryMenu extends AbstractContainerMenu {
     public boolean creativeInsertIntoNestedGrid(int tabIndex, int itemIndex, int count, NestedContainerPath targetOwnerPath,
                                                 String targetContainerId, int targetX, int targetY,
                                                 boolean rotated, boolean folded) {
-        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, count, folded);
+        Optional<ItemStack> stack = creativeStack(tabIndex, itemIndex, creativeGridCount(count), folded);
         Optional<MenuPathHandle> targetOwner = resolveMenuGridPath(targetOwnerPath);
         Optional<GridInventoryData> targetGrid = targetOwner.flatMap(owner -> nestedGrid(owner.stack(), targetContainerId));
         if (stack.isEmpty() || targetOwner.isEmpty() || targetGrid.isEmpty()) {
@@ -787,6 +791,10 @@ public class GridInventoryMenu extends AbstractContainerMenu {
             GridInventoryServices.itemStackData().setBackpackFolded(stack, folded);
         }
         return Optional.of(stack);
+    }
+
+    protected int creativeGridCount(int count) {
+        return GridStackMerger.itemsStackableInGrid() ? count : 1;
     }
 
     private static List<CreativeModeTab> filteredCreativeTabs() {

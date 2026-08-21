@@ -102,6 +102,10 @@ public final class RightSidebarPanel {
         return isContainerPage() && containerPanel.isContainerPagePoint(mouseX, mouseY);
     }
 
+    public boolean isCreativePagePoint(double mouseX, double mouseY) {
+        return page == Page.CREATIVE && creative && creativePanel.contains(mouseX, mouseY);
+    }
+
     public void render(GuiGraphics graphics, int mouseX, int mouseY, boolean suppressTooltip) {
         renderTabs(graphics, mouseX, mouseY);
         if (page == Page.CONTAINER && containerTabEnabled) {

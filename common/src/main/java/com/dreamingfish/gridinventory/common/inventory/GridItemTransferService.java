@@ -330,6 +330,27 @@ public final class GridItemTransferService {
         return committed;
     }
 
+    public static boolean discardCreative(GridInventoryMenu menu, GridItemSource source) {
+        if (!menu.transactionCanCreativeDiscard()) {
+            DFGridInventory.LOGGER.debug("Creative discard rejected source={} reason=not-creative", source);
+            return false;
+        }
+        Transaction transaction = new Transaction(menu);
+        Optional<ResolvedItemRef> sourceRef = transaction.resolveSource(source);
+        if (sourceRef.isEmpty() || sourceRef.get().stackCopy().isEmpty()) {
+            DFGridInventory.LOGGER.debug("Creative discard rejected source={} reason=resolve-failed", source);
+            return false;
+        }
+        int count = sourceRef.get().stackCopy().getCount();
+        if (!sourceRef.get().removeFromRootCopy(count)) {
+            DFGridInventory.LOGGER.debug("Creative discard rejected source={} reason=remove-failed", source);
+            return false;
+        }
+        boolean committed = transaction.commit();
+        DFGridInventory.LOGGER.debug("Creative discard source={} count={} committed={}", source, count, committed);
+        return committed;
+    }
+
     private static ItemStack playerSlotPlacementMovedStack(GridItemSource source, GridItemTarget target,
                                                           ItemStack prepared) {
         if (source instanceof GridItemSource.PlayerSlot

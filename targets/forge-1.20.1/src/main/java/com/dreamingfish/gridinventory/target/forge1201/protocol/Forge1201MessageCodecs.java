@@ -6,6 +6,7 @@ import com.dreamingfish.gridinventory.common.data.EquipmentStorageData;
 import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.network.GridMoveCodecs;
+import com.dreamingfish.gridinventory.common.network.CreativeDiscardItemMessage;
 import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoCurioMessage;
 import com.dreamingfish.gridinventory.common.network.CreativeInsertIntoEquipmentStorageMessage;
@@ -678,6 +679,10 @@ public final class Forge1201MessageCodecs {
                 },
                 buf -> new TransferNestedGridEntryIntoNestedGridMessage(readPath(buf), buf.readUtf(), buf.readUUID(),
                         readPath(buf), buf.readUtf(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean())
+        ));
+        register(GridMessages.CREATIVE_DISCARD_ITEM, codec(
+                (message, buf) -> GridMoveCodecs.writeSource(buf, message.source()),
+                buf -> new CreativeDiscardItemMessage(GridMoveCodecs.readSource(buf))
         ));
     }
 
