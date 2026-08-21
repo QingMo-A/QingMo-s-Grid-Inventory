@@ -95,7 +95,7 @@ public final class ExternalContainerSidebar {
         this.tab = preferredTab;
         boolean hasDockSpace = screenWidth >= imageWidth + 244;
         this.expanded = preferredExpanded && (hasDockSpace || screenWidth >= 360);
-        layout(imageHeight);
+        layout();
         GridInventoryServices.network().sendToServer(RequestExternalPlayerGridMessage.INSTANCE);
     }
 
@@ -176,7 +176,7 @@ public final class ExternalContainerSidebar {
         if (button == 0 && inDockButton(mouseX, mouseY)) {
             dock = dock == Dock.LEFT ? Dock.RIGHT : Dock.LEFT;
             preferredDock = dock;
-            layout(height);
+            layout();
             return true;
         }
         if (button == 0 && inEquipmentTab(mouseX, mouseY)) {
@@ -323,13 +323,13 @@ public final class ExternalContainerSidebar {
                 && menu != minecraft.player.inventoryMenu;
     }
 
-    private void layout(int requestedHeight) {
+    private void layout() {
         width = Math.min(224, Math.max(180, screenWidth - 16));
-        height = Math.min(screenHeight - 16, Math.max(188, requestedHeight));
-        top = Math.max(8, (screenHeight - height) / 2);
+        height = screenHeight;
+        top = 0;
         left = dock == Dock.LEFT ? 8 : screenWidth - width - 8;
         handleX = dock == Dock.LEFT ? 0 : screenWidth - HANDLE_WIDTH;
-        handleY = Math.max(8, (screenHeight - HANDLE_HEIGHT) / 2);
+        handleY = Math.max(0, (screenHeight - HANDLE_HEIGHT) / 2);
     }
 
     private void refreshPocket() {
