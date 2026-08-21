@@ -18,6 +18,7 @@ public final class VanillaContainerScreenLayout {
     private static final int HOPPER_BODY_HEIGHT = 50;
     private static final int BEACON_BODY_HEIGHT = 136;
     private static final int CAP_LEFT_WIDTH = 7;
+    private static final int CAP_OVERLAY_OFFSET_Y = 1;
 
     private static final Layout NONE = new Layout(false, 0, false, null, null);
     private static final Layout RECIPE_BOOK = compact(STANDARD_BODY_HEIGHT, true, null);
@@ -76,19 +77,20 @@ public final class VanillaContainerScreenLayout {
     public static void renderBottomCap(GuiGraphics graphics, ResourceLocation texture,
                                        int sourceY, int sourceWidth,
                                        int x, int y, int width) {
-        graphics.blit(texture, x, y, 0, sourceY,
+        int targetY = y + CAP_OVERLAY_OFFSET_Y;
+        graphics.blit(texture, x, targetY, 0, sourceY,
                 CAP_LEFT_WIDTH, BOTTOM_CAP_HEIGHT);
         int remaining = Math.max(0, width - CAP_LEFT_WIDTH * 2);
         int targetX = x + CAP_LEFT_WIDTH;
         int interiorWidth = sourceWidth - CAP_LEFT_WIDTH * 2;
         while (remaining > 0) {
             int segmentWidth = Math.min(interiorWidth, remaining);
-            graphics.blit(texture, targetX, y, CAP_LEFT_WIDTH, sourceY,
+            graphics.blit(texture, targetX, targetY, CAP_LEFT_WIDTH, sourceY,
                     segmentWidth, BOTTOM_CAP_HEIGHT);
             targetX += segmentWidth;
             remaining -= segmentWidth;
         }
-        graphics.blit(texture, x + width - CAP_LEFT_WIDTH, y, sourceWidth - CAP_LEFT_WIDTH,
+        graphics.blit(texture, x + width - CAP_LEFT_WIDTH, targetY, sourceWidth - CAP_LEFT_WIDTH,
                 sourceY, CAP_LEFT_WIDTH, BOTTOM_CAP_HEIGHT);
     }
 
