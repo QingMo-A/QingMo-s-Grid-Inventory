@@ -23,6 +23,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ContainerScreenMixin extends AbstractContainerScreen<ChestMenu> {
     @Unique
     private static final int DF_GRID_INVENTORY$HIDDEN_SLOT_COORDINATE = -10_000;
+    @Unique
+    private static final int DF_GRID_INVENTORY$BOTTOM_CAP_SOURCE_Y = 215;
+    @Unique
+    private static final int DF_GRID_INVENTORY$BOTTOM_CAP_HEIGHT = 7;
 
     @Shadow @Final private int containerRows;
 
@@ -41,7 +45,7 @@ public abstract class ContainerScreenMixin extends AbstractContainerScreen<Chest
             return;
         }
 
-        imageHeight = containerRows * 18 + 17;
+        imageHeight = containerRows * 18 + 17 + DF_GRID_INVENTORY$BOTTOM_CAP_HEIGHT;
         inventoryLabelY = DF_GRID_INVENTORY$HIDDEN_SLOT_COORDINATE;
         for (Slot slot : menu.slots) {
             if (slot.container == playerInventory) {
@@ -63,8 +67,11 @@ public abstract class ContainerScreenMixin extends AbstractContainerScreen<Chest
     private void df_grid_inventory$skipPlayerInventoryBackground(GuiGraphics graphics, ResourceLocation texture,
                                                                   int x, int y, int u, int v,
                                                                   int width, int height) {
-        if (!df_grid_inventory$compact) {
-            graphics.blit(texture, x, y, u, v, width, height);
+        if (df_grid_inventory$compact) {
+            graphics.blit(texture, x, y, u, DF_GRID_INVENTORY$BOTTOM_CAP_SOURCE_Y,
+                    width, DF_GRID_INVENTORY$BOTTOM_CAP_HEIGHT);
+            return;
         }
+        graphics.blit(texture, x, y, u, v, width, height);
     }
 }
