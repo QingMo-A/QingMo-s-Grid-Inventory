@@ -70,7 +70,7 @@ public final class StorageCardHeaderRenderer {
 
     private static void drawExpansionSymbol(GuiGraphics graphics, int centerX, int centerY, float active) {
         int color = 0xFFD8E2F0;
-        graphics.fill(centerX - 4, centerY - 1, centerX + 5, centerY + 1, color);
+        graphics.fill(centerX - 5, centerY - 1, centerX + 5, centerY + 1, color);
 
         int verticalAlpha = Math.round(0xFF * (1.0F - active));
         if (verticalAlpha > 0) {
