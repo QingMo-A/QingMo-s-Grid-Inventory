@@ -58,7 +58,7 @@ public final class StorageCardHeaderRenderer {
         if (!capacity.isEmpty()) {
             graphics.drawString(font, capacity, x + width - rightReserve, y + (HEIGHT - font.lineHeight) / 2, 0xB8C4D3, false);
         }
-        drawChevron(graphics, x + width - 14, y + HEIGHT / 2, active);
+        drawExpansionSymbol(graphics, x + width - 14, y + HEIGHT / 2, active);
         graphics.pose().popPose();
     }
 
@@ -68,16 +68,14 @@ public final class StorageCardHeaderRenderer {
         graphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, color);
     }
 
-    private static void drawChevron(GuiGraphics graphics, int centerX, int centerY, float active) {
-        int spread = 4;
-        int offset = Math.round(2.0F * active);
+    private static void drawExpansionSymbol(GuiGraphics graphics, int centerX, int centerY, float active) {
         int color = 0xFFD8E2F0;
-        if (active < 0.5F) {
-            graphics.fill(centerX - spread, centerY - 1, centerX, centerY + 1, color);
-            graphics.fill(centerX, centerY + offset, centerX + spread, centerY + offset + 2, color);
-        } else {
-            graphics.fill(centerX - spread, centerY + offset, centerX, centerY + offset + 2, color);
-            graphics.fill(centerX, centerY - 1, centerX + spread, centerY + 1, color);
+        graphics.fill(centerX - 4, centerY - 1, centerX + 5, centerY + 1, color);
+
+        int verticalAlpha = Math.round(0xFF * (1.0F - active));
+        if (verticalAlpha > 0) {
+            graphics.fill(centerX - 1, centerY - 4, centerX + 1, centerY + 5,
+                    (verticalAlpha << 24) | 0x00D8E2F0);
         }
     }
 }
