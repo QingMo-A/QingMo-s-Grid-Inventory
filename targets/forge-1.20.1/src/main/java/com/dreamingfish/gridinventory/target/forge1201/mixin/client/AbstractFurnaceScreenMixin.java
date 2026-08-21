@@ -64,10 +64,20 @@ public abstract class AbstractFurnaceScreenMixin<T extends AbstractFurnaceMenu> 
     private void df_grid_inventory$renderCompactBottomCap(GuiGraphics graphics, float partialTick,
                                                            int mouseX, int mouseY, CallbackInfo ci) {
         if (imageHeight < 166) {
+            graphics.disableScissor();
             VanillaContainerScreenLayout.renderBottomCap(graphics, texture,
                     VanillaContainerScreenLayout.STANDARD_BOTTOM_CAP_SOURCE_Y,
                     VanillaContainerScreenLayout.STANDARD_IMAGE_WIDTH,
                     leftPos, topPos + imageHeight - VanillaContainerScreenLayout.BOTTOM_CAP_HEIGHT, imageWidth);
+        }
+    }
+
+    @Inject(method = "renderBg", at = @At("HEAD"))
+    private void df_grid_inventory$clipCompactBody(GuiGraphics graphics, float partialTick,
+                                                    int mouseX, int mouseY, CallbackInfo ci) {
+        if (imageHeight < 166) {
+            graphics.enableScissor(leftPos, topPos, leftPos + imageWidth,
+                    topPos + imageHeight - VanillaContainerScreenLayout.BOTTOM_CAP_HEIGHT);
         }
     }
 }

@@ -86,7 +86,27 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
     @Inject(method = "renderBackground", at = @At("TAIL"))
     private void df_grid_inventory$renderVanillaContainerDecoration(GuiGraphics graphics, int mouseX, int mouseY,
                                                                      float partialTick, CallbackInfo ci) {
+        if (df_grid_inventory$vanillaLayout.compact()
+                && !df_grid_inventory$vanillaLayout.decorateInRenderBg()) {
+            graphics.disableScissor();
+        }
         df_grid_inventory$renderVanillaContainerDecoration(graphics);
+    }
+
+    @Inject(
+            method = "renderBackground",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;renderBg(Lnet/minecraft/client/gui/GuiGraphics;FII)V"
+            )
+    )
+    private void df_grid_inventory$clipVanillaContainerBody(GuiGraphics graphics, int mouseX, int mouseY,
+                                                             float partialTick, CallbackInfo ci) {
+        if (df_grid_inventory$vanillaLayout.compact()
+                && !df_grid_inventory$vanillaLayout.decorateInRenderBg()) {
+            graphics.enableScissor(leftPos, topPos,
+                    leftPos + imageWidth, topPos + df_grid_inventory$vanillaLayout.bodyHeight());
+        }
     }
 
     @Inject(method = "render", at = @At("TAIL"))
