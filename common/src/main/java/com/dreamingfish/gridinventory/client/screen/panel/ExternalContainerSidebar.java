@@ -297,7 +297,7 @@ public final class ExternalContainerSidebar {
         return movingInteraction(menu).handlePreviewKey(keyCode, scanCode);
     }
 
-    private static boolean supports(Screen screen, AbstractContainerMenu menu) {
+    public static boolean supports(Screen screen, AbstractContainerMenu menu) {
         Minecraft minecraft = Minecraft.getInstance();
         return minecraft.player != null
                 && !minecraft.player.isSpectator()
