@@ -4,7 +4,12 @@
   "package": "com.dreamingfish.gridinventory.target.forge1201.mixin",
   "refmap": "df_grid_inventory.forge1201.refmap.json",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [],
+  "mixins": [
+    "InventoryStackedContentsMixin",
+    "ServerPlaceRecipeMixin",
+    "PlayerItemHandlerMixin",
+    "compat.TaczAbstractGunItemMixin"
+  ],
   "client": [
     "client.AbstractFurnaceScreenMixin",
     "client.AbstractContainerScreenMixin",

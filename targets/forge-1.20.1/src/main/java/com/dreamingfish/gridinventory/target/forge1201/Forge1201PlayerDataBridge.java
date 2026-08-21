@@ -28,11 +28,13 @@ public final class Forge1201PlayerDataBridge implements GridInventoryPlayerDataB
     public void setPlayerGridInventory(Player player, GridInventoryData data) {
         if (data == null) {
             removePlayerGridInventory(player);
+            player.getInventory().setChanged();
             return;
         }
         GridInventoryData.CODEC.encodeStart(NbtOps.INSTANCE, data)
                 .resultOrPartial(message -> DFGridInventory.LOGGER.warn("Failed to write player grid inventory: {}", message))
                 .ifPresent(tag -> root(player).put(PLAYER_GRID_INVENTORY, tag));
+        player.getInventory().setChanged();
     }
 
     @Override

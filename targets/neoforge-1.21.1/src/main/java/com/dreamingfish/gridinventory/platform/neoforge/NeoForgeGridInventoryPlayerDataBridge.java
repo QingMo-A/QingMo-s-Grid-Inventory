@@ -14,6 +14,7 @@ public final class NeoForgeGridInventoryPlayerDataBridge implements GridInventor
     @Override
     public void setPlayerGridInventory(Player player, GridInventoryData data) {
         player.setData(NeoForge1211Attachments.PLAYER_GRID_INVENTORY, data);
+        player.getInventory().setChanged();
     }
 
     @Override
