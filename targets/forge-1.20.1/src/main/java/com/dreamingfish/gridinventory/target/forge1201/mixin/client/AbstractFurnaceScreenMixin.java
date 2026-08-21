@@ -10,8 +10,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractFurnaceMenu;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,10 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(AbstractFurnaceScreen.class)
 public abstract class AbstractFurnaceScreenMixin<T extends AbstractFurnaceMenu> extends AbstractContainerScreen<T> {
     @Shadow private boolean widthTooNarrow;
-
-    @Unique
-    private static final ResourceLocation DF_GRID_INVENTORY$GENERIC_CONTAINER_TEXTURE =
-            new ResourceLocation("minecraft", "textures/gui/container/generic_54.png");
+    @Shadow @Final private ResourceLocation texture;
 
     protected AbstractFurnaceScreenMixin(T menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -40,6 +37,11 @@ public abstract class AbstractFurnaceScreenMixin<T extends AbstractFurnaceMenu> 
 
     @ModifyConstant(method = "init", constant = @Constant(intValue = 49))
     private int df_grid_inventory$keepRecipeButtonWithCompactPanel(int originalOffset) {
+        return imageHeight / 2 - 34;
+    }
+
+    @ModifyConstant(method = "lambda$init$0", constant = @Constant(intValue = 49), remap = false)
+    private int df_grid_inventory$keepToggledRecipeButtonWithCompactPanel(int originalOffset) {
         return imageHeight / 2 - 34;
     }
 
@@ -62,7 +64,9 @@ public abstract class AbstractFurnaceScreenMixin<T extends AbstractFurnaceMenu> 
     private void df_grid_inventory$renderCompactBottomCap(GuiGraphics graphics, float partialTick,
                                                            int mouseX, int mouseY, CallbackInfo ci) {
         if (imageHeight < 166) {
-            VanillaContainerScreenLayout.renderBottomCap(graphics, DF_GRID_INVENTORY$GENERIC_CONTAINER_TEXTURE,
+            VanillaContainerScreenLayout.renderBottomCap(graphics, texture,
+                    VanillaContainerScreenLayout.STANDARD_BOTTOM_CAP_SOURCE_Y,
+                    VanillaContainerScreenLayout.STANDARD_IMAGE_WIDTH,
                     leftPos, topPos + imageHeight - VanillaContainerScreenLayout.BOTTOM_CAP_HEIGHT, imageWidth);
         }
     }

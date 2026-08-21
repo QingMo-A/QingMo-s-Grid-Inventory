@@ -34,14 +34,12 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
     @Shadow @Nullable protected Slot hoveredSlot;
 
     @Unique
-    private static final ResourceLocation DF_GRID_INVENTORY$GENERIC_CONTAINER_TEXTURE =
-            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
-
-    @Unique
     private final ExternalContainerSidebar df_grid_inventory$externalSidebar = new ExternalContainerSidebar();
     @Unique
     private VanillaContainerScreenLayout.Layout df_grid_inventory$vanillaLayout =
             VanillaContainerScreenLayout.none();
+    @Unique @Nullable
+    private ResourceLocation df_grid_inventory$bottomCapTexture;
 
     protected AbstractContainerScreenMixin(Component title) {
         super(title);
@@ -49,6 +47,7 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
 
     @Inject(method = "init", at = @At("HEAD"))
     private void df_grid_inventory$prepareVanillaContainerLayout(CallbackInfo ci) {
+        df_grid_inventory$bottomCapTexture = null;
         Screen screen = (Screen) (Object) this;
         df_grid_inventory$vanillaLayout = VanillaContainerScreenLayout.resolve(screen);
         if (!df_grid_inventory$vanillaLayout.hidesPlayerInventory()
@@ -57,6 +56,10 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
             return;
         }
 
+        VanillaContainerScreenLayout.BottomCap bottomCap = df_grid_inventory$vanillaLayout.bottomCap();
+        if (bottomCap != null) {
+            df_grid_inventory$bottomCapTexture = ResourceLocation.withDefaultNamespace(bottomCap.texturePath());
+        }
         if (df_grid_inventory$vanillaLayout.compact()) {
             imageHeight = df_grid_inventory$vanillaLayout.compactImageHeight();
         }
@@ -96,8 +99,12 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
     private void df_grid_inventory$renderVanillaContainerDecoration(GuiGraphics graphics) {
         if (df_grid_inventory$vanillaLayout.compact()
                 && !df_grid_inventory$vanillaLayout.decorateInRenderBg()) {
-            VanillaContainerScreenLayout.renderBottomCap(graphics, DF_GRID_INVENTORY$GENERIC_CONTAINER_TEXTURE,
-                    leftPos, topPos + df_grid_inventory$vanillaLayout.bodyHeight(), imageWidth);
+            VanillaContainerScreenLayout.BottomCap bottomCap = df_grid_inventory$vanillaLayout.bottomCap();
+            if (bottomCap != null && df_grid_inventory$bottomCapTexture != null) {
+                VanillaContainerScreenLayout.renderBottomCap(graphics, df_grid_inventory$bottomCapTexture,
+                        bottomCap.sourceY(), bottomCap.sourceWidth(),
+                        leftPos, topPos + df_grid_inventory$vanillaLayout.bodyHeight(), imageWidth);
+            }
             return;
         }
         VanillaContainerScreenLayout.Mask mask = df_grid_inventory$vanillaLayout.mask();

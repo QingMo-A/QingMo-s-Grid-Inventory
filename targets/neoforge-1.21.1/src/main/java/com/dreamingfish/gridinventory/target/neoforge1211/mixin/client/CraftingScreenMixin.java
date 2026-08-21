@@ -25,8 +25,8 @@ public abstract class CraftingScreenMixin extends AbstractContainerScreen<Crafti
     @Shadow private boolean widthTooNarrow;
 
     @Unique
-    private static final ResourceLocation DF_GRID_INVENTORY$GENERIC_CONTAINER_TEXTURE =
-            ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png");
+    private static final ResourceLocation DF_GRID_INVENTORY$CRAFTING_TABLE_TEXTURE =
+            ResourceLocation.withDefaultNamespace("textures/gui/container/crafting_table.png");
 
     protected CraftingScreenMixin(CraftingMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -40,6 +40,11 @@ public abstract class CraftingScreenMixin extends AbstractContainerScreen<Crafti
 
     @ModifyConstant(method = "init", constant = @Constant(intValue = 49))
     private int df_grid_inventory$keepRecipeButtonWithCompactPanel(int originalOffset) {
+        return imageHeight / 2 - 34;
+    }
+
+    @ModifyConstant(method = "lambda$init$0", constant = @Constant(intValue = 49), remap = false)
+    private int df_grid_inventory$keepToggledRecipeButtonWithCompactPanel(int originalOffset) {
         return imageHeight / 2 - 34;
     }
 
@@ -62,7 +67,9 @@ public abstract class CraftingScreenMixin extends AbstractContainerScreen<Crafti
     private void df_grid_inventory$renderCompactBottomCap(GuiGraphics graphics, float partialTick,
                                                            int mouseX, int mouseY, CallbackInfo ci) {
         if (imageHeight < 166) {
-            VanillaContainerScreenLayout.renderBottomCap(graphics, DF_GRID_INVENTORY$GENERIC_CONTAINER_TEXTURE,
+            VanillaContainerScreenLayout.renderBottomCap(graphics, DF_GRID_INVENTORY$CRAFTING_TABLE_TEXTURE,
+                    VanillaContainerScreenLayout.STANDARD_BOTTOM_CAP_SOURCE_Y,
+                    VanillaContainerScreenLayout.STANDARD_IMAGE_WIDTH,
                     leftPos, topPos + imageHeight - VanillaContainerScreenLayout.BOTTOM_CAP_HEIGHT, imageWidth);
         }
     }
