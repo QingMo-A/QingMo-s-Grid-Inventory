@@ -6,8 +6,11 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [],
   "client": [
+    "client.AbstractFurnaceScreenMixin",
     "client.AbstractContainerScreenMixin",
     "client.ContainerScreenMixin",
+    "client.CrafterScreenMixin",
+    "client.CraftingScreenMixin",
     "client.MinecraftMixin",
     "client.InventoryScreenMixin",
     "client.SlotAccessor"

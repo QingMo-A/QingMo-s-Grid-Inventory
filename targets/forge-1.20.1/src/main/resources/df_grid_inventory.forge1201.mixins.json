@@ -6,9 +6,16 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [],
   "client": [
+    "client.AbstractFurnaceScreenMixin",
     "client.AbstractContainerScreenMixin",
+    "client.AnvilScreenMixin",
+    "client.CartographyTableScreenMixin",
     "client.ContainerScreenMixin",
+    "client.CraftingScreenMixin",
+    "client.HorseInventoryScreenMixin",
+    "client.LoomScreenMixin",
     "client.SlotAccessor",
+    "client.StonecutterScreenMixin",
     "client.MinecraftMixin"
   ],
   "injectors": {
