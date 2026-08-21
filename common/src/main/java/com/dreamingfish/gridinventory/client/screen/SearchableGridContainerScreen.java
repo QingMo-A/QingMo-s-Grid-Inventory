@@ -46,19 +46,13 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
     }
 
     @Override
-    protected ItemStack draggedStack() {
-        return draggingContainerEntry != null ? draggingContainerEntry.stack() : super.draggedStack();
-    }
-
-    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         Optional<ContainerGridSidebarPanel.GridEntryHit> containerHit =
                 rightSidebarPanel.containerEntryAt((int) mouseX, (int) mouseY);
         if (button == 0 && containerHit.isPresent() && draggedStack().isEmpty()) {
             GridEntry entry = containerHit.get().entry();
             draggingContainerEntry = entry;
-            dragPreviewStack = entry.stack().copy();
-            rotatedPreview = entry.rotated();
+            beginLegacyDragPreview(entry.stack(), entry.rotated());
             setGridDragAnchor((int) mouseX, (int) mouseY, containerHit.get().drawX(), containerHit.get().drawY(),
                     entry.width(), entry.height());
             GridInventoryUiSounds.dragStart();
@@ -82,13 +76,13 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
                     Optional<NearbyGroundItemView> dragged = rightSidebarPanel.draggedGroundItem();
                     dragged.ifPresent(view -> GridInventoryServices.network().sendToServer(
                             new PickupGroundItemIntoSearchableContainerMessage(searchableMenu.blockPos(),
-                                    view.entityId(), targetX, targetY, rotatedPreview, folded)));
+                                    view.entityId(), targetX, targetY, previewRotated(), folded)));
                 } else {
                     Optional<CreativeItemReference> dragged = rightSidebarPanel.draggedCreativeItem();
                     dragged.ifPresent(item -> GridInventoryServices.network().sendToServer(
                             new CreativeInsertIntoSearchableContainerMessage(searchableMenu.blockPos(),
                                     item.tabIndex(), item.itemIndex(), item.stack().getCount(),
-                                    targetX, targetY, rotatedPreview, folded)));
+                                    targetX, targetY, previewRotated(), folded)));
                 }
                 playReleaseSound(true, false, false);
                 rightSidebarPanel.clearDrag();
@@ -105,7 +99,7 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
                 GridInventoryServices.network().sendToServer(new MoveSearchableContainerEntryMessage(
                         searchableMenu.blockPos(), draggingContainerEntry.entryId(),
                         hit.cellX() - anchorCellX(draggedStack()), hit.cellY() - anchorCellY(draggedStack()),
-                        rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                        previewRotated(), GridBackpackItem.isFolded(draggedStack())));
                 released = true;
             } else {
                 Slot hovered = findHoveredSlot(mouseX, mouseY);
@@ -120,7 +114,7 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
             clearDragState();
             return true;
         }
-        if (button == 0 && !selectedPlayerStack.isEmpty() && lastPlayerSlot >= 0) {
+        if (button == 0 && isPlayerSlotDrag() && lastPlayerSlot >= 0) {
             Optional<ContainerGridSidebarPanel.GridPlacementHit> placement =
                     rightSidebarPanel.containerPlacementAt((int) mouseX, (int) mouseY);
             if (placement.isPresent()) {
@@ -128,7 +122,7 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
                 GridInventoryServices.network().sendToServer(new MovePlayerSlotToSearchableContainerMessage(
                         searchableMenu.blockPos(), lastPlayerSlot,
                         hit.cellX() - anchorCellX(draggedStack()), hit.cellY() - anchorCellY(draggedStack()),
-                        rotatedPreview, GridBackpackItem.isFolded(draggedStack())));
+                        previewRotated(), GridBackpackItem.isFolded(draggedStack())));
                 playReleaseSound(true, false, false);
                 clearDragState();
                 return true;
@@ -166,10 +160,10 @@ public final class SearchableGridContainerScreen extends GridInventoryScreen {
         int targetX = hit.cellX() - anchorCellX(stack);
         int targetY = hit.cellY() - anchorCellY(stack);
         GridItemSize size = GridItemSizeManager.getSize(stack);
-        int w = size.placedWidth(rotatedPreview);
-        int h = size.placedHeight(rotatedPreview);
+        int w = size.placedWidth(previewRotated());
+        int h = size.placedHeight(previewRotated());
         boolean valid = GridPlacementValidator.canPlace(searchableMenu.getContainerGridData(), stack, targetX, targetY,
-                rotatedPreview, draggingContainerEntry == null ? null : draggingContainerEntry.entryId(), 0);
+                previewRotated(), draggingContainerEntry == null ? null : draggingContainerEntry.entryId(), 0);
         renderPlacementPreview(graphics, searchableMenu.getContainerGridData(), hit.gridLeft(), hit.gridTop(),
                 targetX, targetY, w, h, hit.cellX(), hit.cellY(),
                 valid ? 0x6630C860 : 0x66D84040, valid ? 0xCC7DFFA2 : 0xCCFF8888);

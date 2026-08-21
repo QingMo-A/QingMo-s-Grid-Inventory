@@ -3,6 +3,9 @@ package com.dreamingfish.gridinventory.client.screen;
 import com.dreamingfish.gridinventory.platform.GridInventoryServices;
 
 import com.dreamingfish.gridinventory.api.GridItemSize;
+import com.dreamingfish.gridinventory.client.interaction.GridDragSession;
+import com.dreamingfish.gridinventory.client.interaction.GridInteractionController;
+import com.dreamingfish.gridinventory.client.interaction.GridInteractionSurface;
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
@@ -22,32 +25,13 @@ import com.dreamingfish.gridinventory.common.inventory.NestedContainerPath;
 import com.dreamingfish.gridinventory.common.menu.GridInventoryMenu;
 import com.dreamingfish.gridinventory.common.network.ExtractToPlayerInventoryMessage;
 import com.dreamingfish.gridinventory.common.network.InsertFromPlayerInventoryMessage;
-import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
-import com.dreamingfish.gridinventory.common.network.TransferGridEntryIntoNestedGridMessage;
-import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoEquipmentStorageMessage;
-import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoGridMessage;
-import com.dreamingfish.gridinventory.common.network.TransferNestedGridEntryIntoNestedGridMessage;
-import com.dreamingfish.gridinventory.common.network.QuickEquipGridEntryMessage;
-import com.dreamingfish.gridinventory.common.network.QuickEquipEquipmentStorageEntryMessage;
-import com.dreamingfish.gridinventory.common.network.QuickEquipPlayerSlotMessage;
-import com.dreamingfish.gridinventory.common.network.DropGridEntryMessage;
-import com.dreamingfish.gridinventory.common.network.DropEquipmentStorageEntryMessage;
-import com.dreamingfish.gridinventory.common.network.DropCurioMessage;
-import com.dreamingfish.gridinventory.common.network.DropPlayerSlotMessage;
-import com.dreamingfish.gridinventory.common.network.CreativeDiscardItemMessage;
-import com.dreamingfish.gridinventory.common.network.ToggleGridEntryBackpackFoldMessage;
-import com.dreamingfish.gridinventory.common.network.ToggleEquipmentStorageEntryBackpackFoldMessage;
-import com.dreamingfish.gridinventory.common.network.DropNestedGridEntryMessage;
-import com.dreamingfish.gridinventory.common.network.QuickEquipNestedGridEntryMessage;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
-import com.dreamingfish.gridinventory.client.screen.widget.NearbyGroundItemView;
 import com.dreamingfish.gridinventory.client.screen.widget.NestedContainerWindowManager;
 import com.dreamingfish.gridinventory.client.screen.panel.EquipmentColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.GridColumnPanel;
 import com.dreamingfish.gridinventory.client.screen.panel.CreativeItemReference;
 import com.dreamingfish.gridinventory.client.screen.panel.RightSidebarPanel;
-import com.dreamingfish.gridinventory.client.screen.panel.SidebarDragKind;
 import com.dreamingfish.gridinventory.client.screen.widget.FreeSlotWidget;
 import com.dreamingfish.gridinventory.client.screen.widget.CuriosSlotWidget;
 import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
@@ -90,14 +74,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     private int pendingItemTop;
     private int pendingItemWidth = 1;
     private int pendingItemHeight = 1;
-    protected ItemStack dragPreviewStack = ItemStack.EMPTY;
-    protected boolean rotatedPreview;
+    protected final GridInteractionController interactionController = new GridInteractionController(CELL);
     protected int lastPlayerSlot = -1;
-    protected ItemStack selectedPlayerStack = ItemStack.EMPTY;
-    private int dragAnchorCellX;
-    private int dragAnchorCellY;
-    protected int dragAnchorPixelX = CELL / 2;
-    protected int dragAnchorPixelY = CELL / 2;
     protected final RightSidebarPanel rightSidebarPanel = new RightSidebarPanel();
     private final NestedContainerWindowManager nestedWindows = new NestedContainerWindowManager();
     private final EquipmentColumnPanel equipmentColumnPanel = new EquipmentColumnPanel();
@@ -225,14 +203,9 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private boolean hoverAnimationsEnabled() {
-        return draggingEntry == null
-                && draggingEquipmentEntry == null
-                && draggingNestedEntry == null
-                && draggingCurioSlot == null
-                && !rightSidebarPanel.isDraggingGroundItem()
+        return !interactionController.drag().isActive()
                 && !hasPendingDrag()
-                && !nestedWindows.isDraggingWindow()
-                && selectedPlayerStack.isEmpty();
+                && !nestedWindows.isDraggingWindow();
     }
 
     @Override
@@ -248,7 +221,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 ? nestedWindows.entryAt(mouseX, mouseY) : Optional.empty();
         if (renderMainHoverTooltips) {
             if (draggingEntry == null && draggingEquipmentEntry == null && draggingNestedEntry == null
-                    && selectedPlayerStack.isEmpty()) {
+                    && !interactionController.drag().isActive()) {
                 hoveredStack(mouseX, mouseY).ifPresent(stack ->
                         EquipmentStorageTooltipRenderer.render(graphics, stack, mouseX, mouseY, width, height));
             }
@@ -258,7 +231,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         nestedWindows.refresh(this::resolveNestedWindowStack);
         nestedWindows.render(graphics, mouseX, mouseY, hoverAnimationsEnabled(), nestedPlacementPreview());
         graphics.flush();
-        if (renderHoverTooltips && draggingNestedEntry == null && selectedPlayerStack.isEmpty()) {
+        if (renderHoverTooltips && draggingNestedEntry == null && !interactionController.drag().isActive()) {
             float nestedTooltipZ = GridUiLayers.nestedWindowTooltipZ(nestedWindows.topWindowContentZ());
             hoveredNestedEntry.ifPresent(hit -> {
                 GridGuiRenderState.prepareOverlayAfterGuiItems();
@@ -282,7 +255,8 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 hoveredGridEntry(mouseX, mouseY).ifPresent(entry ->
                         graphics.renderTooltip(font, gridEntryTooltip(entry), Optional.empty(), mouseX, mouseY));
                 if (menu.isPlayerGrid() && draggingEntry == null && draggingEquipmentEntry == null
-                        && draggingNestedEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()) {
+                        && draggingNestedEntry == null && draggingCurioSlot == null
+                        && !interactionController.drag().isActive()) {
                     equipmentColumnPanel.slotAt(mouseX, mouseY)
                             .map(slot -> menu.slots.get(slot.menuIndex()))
                             .filter(Slot::hasItem)
@@ -302,13 +276,13 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (stack.isEmpty() || !inGrid(mouseX, mouseY)) {
             return;
         }
-        int x = targetGridX(stack, mouseX);
-        int y = targetGridY(stack, mouseY);
-        boolean valid = GridPlacementValidator.canPlace(menu.getGridData(), stack, x, y, rotatedPreview,
+        int x = targetGridX(stack, mouseX, mouseY);
+        int y = targetGridY(stack, mouseX, mouseY);
+        boolean valid = GridPlacementValidator.canPlace(menu.getGridData(), stack, x, y, previewRotated(),
                 draggingEntry == null ? null : draggingEntry.entryId(), menu.isPlayerGrid() ? 0 : 1);
         GridItemSize size = GridItemSizeManager.getSize(stack);
-        int w = size.placedWidth(rotatedPreview);
-        int h = size.placedHeight(rotatedPreview);
+        int w = size.placedWidth(previewRotated());
+        int h = size.placedHeight(previewRotated());
         int color = valid ? 0x6630C860 : 0x66D84040;
         int outline = valid ? 0xCC7DFFA2 : 0xCCFF8888;
         renderPlacementPreview(graphics, menu.getGridData(), gridLeft, gridTop, x, y, w, h,
@@ -328,14 +302,15 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return;
         }
         GridItemSize size = GridItemSizeManager.getSize(stack);
-        int w = size.placedWidth(rotatedPreview);
-        int h = size.placedHeight(rotatedPreview);
-        int left = mouseX - anchorCellX(stack) * CELL - dragAnchorPixelX;
-        int top = mouseY - anchorCellY(stack) * CELL - dragAnchorPixelY;
+        int w = size.placedWidth(previewRotated());
+        int h = size.placedHeight(previewRotated());
+        int left = mouseX - anchorCellX(stack) * CELL - interactionController.drag().anchorPixelX();
+        int top = mouseY - anchorCellY(stack) * CELL - interactionController.drag().anchorPixelY();
         graphics.flush();
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, 0.0F, GridUiLayers.draggedItemZ(nestedWindows.topWindowContentZ()));
-        GridItemRenderer.renderDraggedStackOverlay(graphics, stack, left, top, w * CELL, h * CELL, 0.75F, rotatedPreview);
+        GridItemRenderer.renderDraggedStackOverlay(graphics, stack, left, top, w * CELL, h * CELL, 0.75F,
+                previewRotated());
         graphics.pose().popPose();
         graphics.flush();
     }
@@ -346,16 +321,16 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return;
         }
         gridColumnPanel.equipmentRegionAt(mouseX, mouseY).ifPresent(region -> {
-            int x = targetRegionX(region, stack, mouseX);
-            int y = targetRegionY(region, stack, mouseY);
+            int x = targetRegionX(region, stack, mouseX, mouseY);
+            int y = targetRegionY(region, stack, mouseX, mouseY);
             boolean movingWithinSameRegion = draggingEquipmentEntry != null
                     && region.slot() == draggingEquipmentEntry.slot()
                     && region.containerId().equals(draggingEquipmentEntry.containerId());
-            boolean valid = GridPlacementValidator.canPlace(region.inventory(), stack, x, y, rotatedPreview,
+            boolean valid = GridPlacementValidator.canPlace(region.inventory(), stack, x, y, previewRotated(),
                     movingWithinSameRegion ? draggingEquipmentEntry.entry().entryId() : null, 1);
             GridItemSize size = GridItemSizeManager.getSize(stack);
-            int w = size.placedWidth(rotatedPreview);
-            int h = size.placedHeight(rotatedPreview);
+            int w = size.placedWidth(previewRotated());
+            int h = size.placedHeight(previewRotated());
             renderPlacementPreview(graphics, region.inventory(), region.left(), region.top(), x, y, w, h,
                     region.cellX(mouseX, mouseY), region.cellY(mouseX, mouseY),
                     valid ? 0x6630C860 : 0x66D84040, valid ? 0xCC7DFFA2 : 0xCCFF8888);
@@ -363,43 +338,23 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     protected ItemStack draggedStack() {
-        if (!dragPreviewStack.isEmpty()) {
-            return dragPreviewStack;
+        if (interactionController.drag().isActive()) {
+            return interactionController.drag().stack();
         }
-        return draggingEntry != null ? draggingEntry.stack()
-                : draggingEquipmentEntry != null ? draggingEquipmentEntry.entry().stack()
-                : draggingNestedEntry != null ? draggingNestedEntry.entry().stack()
-                : draggingCurioSlot != null ? draggingCurioSlot.view().stack()
-                : rightSidebarPanel.draggedStack().orElse(selectedPlayerStack);
+        return rightSidebarPanel.draggedStack().orElse(ItemStack.EMPTY);
     }
 
-    private boolean toggleDraggedBackpackPreview() {
-        ItemStack stack = draggedStack();
-        if (stack.isEmpty() || !(stack.getItem() instanceof GridBackpackItem)) {
-            return false;
-        }
-        ItemStack toggled = stack.copy();
-        if (!GridBackpackItem.toggleFolded(toggled)) {
-            return false;
-        }
-        dragPreviewStack = toggled;
-        GridItemSize size = GridItemSizeManager.getSize(toggled);
-        if (!size.rotatable()) {
-            rotatedPreview = false;
-        }
-        GridInventoryUiSounds.foldBackpack();
-        return true;
+    protected boolean previewRotated() {
+        return interactionController.drag().rotated();
     }
 
-    private void rotateDraggedPreview() {
-        ItemStack stack = draggedStack();
-        if (stack.isEmpty()) {
-            return;
-        }
-        GridItemSize size = GridItemSizeManager.getSize(stack);
-        if (size.rotatable() && size.width() != size.height()) {
-            rotatedPreview = !rotatedPreview;
-        }
+    protected boolean isPlayerSlotDrag() {
+        return interactionController.drag().source()
+                .filter(GridItemSource.PlayerSlot.class::isInstance).isPresent();
+    }
+
+    protected void beginLegacyDragPreview(ItemStack stack, boolean rotated) {
+        interactionController.begin(null, stack, rotated);
     }
 
     protected void renderPlacementPreview(GuiGraphics graphics, GridInventoryData inventory,
@@ -477,15 +432,12 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         Optional<NestedContainerWindowManager.EntryHit> nestedEntryHit = nestedWindows.entryAt((int) mouseX, (int) mouseY);
-        if (button == 1 && !draggedStack().isEmpty()) {
-            rotateDraggedPreview();
+        if (interactionController.handleMouseButton(button)) {
             return true;
         }
         if (button == 1 && nestedEntryHit.isPresent() && menu.isPlayerGrid()) {
             NestedContainerWindowManager.EntryHit hit = nestedEntryHit.get();
-            GridInventoryServices.network().sendToServer(new QuickEquipNestedGridEntryMessage(
-                    hit.ownerPath(), hit.containerId(), hit.entry().entryId()));
-            GridInventoryUiSounds.equip();
+            interactionController.quickEquip(nestedSource(hit));
             return true;
         }
         if (button == 0 && nestedEntryHit.isPresent()) {
@@ -500,14 +452,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             return true;
         }
         if (rightSidebarPanel.mouseClicked(mouseX, mouseY, button)) {
+            synchronizeSidebarDrag();
             return true;
         }
         if (menu.isPlayerGrid() && gridColumnPanel.mouseClicked(mouseX, mouseY, button)) {
-            return true;
-        }
-        if (button == 1 && (draggingEntry != null || draggingEquipmentEntry != null || draggingNestedEntry != null
-                || draggingCurioSlot != null || !selectedPlayerStack.isEmpty())) {
-            rotateDraggedPreview();
             return true;
         }
         if (menu.isPlayerGrid()) {
@@ -525,9 +473,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt((int) mouseX, (int) mouseY);
             if (equipmentHit.isPresent()) {
                 if (button == 1) {
-                    GridInventoryServices.network().sendToServer(new QuickEquipEquipmentStorageEntryMessage(
-                            equipmentHit.get().slot(), equipmentHit.get().containerId(), equipmentHit.get().entry().entryId()));
-                    GridInventoryUiSounds.equip();
+                    interactionController.quickEquip(equipmentSource(equipmentHit.get()));
                     return true;
                 }
                 if (button == 0) {
@@ -545,8 +491,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             Optional<GridEntry> hit = menu.getGridData().getEntries().stream().filter(entry -> entry.contains(x, y)).findFirst();
             if (hit.isPresent()) {
                 if (button == 1 && menu.isPlayerGrid()) {
-                    GridInventoryServices.network().sendToServer(new QuickEquipGridEntryMessage(hit.get().entryId()));
-                    GridInventoryUiSounds.equip();
+                    interactionController.quickEquip(new GridItemSource.MenuGridEntry(hit.get().entryId()));
                 } else if (hasShiftDown() && button == 0) {
                     GridInventoryServices.network().sendToServer(new ExtractToPlayerInventoryMessage(hit.get().entryId(), hit.get().stack().getCount()));
                     GridInventoryUiSounds.unequip();
@@ -565,12 +510,10 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             lastPlayerSlot = hovered.getSlotIndex();
             if (hasShiftDown() && button == 0) {
                 GridInventoryServices.network().sendToServer(new InsertFromPlayerInventoryMessage(lastPlayerSlot, 0, 0, false, true, false));
-                selectedPlayerStack = ItemStack.EMPTY;
                 return true;
             }
             if (button == 1 && hovered.hasItem() && menu.isPlayerGrid()) {
-                GridInventoryServices.network().sendToServer(new QuickEquipPlayerSlotMessage(lastPlayerSlot));
-                GridInventoryUiSounds.equip();
+                interactionController.quickEquip(new GridItemSource.PlayerSlot(lastPlayerSlot));
                 return true;
             }
             if (button == 0 && hovered.hasItem()) {
@@ -589,25 +532,11 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (rightSidebarPanel.isTextInputFocused()) {
             return true;
         }
-        if (ModKeyMappings.ROTATE_GRID_ITEM.matches(keyCode, scanCode) && !draggedStack().isEmpty()) {
-            rotateDraggedPreview();
-            return true;
-        }
-        if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode) && draggingEntry != null) {
-            toggleDraggedBackpackPreview();
-            return true;
-        }
-        if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode) && draggingEquipmentEntry != null) {
-            toggleDraggedBackpackPreview();
-            return true;
-        }
-        if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode)
-                && (draggingNestedEntry != null || draggingCurioSlot != null || !selectedPlayerStack.isEmpty())) {
-            toggleDraggedBackpackPreview();
+        if (interactionController.handlePreviewKey(keyCode, scanCode)) {
             return true;
         }
         if (ModKeyMappings.PICKUP_ITEM.matches(keyCode, scanCode)
-                && draggingEntry == null && draggingEquipmentEntry == null && draggingCurioSlot == null && selectedPlayerStack.isEmpty()
+                && !interactionController.drag().isActive()
                 && rightSidebarPanel.pickupHovered(currentMouseX(), currentMouseY())) {
             return true;
         }
@@ -630,10 +559,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         int mouseY = currentMouseY();
         Optional<NestedContainerWindowManager.EntryHit> nestedEntryHit = nestedWindows.entryAt(mouseX, mouseY);
         if (nestedEntryHit.isPresent()) {
-            NestedContainerWindowManager.EntryHit hit = nestedEntryHit.get();
-            GridInventoryServices.network().sendToServer(new DropNestedGridEntryMessage(
-                    hit.ownerPath(), hit.containerId(), hit.entry().entryId()));
-            return true;
+            return interactionController.drop(nestedSource(nestedEntryHit.get()));
         }
         if (nestedWindows.containsWindowAt(mouseX, mouseY)) {
             return true;
@@ -641,26 +567,20 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (menu.isPlayerGrid()) {
             Optional<GridColumnPanel.EquipmentEntryHit> equipmentHit = gridColumnPanel.equipmentEntryAt(mouseX, mouseY);
             if (equipmentHit.isPresent()) {
-                GridColumnPanel.EquipmentEntryHit hit = equipmentHit.get();
-                GridInventoryServices.network().sendToServer(new DropEquipmentStorageEntryMessage(hit.slot(), hit.containerId(), hit.entry().entryId()));
-                return true;
+                return interactionController.drop(equipmentSource(equipmentHit.get()));
             }
             Optional<CuriosSlotWidget> curioHit = equipmentColumnPanel.curioSlotAt(mouseX, mouseY);
             if (curioHit.isPresent() && !curioHit.get().view().stack().isEmpty()) {
-                GridInventoryServices.network().sendToServer(new DropCurioMessage(
-                        curioHit.get().view().identifier(), curioHit.get().view().index()));
-                return true;
+                return interactionController.drop(curioSource(curioHit.get()));
             }
             Slot hovered = findHoveredSlot(mouseX, mouseY);
             if (hovered != null && hovered.hasItem()) {
-                GridInventoryServices.network().sendToServer(new DropPlayerSlotMessage(hovered.getSlotIndex()));
-                return true;
+                return interactionController.drop(new GridItemSource.PlayerSlot(hovered.getSlotIndex()));
             }
         }
         Optional<GridEntry> entry = entryAt(mouseX, mouseY);
         if (entry.isPresent()) {
-            GridInventoryServices.network().sendToServer(new DropGridEntryMessage(entry.get().entryId()));
-            return true;
+            return interactionController.drop(new GridItemSource.MenuGridEntry(entry.get().entryId()));
         }
         return false;
     }
@@ -682,16 +602,6 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         if (nestedWindows.mouseReleased(button)) {
             return true;
         }
-        if (button == 0 && rightSidebarPanel.dragKind() == SidebarDragKind.CREATIVE_ITEM) {
-            handleCreativeItemRelease((int) mouseX, (int) mouseY);
-            rightSidebarPanel.clearDrag();
-            return true;
-        }
-        if (button == 0 && rightSidebarPanel.isDraggingGroundItem()) {
-            handleGroundItemRelease((int) mouseX, (int) mouseY);
-            rightSidebarPanel.clearDrag();
-            return true;
-        }
         if (button == 0 && hasPendingDrag()) {
             if (openPendingNestedWindow((int) mouseX, (int) mouseY)) {
                 clearPendingDrag();
@@ -709,275 +619,53 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
                 return true;
             }
         }
+        if (button == 0 && interactionController.drag().source().isPresent()) {
+            GridItemSource source = interactionController.drag().source().orElseThrow();
+            GridInteractionController.ReleaseResult release = interactionController.release(
+                    (int) mouseX, (int) mouseY, mainDropSurfaces());
+            playUnifiedReleaseSound(source, release.target(), release.sent());
+            if (source instanceof GridItemSource.GroundItem || source instanceof GridItemSource.CreativeItem) {
+                rightSidebarPanel.clearDrag();
+            }
+            clearDragState();
+            return true;
+        }
         if (rightSidebarPanel.mouseReleased(mouseX, mouseY, button)) {
-            return true;
-        }
-        if (button == 0 && draggingCurioSlot != null) {
-            boolean released = false;
-            boolean unequipped = true;
-            Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
-            if (nestedTarget.isPresent()) {
-                NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(curioDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
-                released = true;
-            }
-            if (!released && nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
-                clearDragState();
-                return true;
-            }
-            Optional<GridColumnPanel.Region> equipmentRegion = !released && menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
-            if (equipmentRegion.isPresent()) {
-                GridColumnPanel.Region target = equipmentRegion.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(curioDragSource(),
-                        equipmentPlacementTarget(target, (int) mouseX, (int) mouseY, targetFolded), targetFolded);
-                released = true;
-            } else if (inGrid((int) mouseX, (int) mouseY)) {
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(curioDragSource(),
-                        menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded), targetFolded);
-                released = true;
-            } else {
-                Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null) {
-                    sendMove(curioDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
-                            GridBackpackItem.isFolded(draggedStack()));
-                    released = true;
-                }
-            }
-            playReleaseSound(released, false, unequipped);
-            clearDragState();
-            return true;
-        }
-        if (button == 0 && draggingEquipmentEntry != null) {
-            boolean released = false;
-            boolean equipped = false;
-            boolean unequipped = false;
-            Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
-            if (nestedTarget.isPresent()) {
-                NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(equipmentDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
-                playReleaseSound(true, false, false);
-                clearDragState();
-                return true;
-            }
-            if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
-                clearDragState();
-                return true;
-            }
-            Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
-            if (curioTarget.isPresent()) {
-                sendMove(equipmentDragSource(), new GridItemTarget.AccessorySlot(
-                                curioTarget.get().view().identifier(), curioTarget.get().view().index()),
-                        GridBackpackItem.isFolded(draggedStack()));
-                GridInventoryUiSounds.equip();
-                clearDragState();
-                return true;
-            }
-            Optional<GridColumnPanel.Region> region = gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY);
-            if (region.isPresent()) {
-                GridColumnPanel.Region target = region.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(equipmentDragSource(), equipmentPlacementTarget(target, (int) mouseX, (int) mouseY,
-                        targetFolded), targetFolded);
-                released = true;
-            } else if (inGrid((int) mouseX, (int) mouseY)) {
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(equipmentDragSource(), menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded),
-                        targetFolded);
-                released = true;
-                unequipped = true;
-            } else {
-                Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null) {
-                    sendMove(equipmentDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
-                            new GridMoveOptions(draggingEquipmentEntry.entry().stack().getCount(), false, false));
-                    released = true;
-                    unequipped = true;
-                }
-            }
-            playReleaseSound(released, equipped, unequipped);
-            clearDragState();
-            return true;
-        }
-        if (button == 0 && draggingNestedEntry != null) {
-            boolean released = false;
-            Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
-            if (nestedTarget.isPresent()) {
-                NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(nestedDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
-                released = true;
-            } else if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
-                clearDragState();
-                return true;
-            } else {
-                Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
-                        ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
-                if (equipmentRegion.isPresent()) {
-                    GridColumnPanel.Region target = equipmentRegion.get();
-                    boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                    sendMove(nestedDragSource(), equipmentPlacementTarget(target, (int) mouseX, (int) mouseY,
-                            targetFolded), targetFolded);
-                    released = true;
-                }
-            }
-            if (!released && inGrid((int) mouseX, (int) mouseY)) {
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(nestedDragSource(), menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded),
-                        targetFolded);
-                released = true;
-            }
-            if (!released) {
-                Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null) {
-                    sendMove(nestedDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
-                            new GridMoveOptions(draggingNestedEntry.entry().stack().getCount(), false, false));
-                    released = true;
-                }
-            }
-            playReleaseSound(released, false, false);
-            clearDragState();
-            return true;
-        }
-        if (button == 0 && draggingEntry != null) {
-            boolean released = false;
-            boolean equipped = false;
-            Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
-            if (nestedTarget.isPresent()) {
-                NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(gridDragSource(), nestedPlacementTarget(target, targetFolded), targetFolded);
-                playReleaseSound(true, false, false);
-                clearDragState();
-                return true;
-            }
-            if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
-                clearDragState();
-                return true;
-            }
-            Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
-            if (curioTarget.isPresent()) {
-                sendMove(gridDragSource(), new GridItemTarget.AccessorySlot(
-                                curioTarget.get().view().identifier(), curioTarget.get().view().index()),
-                        GridBackpackItem.isFolded(draggedStack()));
-                GridInventoryUiSounds.equip();
-                clearDragState();
-                return true;
-            }
-            Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
-            if (equipmentRegion.isPresent()) {
-                GridColumnPanel.Region target = equipmentRegion.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(gridDragSource(), equipmentPlacementTarget(target, (int) mouseX, (int) mouseY,
-                        targetFolded), targetFolded);
-                released = true;
-                equipped = true;
-            } else if (inGrid((int) mouseX, (int) mouseY)) {
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(gridDragSource(),
-                        menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded), targetFolded);
-                released = true;
-            } else {
-                Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null) {
-                    sendMove(gridDragSource(), new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
-                            new GridMoveOptions(draggingEntry.stack().getCount(), false, false));
-                    released = true;
-                }
-            }
-            playReleaseSound(released, equipped, false);
-            clearDragState();
-            return true;
-        }
-        if (button == 0 && !selectedPlayerStack.isEmpty() && lastPlayerSlot >= 0) {
-            boolean released = false;
-            boolean equipped = false;
-            Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt((int) mouseX, (int) mouseY);
-            if (nestedTarget.isPresent()) {
-                NestedContainerWindowManager.GridHit target = nestedTarget.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(playerSlotSource(lastPlayerSlot), nestedPlacementTarget(target, targetFolded), targetFolded);
-                playReleaseSound(true, false, false);
-                clearDragState();
-                return true;
-            }
-            if (nestedWindows.containsWindowAt((int) mouseX, (int) mouseY)) {
-                clearDragState();
-                return true;
-            }
-            Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
-            if (curioTarget.isPresent()) {
-                sendMove(playerSlotSource(lastPlayerSlot), new GridItemTarget.AccessorySlot(
-                                curioTarget.get().view().identifier(), curioTarget.get().view().index()),
-                        GridBackpackItem.isFolded(draggedStack()));
-                GridInventoryUiSounds.equip();
-                clearDragState();
-                return true;
-            }
-            Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid() ? gridColumnPanel.equipmentRegionAt((int) mouseX, (int) mouseY) : Optional.empty();
-            if (equipmentRegion.isPresent()) {
-                GridColumnPanel.Region target = equipmentRegion.get();
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(playerSlotSource(lastPlayerSlot),
-                        equipmentPlacementTarget(target, (int) mouseX, (int) mouseY, targetFolded), targetFolded);
-                released = true;
-                equipped = true;
-            } else if (inGrid((int) mouseX, (int) mouseY)) {
-                boolean targetFolded = GridBackpackItem.isFolded(draggedStack());
-                sendMove(playerSlotSource(lastPlayerSlot),
-                        menuGridPlacementTarget((int) mouseX, (int) mouseY, targetFolded), targetFolded);
-                released = true;
-            } else {
-                Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null) {
-                    sendMove(playerSlotSource(lastPlayerSlot),
-                            new GridItemTarget.PlayerSlot(hovered.getSlotIndex()),
-                            GridBackpackItem.isFolded(draggedStack()));
-                    released = true;
-                }
-            }
-            playReleaseSound(released, equipped, false);
-            clearDragState();
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private boolean discardDraggedItemIntoCreative() {
-        GridItemSource source;
-        if (draggingCurioSlot != null) {
-            source = curioDragSource();
-        } else if (draggingEquipmentEntry != null) {
-            source = equipmentDragSource();
-        } else if (draggingNestedEntry != null) {
-            source = nestedDragSource();
-        } else if (draggingEntry != null) {
-            source = gridDragSource();
-        } else if (!selectedPlayerStack.isEmpty() && lastPlayerSlot >= 0) {
-            source = playerSlotSource(lastPlayerSlot);
-        } else {
+        Optional<GridItemSource> source = interactionController.drag().source();
+        if (source.isEmpty() || source.get() instanceof GridItemSource.GroundItem
+                || source.get() instanceof GridItemSource.CreativeItem) {
             return false;
         }
-        GridInventoryServices.network().sendToServer(new CreativeDiscardItemMessage(source));
+        interactionController.discardCreative();
         playReleaseSound(true, false, false);
         clearDragState();
         return true;
     }
 
     private GridItemSource nestedDragSource() {
-        return draggingNestedEntry.containerId().isEmpty()
-                ? new GridItemSource.NestedGridEntry(draggingNestedEntry.ownerPath(),
-                draggingNestedEntry.entry().entryId())
-                : new GridItemSource.NestedEquipmentStorageEntry(draggingNestedEntry.ownerPath(),
-                draggingNestedEntry.containerId(), draggingNestedEntry.entry().entryId());
+        return nestedSource(draggingNestedEntry);
+    }
+
+    private static GridItemSource nestedSource(NestedContainerWindowManager.EntryHit hit) {
+        return hit.containerId().isEmpty()
+                ? new GridItemSource.NestedGridEntry(hit.ownerPath(), hit.entry().entryId())
+                : new GridItemSource.NestedEquipmentStorageEntry(
+                hit.ownerPath(), hit.containerId(), hit.entry().entryId());
     }
 
     private GridItemSource equipmentDragSource() {
-        return new GridItemSource.EquipmentStorageEntry(draggingEquipmentEntry.slot(),
-                draggingEquipmentEntry.containerId(), draggingEquipmentEntry.entry().entryId());
+        return equipmentSource(draggingEquipmentEntry);
+    }
+
+    private static GridItemSource equipmentSource(GridColumnPanel.EquipmentEntryHit hit) {
+        return new GridItemSource.EquipmentStorageEntry(
+                hit.slot(), hit.containerId(), hit.entry().entryId());
     }
 
     private GridItemSource gridDragSource() {
@@ -989,159 +677,137 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private GridItemSource curioDragSource() {
-        return new GridItemSource.AccessorySlot(draggingCurioSlot.view().identifier(),
-                draggingCurioSlot.view().index());
+        return curioSource(draggingCurioSlot);
     }
 
-    private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target, boolean targetFolded) {
-        return nestedPlacementTarget(target, draggedStack(), targetFolded);
+    private static GridItemSource curioSource(CuriosSlotWidget slot) {
+        return new GridItemSource.AccessorySlot(slot.view().identifier(), slot.view().index());
     }
 
-    private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target, ItemStack stack,
-                                                 boolean targetFolded) {
-        int targetX = target.cellX() - anchorCellX(stack);
-        int targetY = target.cellY() - anchorCellY(stack);
+    private GridItemTarget nestedPlacementTarget(NestedContainerWindowManager.GridHit target,
+                                                 GridDragSession session) {
+        int targetX = target.cellX() - session.anchorCellX();
+        int targetY = target.cellY() - session.anchorCellY();
         return target.containerId().isEmpty()
-                ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY, rotatedPreview,
-                targetFolded)
+                ? new GridItemTarget.NestedGridPlacement(target.ownerPath(), targetX, targetY, session.rotated(),
+                session.folded())
                 : new GridItemTarget.NestedEquipmentStoragePlacement(target.ownerPath(), target.containerId(),
-                targetX, targetY, rotatedPreview, targetFolded);
+                targetX, targetY, session.rotated(), session.folded());
     }
 
-    private GridItemTarget equipmentPlacementTarget(GridColumnPanel.Region target, int mouseX, int mouseY,
-                                                   boolean targetFolded) {
-        return equipmentPlacementTarget(target, draggedStack(), mouseX, mouseY, targetFolded);
-    }
-
-    private GridItemTarget equipmentPlacementTarget(GridColumnPanel.Region target, ItemStack stack,
-                                                    int mouseX, int mouseY, boolean targetFolded) {
+    private GridItemTarget equipmentPlacementTarget(GridColumnPanel.Region target, GridDragSession session,
+                                                    int mouseX, int mouseY) {
         return new GridItemTarget.EquipmentStoragePlacement(target.slot(), target.containerId(),
-                targetRegionX(target, stack, mouseX), targetRegionY(target, stack, mouseY),
-                rotatedPreview, targetFolded);
+                targetRegionX(target, session.stack(), mouseX, mouseY),
+                targetRegionY(target, session.stack(), mouseX, mouseY),
+                session.rotated(), session.folded());
     }
 
-    private GridItemTarget menuGridPlacementTarget(int mouseX, int mouseY, boolean targetFolded) {
-        return menuGridPlacementTarget(draggedStack(), mouseX, mouseY, targetFolded);
+    private GridItemTarget menuGridPlacementTarget(GridDragSession session, int mouseX, int mouseY) {
+        return new GridItemTarget.MenuGridPlacement(
+                targetGridX(session.stack(), mouseX, mouseY),
+                targetGridY(session.stack(), mouseX, mouseY), session.rotated(), session.folded());
     }
 
-    private GridItemTarget menuGridPlacementTarget(ItemStack stack, int mouseX, int mouseY,
-                                                   boolean targetFolded) {
-        return new GridItemTarget.MenuGridPlacement(targetGridX(stack, mouseX),
-                targetGridY(stack, mouseY), rotatedPreview, targetFolded);
-    }
-
-    private GridMoveOptions moveOptions(boolean targetFolded) {
-        return GridMoveOptions.all(rotatedPreview, targetFolded);
-    }
-
-    private void sendMove(GridItemSource source, GridItemTarget target, boolean targetFolded) {
-        sendMove(source, target, moveOptions(targetFolded));
-    }
-
-    private void sendMove(GridItemSource source, GridItemTarget target, GridMoveOptions options) {
-        GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target, options));
-    }
-
-    private void handleGroundItemRelease(int mouseX, int mouseY) {
-        Optional<NearbyGroundItemView> dragged = rightSidebarPanel.draggedGroundItem();
-        if (dragged.isEmpty()) {
+    private void synchronizeSidebarDrag() {
+        Optional<CreativeItemReference> creative = rightSidebarPanel.draggedCreativeItem();
+        if (creative.isPresent() && isCreativePlayer()) {
+            CreativeItemReference item = creative.get();
+            interactionController.begin(new GridItemSource.CreativeItem(
+                    item.tabIndex(), item.itemIndex(), item.stack().getCount()), item.stack(), false);
             return;
         }
-        NearbyGroundItemView view = dragged.get();
-        Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt(mouseX, mouseY);
-        if (nestedTarget.isPresent()) {
-            NestedContainerWindowManager.GridHit target = nestedTarget.get();
-            boolean targetFolded = GridBackpackItem.isFolded(view.stack());
-            sendMove(new GridItemSource.GroundItem(view.entityId()),
-                    nestedPlacementTarget(target, view.stack(), targetFolded), targetFolded);
-            rotatedPreview = false;
-            return;
-        }
-        if (menu.isPlayerGrid()) {
-            Optional<CuriosSlotWidget> curioHit = equipmentColumnPanel.curioSlotAt(mouseX, mouseY);
-            if (curioHit.isPresent()) {
-                sendMove(new GridItemSource.GroundItem(view.entityId()), new GridItemTarget.AccessorySlot(
-                        curioHit.get().view().identifier(), curioHit.get().view().index()), false);
-                rotatedPreview = false;
-                return;
-            }
-            Slot hovered = findHoveredSlot(mouseX, mouseY);
-            if (hovered != null) {
-                sendMove(new GridItemSource.GroundItem(view.entityId()),
-                        new GridItemTarget.PlayerSlot(hovered.getSlotIndex()), false);
-                rotatedPreview = false;
-                return;
-            }
-        }
-        Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
-                ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
-        if (equipmentRegion.isPresent()) {
-            GridColumnPanel.Region region = equipmentRegion.get();
-            boolean targetFolded = GridBackpackItem.isFolded(view.stack());
-            sendMove(new GridItemSource.GroundItem(view.entityId()),
-                    equipmentPlacementTarget(region, view.stack(), mouseX, mouseY, targetFolded), targetFolded);
-        } else if (menu.isPlayerGrid()) {
-            if (inGrid(mouseX, mouseY)) {
-                boolean targetFolded = GridBackpackItem.isFolded(view.stack());
-                sendMove(new GridItemSource.GroundItem(view.entityId()),
-                        menuGridPlacementTarget(view.stack(), mouseX, mouseY, targetFolded), targetFolded);
-            }
-        } else if (inGrid(mouseX, mouseY)) {
-            boolean targetFolded = GridBackpackItem.isFolded(view.stack());
-            sendMove(new GridItemSource.GroundItem(view.entityId()),
-                    menuGridPlacementTarget(view.stack(), mouseX, mouseY, targetFolded), targetFolded);
-        }
-        rotatedPreview = false;
+        rightSidebarPanel.draggedGroundItem().ifPresent(view -> interactionController.begin(
+                new GridItemSource.GroundItem(view.entityId()), view.stack(), false));
     }
 
-    private void handleCreativeItemRelease(int mouseX, int mouseY) {
-        Optional<CreativeItemReference> dragged = rightSidebarPanel.draggedCreativeItem();
-        if (dragged.isEmpty() || !isCreativePlayer()) {
-            rotatedPreview = false;
+    private List<GridInteractionSurface> mainDropSurfaces() {
+        return List.of(this::resolveNestedDrop, this::resolveCurioDrop, this::resolveEquipmentDrop,
+                this::resolveMenuGridDrop, this::resolvePlayerSlotDrop);
+    }
+
+    private GridInteractionSurface.DropHit resolveNestedDrop(GridDragSession session, int mouseX, int mouseY) {
+        Optional<NestedContainerWindowManager.GridHit> hit = nestedWindows.gridAt(mouseX, mouseY);
+        if (hit.isPresent()) {
+            return GridInteractionSurface.DropHit.target(nestedPlacementTarget(hit.get(), session));
+        }
+        return nestedWindows.containsWindowAt(mouseX, mouseY)
+                ? GridInteractionSurface.DropHit.blocked()
+                : GridInteractionSurface.DropHit.pass();
+    }
+
+    private GridInteractionSurface.DropHit resolveCurioDrop(GridDragSession session, int mouseX, int mouseY) {
+        if (!menu.isPlayerGrid()) {
+            return GridInteractionSurface.DropHit.pass();
+        }
+        Optional<CuriosSlotWidget> curio = equipmentColumnPanel.curioSlotAt(mouseX, mouseY);
+        if (curio.isEmpty()) {
+            return GridInteractionSurface.DropHit.pass();
+        }
+        if (session.source().filter(GridItemSource.AccessorySlot.class::isInstance).isPresent()) {
+            return GridInteractionSurface.DropHit.blocked();
+        }
+        return GridInteractionSurface.DropHit.target(new GridItemTarget.AccessorySlot(
+                curio.get().view().identifier(), curio.get().view().index()));
+    }
+
+    private GridInteractionSurface.DropHit resolveEquipmentDrop(GridDragSession session, int mouseX, int mouseY) {
+        if (!menu.isPlayerGrid()) {
+            return GridInteractionSurface.DropHit.pass();
+        }
+        return gridColumnPanel.equipmentRegionAt(mouseX, mouseY)
+                .map(region -> GridInteractionSurface.DropHit.target(
+                        equipmentPlacementTarget(region, session, mouseX, mouseY)))
+                .orElseGet(GridInteractionSurface.DropHit::pass);
+    }
+
+    private GridInteractionSurface.DropHit resolveMenuGridDrop(GridDragSession session, int mouseX, int mouseY) {
+        return inGrid(mouseX, mouseY)
+                ? GridInteractionSurface.DropHit.target(menuGridPlacementTarget(session, mouseX, mouseY))
+                : GridInteractionSurface.DropHit.pass();
+    }
+
+    private GridInteractionSurface.DropHit resolvePlayerSlotDrop(GridDragSession session, int mouseX, int mouseY) {
+        Slot hovered = findHoveredSlot(mouseX, mouseY);
+        if (hovered == null) {
+            return GridInteractionSurface.DropHit.pass();
+        }
+        return GridInteractionSurface.DropHit.target(
+                new GridItemTarget.PlayerSlot(hovered.getSlotIndex()), playerSlotMoveOptions(session));
+    }
+
+    private GridMoveOptions playerSlotMoveOptions(GridDragSession session) {
+        GridItemSource source = session.source().orElseThrow();
+        if (source instanceof GridItemSource.MenuGridEntry
+                || source instanceof GridItemSource.EquipmentStorageEntry
+                || source instanceof GridItemSource.NestedGridEntry
+                || source instanceof GridItemSource.NestedEquipmentStorageEntry) {
+            return new GridMoveOptions(session.stack().getCount(), false, false);
+        }
+        if (source instanceof GridItemSource.GroundItem || source instanceof GridItemSource.CreativeItem) {
+            return new GridMoveOptions(Integer.MAX_VALUE, session.rotated(), false);
+        }
+        return session.options();
+    }
+
+    private void playUnifiedReleaseSound(GridItemSource source, GridItemTarget target, boolean sent) {
+        if (!sent || source instanceof GridItemSource.GroundItem || source instanceof GridItemSource.CreativeItem) {
             return;
         }
-        CreativeItemReference creativeItem = dragged.get();
-        ItemStack stack = creativeItem.stack();
-        Optional<NestedContainerWindowManager.GridHit> nestedTarget = nestedWindows.gridAt(mouseX, mouseY);
-        if (nestedTarget.isPresent()) {
-            NestedContainerWindowManager.GridHit target = nestedTarget.get();
-            boolean targetFolded = GridBackpackItem.isFolded(stack);
-            sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
-                            stack.getCount()),
-                    nestedPlacementTarget(target, stack, targetFolded), targetFolded);
-            rotatedPreview = false;
-            return;
-        }
-        Optional<GridColumnPanel.Region> equipmentRegion = menu.isPlayerGrid()
-                ? gridColumnPanel.equipmentRegionAt(mouseX, mouseY) : Optional.empty();
-        if (equipmentRegion.isPresent()) {
-            GridColumnPanel.Region region = equipmentRegion.get();
-            boolean targetFolded = GridBackpackItem.isFolded(stack);
-            sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
-                            stack.getCount()),
-                    equipmentPlacementTarget(region, stack, mouseX, mouseY, targetFolded), targetFolded);
-        } else if (inGrid(mouseX, mouseY)) {
-            boolean targetFolded = GridBackpackItem.isFolded(stack);
-            sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
-                            stack.getCount()),
-                    menuGridPlacementTarget(stack, mouseX, mouseY, targetFolded), targetFolded);
+        if (target instanceof GridItemTarget.AccessorySlot) {
+            GridInventoryUiSounds.equip();
+        } else if (source instanceof GridItemSource.AccessorySlot) {
+            GridInventoryUiSounds.unequip();
+        } else if (target instanceof GridItemTarget.EquipmentStoragePlacement
+                && (source instanceof GridItemSource.MenuGridEntry || source instanceof GridItemSource.PlayerSlot)) {
+            GridInventoryUiSounds.equip();
+        } else if (source instanceof GridItemSource.EquipmentStorageEntry
+                && (target instanceof GridItemTarget.MenuGridPlacement
+                || target instanceof GridItemTarget.PlayerSlot)) {
+            GridInventoryUiSounds.unequip();
         } else {
-            Optional<CuriosSlotWidget> curioTarget = menu.isPlayerGrid() ? equipmentColumnPanel.curioSlotAt(mouseX, mouseY) : Optional.empty();
-            if (curioTarget.isPresent()) {
-                sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
-                                stack.getCount()),
-                        new GridItemTarget.AccessorySlot(curioTarget.get().view().identifier(),
-                                curioTarget.get().view().index()), false);
-            } else {
-                Slot hovered = findHoveredSlot(mouseX, mouseY);
-                if (hovered != null) {
-                    sendMove(new GridItemSource.CreativeItem(creativeItem.tabIndex(), creativeItem.itemIndex(),
-                                    stack.getCount()),
-                            new GridItemTarget.PlayerSlot(hovered.getSlotIndex()), false);
-                }
-            }
+            GridInventoryUiSounds.dragRelease();
         }
-        rotatedPreview = false;
     }
 
     @Override
@@ -1282,7 +948,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
             sourceContainerId = Optional.of(draggingNestedEntry.containerId());
             sourceEntryId = Optional.of(draggingNestedEntry.entry().entryId());
         }
-        return Optional.of(new NestedContainerWindowManager.PlacementPreview(stack, rotatedPreview,
+        return Optional.of(new NestedContainerWindowManager.PlacementPreview(stack, previewRotated(),
                 anchorCellX(stack), anchorCellY(stack), sourceOwnerPath, sourceContainerId, sourceEntryId));
     }
 
@@ -1383,38 +1049,31 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     protected int anchorCellX(ItemStack stack) {
-        int width = GridItemSizeManager.getSize(stack).placedWidth(rotatedPreview);
-        return Math.max(0, Math.min(dragAnchorCellX, width - 1));
+        return interactionController.drag().anchorCellX();
     }
 
     protected int anchorCellY(ItemStack stack) {
-        int height = GridItemSizeManager.getSize(stack).placedHeight(rotatedPreview);
-        return Math.max(0, Math.min(dragAnchorCellY, height - 1));
+        return interactionController.drag().anchorCellY();
     }
 
-    private int targetGridX(ItemStack stack, int mouseX) {
-        return cellX(mouseX, currentMouseY()) - anchorCellX(stack);
+    private int targetGridX(ItemStack stack, int mouseX, int mouseY) {
+        return cellX(mouseX, mouseY) - anchorCellX(stack);
     }
 
-    private int targetGridY(ItemStack stack, int mouseY) {
-        return cellY(currentMouseX(), mouseY) - anchorCellY(stack);
+    private int targetGridY(ItemStack stack, int mouseX, int mouseY) {
+        return cellY(mouseX, mouseY) - anchorCellY(stack);
     }
 
-    private int targetRegionX(GridColumnPanel.Region region, ItemStack stack, int mouseX) {
-        return region.cellX(mouseX, currentMouseY()) - anchorCellX(stack);
+    private int targetRegionX(GridColumnPanel.Region region, ItemStack stack, int mouseX, int mouseY) {
+        return region.cellX(mouseX, mouseY) - anchorCellX(stack);
     }
 
-    private int targetRegionY(GridColumnPanel.Region region, ItemStack stack, int mouseY) {
-        return region.cellY(currentMouseX(), mouseY) - anchorCellY(stack);
+    private int targetRegionY(GridColumnPanel.Region region, ItemStack stack, int mouseX, int mouseY) {
+        return region.cellY(mouseX, mouseY) - anchorCellY(stack);
     }
 
     protected void setGridDragAnchor(int mouseX, int mouseY, int itemLeft, int itemTop, int width, int height) {
-        int relativeX = Math.max(0, Math.min(width * CELL - 1, mouseX - itemLeft));
-        int relativeY = Math.max(0, Math.min(height * CELL - 1, mouseY - itemTop));
-        dragAnchorCellX = relativeX / CELL;
-        dragAnchorCellY = relativeY / CELL;
-        dragAnchorPixelX = relativeX % CELL;
-        dragAnchorPixelY = relativeY % CELL;
+        interactionController.drag().setGridAnchor(mouseX, mouseY, itemLeft, itemTop, width, height);
     }
 
     private void beginPendingGridDrag(GridEntry entry, int mouseX, int mouseY, int itemLeft, int itemTop) {
@@ -1476,32 +1135,25 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         }
         if (pendingGridDrag != null) {
             draggingEntry = pendingGridDrag;
-            dragPreviewStack = draggingEntry.stack().copy();
-            rotatedPreview = draggingEntry.rotated();
+            interactionController.begin(gridDragSource(), draggingEntry.stack(), draggingEntry.rotated());
             setGridDragAnchor(pendingMouseX, pendingMouseY, pendingItemLeft, pendingItemTop, pendingItemWidth, pendingItemHeight);
         } else if (pendingEquipmentDrag != null) {
             draggingEquipmentEntry = pendingEquipmentDrag;
-            dragPreviewStack = draggingEquipmentEntry.entry().stack().copy();
-            rotatedPreview = draggingEquipmentEntry.entry().rotated();
+            interactionController.begin(equipmentDragSource(), draggingEquipmentEntry.entry().stack(),
+                    draggingEquipmentEntry.entry().rotated());
             setGridDragAnchor(pendingMouseX, pendingMouseY, pendingItemLeft, pendingItemTop, pendingItemWidth, pendingItemHeight);
         } else if (pendingNestedDrag != null) {
             draggingNestedEntry = pendingNestedDrag;
-            dragPreviewStack = draggingNestedEntry.entry().stack().copy();
-            rotatedPreview = draggingNestedEntry.entry().rotated();
+            interactionController.begin(nestedDragSource(), draggingNestedEntry.entry().stack(),
+                    draggingNestedEntry.entry().rotated());
             setGridDragAnchor(pendingMouseX, pendingMouseY, pendingItemLeft, pendingItemTop, pendingItemWidth, pendingItemHeight);
         } else if (pendingCurioDrag != null) {
             draggingCurioSlot = pendingCurioDrag;
-            selectedPlayerStack = ItemStack.EMPTY;
             lastPlayerSlot = -1;
-            rotatedPreview = false;
-            dragAnchorCellX = 0;
-            dragAnchorCellY = 0;
-            dragAnchorPixelX = CELL / 2;
-            dragAnchorPixelY = CELL / 2;
+            interactionController.begin(curioDragSource(), draggingCurioSlot.view().stack(), false);
         } else if (pendingSlotDrag != null) {
-            selectedPlayerStack = pendingSlotDrag.getItem().copy();
             lastPlayerSlot = pendingSlotIndex;
-            rotatedPreview = false;
+            interactionController.begin(playerSlotSource(lastPlayerSlot), pendingSlotDrag.getItem(), false);
             setSlotDragAnchor(pendingMouseX, pendingMouseY, pendingSlotDrag);
         }
         GridInventoryUiSounds.dragStart();
@@ -1536,19 +1188,17 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
     }
 
     private void setSlotDragAnchor(int mouseX, int mouseY, Slot slot) {
-        dragAnchorCellX = 0;
-        dragAnchorCellY = 0;
         if (menu.isPlayerGrid()) {
             Optional<FreeSlotWidget> customSlot = equipmentColumnPanel.slotAt(mouseX, mouseY);
             if (customSlot.isPresent()) {
                 FreeSlotWidget widget = customSlot.get();
-                dragAnchorPixelX = Math.max(0, Math.min(CELL - 1, (mouseX - widget.x()) * CELL / widget.size()));
-                dragAnchorPixelY = Math.max(0, Math.min(CELL - 1, (mouseY - widget.y()) * CELL / widget.size()));
+                interactionController.drag().setPixelAnchor(
+                        (mouseX - widget.x()) * CELL / widget.size(),
+                        (mouseY - widget.y()) * CELL / widget.size());
                 return;
             }
         }
-        dragAnchorPixelX = Math.max(0, Math.min(CELL - 1, mouseX - leftPos - slot.x));
-        dragAnchorPixelY = Math.max(0, Math.min(CELL - 1, mouseY - topPos - slot.y));
+        interactionController.drag().setPixelAnchor(mouseX - leftPos - slot.x, mouseY - topPos - slot.y);
     }
 
     protected Slot findHoveredSlot(double mouseX, double mouseY) {
@@ -1571,13 +1221,7 @@ public class GridInventoryScreen extends AbstractContainerScreen<GridInventoryMe
         draggingEquipmentEntry = null;
         draggingNestedEntry = null;
         draggingCurioSlot = null;
-        dragPreviewStack = ItemStack.EMPTY;
-        selectedPlayerStack = ItemStack.EMPTY;
         lastPlayerSlot = -1;
-        rotatedPreview = false;
-        dragAnchorCellX = 0;
-        dragAnchorCellY = 0;
-        dragAnchorPixelX = CELL / 2;
-        dragAnchorPixelY = CELL / 2;
+        interactionController.clear();
     }
 }

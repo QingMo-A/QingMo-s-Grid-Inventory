@@ -1,6 +1,8 @@
 package com.dreamingfish.gridinventory.client.screen.panel;
 
-import com.dreamingfish.gridinventory.client.key.ModKeyMappings;
+import com.dreamingfish.gridinventory.client.interaction.GridDragSession;
+import com.dreamingfish.gridinventory.client.interaction.GridInteractionController;
+import com.dreamingfish.gridinventory.client.interaction.GridInteractionSurface;
 import com.dreamingfish.gridinventory.client.render.EquipmentStorageTooltipRenderer;
 import com.dreamingfish.gridinventory.client.render.GridItemRenderer;
 import com.dreamingfish.gridinventory.client.render.GridLayoutMetrics;
@@ -15,11 +17,8 @@ import com.dreamingfish.gridinventory.common.data.GridInventoryData;
 import com.dreamingfish.gridinventory.common.equipment.EquipmentSlotHelper;
 import com.dreamingfish.gridinventory.common.inventory.GridItemSource;
 import com.dreamingfish.gridinventory.common.inventory.GridItemTarget;
-import com.dreamingfish.gridinventory.common.inventory.GridMoveOptions;
 import com.dreamingfish.gridinventory.common.inventory.GridPlacementValidator;
 import com.dreamingfish.gridinventory.common.inventory.PlayerPocketDefinitionManager;
-import com.dreamingfish.gridinventory.common.item.GridBackpackItem;
-import com.dreamingfish.gridinventory.common.network.MoveItemMessage;
 import com.dreamingfish.gridinventory.common.network.RequestExternalPlayerGridMessage;
 import com.dreamingfish.gridinventory.common.size.GridItemSizeManager;
 import com.dreamingfish.gridinventory.common.util.GridItemStacks;
@@ -54,6 +53,8 @@ public final class ExternalContainerSidebar {
     private final GridColumnPanel gridPanel = new GridColumnPanel();
     private final EquipmentColumnPanel equipmentPanel = new EquipmentColumnPanel();
     private final HoverAnimationTracker<UUID> pocketHoverAnimations = new HoverAnimationTracker<>();
+    private final GridInteractionController dragInteraction = new GridInteractionController(CELL);
+    private final GridInteractionController carriedInteraction = new GridInteractionController(CELL);
     private boolean active;
     private boolean expanded;
     private Dock dock = preferredDock;
@@ -69,15 +70,9 @@ public final class ExternalContainerSidebar {
     private GridInventoryData pocket = PlayerPocketDefinitionManager.createInventory();
     private List<Slot> equipmentSlots = List.of();
     private Inventory equipmentInventory;
-    private GridItemSource dragSource;
-    private ItemStack dragStack = ItemStack.EMPTY;
     private UUID draggedPocketEntryId;
     private GridColumnPanel.EquipmentEntryHit draggedEquipmentEntry;
     private int draggedPlayerSlot = -1;
-    private boolean rotatedPreview;
-    private boolean foldedPreview;
-    private int anchorCellX;
-    private int anchorCellY;
     private ItemStack observedCarried = ItemStack.EMPTY;
     private UUID pocketOwnerId;
     private long pocketRevision = -1L;
@@ -87,8 +82,11 @@ public final class ExternalContainerSidebar {
         this.active = supports(screen, menu);
         if (!active) {
             clearDrag();
+            carriedInteraction.clear();
             return;
         }
+        carriedInteraction.clear();
+        observedCarried = ItemStack.EMPTY;
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
         this.dock = preferredDock;
@@ -100,7 +98,7 @@ public final class ExternalContainerSidebar {
     }
 
     public boolean isDraggingSidebarItem() {
-        return dragSource != null && !dragStack.isEmpty();
+        return dragInteraction.drag().isActive() && dragInteraction.drag().source().isPresent();
     }
 
     public boolean contains(double mouseX, double mouseY) {
@@ -132,18 +130,19 @@ public final class ExternalContainerSidebar {
         renderTopBar(graphics, mouseX, mouseY);
         int contentTop = top + BAR_HEIGHT;
         int contentHeight = height - BAR_HEIGHT;
-        ItemStack moving = movingStack(menu);
+        GridDragSession movingSession = movingSession(menu);
+        ItemStack moving = movingSession.stack();
         if (tab == Tab.GRID) {
             gridPanel.setBounds(left, contentTop, width, contentHeight);
             gridPanel.render(graphics, pocket, draggedPocketEntryId, draggedEquipmentEntry,
-                    mouseX, mouseY, pocketHoverAnimations, dragSource == null && menu.getCarried().isEmpty());
-            renderGridPlacementPreview(graphics, menu, mouseX, mouseY, moving);
+                    mouseX, mouseY, pocketHoverAnimations, !isDraggingSidebarItem() && menu.getCarried().isEmpty());
+            renderGridPlacementPreview(graphics, mouseX, mouseY, movingSession);
             pocketHoverAnimations.markFrameEnd();
         } else {
             equipmentPanel.setBounds(left, contentTop, width, contentHeight);
             int hotbarTop = top + height - 28;
             equipmentPanel.render(graphics, mouseX, mouseY, mouseX, mouseY, hotbarTop,
-                    equipmentSlots, draggedPlayerSlot, moving, !moving.isEmpty(), dragSource == null);
+                    equipmentSlots, draggedPlayerSlot, moving, !moving.isEmpty(), !isDraggingSidebarItem());
         }
         graphics.pose().popPose();
 
@@ -165,8 +164,9 @@ public final class ExternalContainerSidebar {
             }
             return false;
         }
-        if (button == 1 && isDraggingSidebarItem()) {
-            rotatePreview();
+        GridInteractionController movingInteraction = movingInteraction(menu);
+        if (button == 1 && (isDraggingSidebarItem() || contains(mouseX, mouseY))
+                && movingInteraction.handleMouseButton(button)) {
             return true;
         }
         if (button == 0 && inCollapseButton(mouseX, mouseY)) {
@@ -247,28 +247,14 @@ public final class ExternalContainerSidebar {
             equipmentPanel.mouseReleased(button);
         }
         if (isDraggingSidebarItem()) {
-            boolean sent = false;
-            if (hoveredMenuSlot != null && !contains(mouseX, mouseY)) {
-                int slotIndex = menu.slots.indexOf(hoveredMenuSlot);
-                if (slotIndex >= 0 && isOperationSlot(hoveredMenuSlot)) {
-                    sendMove(menu, dragSource, new GridItemTarget.MenuSlot(menu.containerId, slotIndex));
-                    sent = true;
-                }
-            } else if (expanded && contains(mouseX, mouseY)) {
-                Optional<GridItemTarget> target = sidebarTarget((int) mouseX, (int) mouseY, dragStack);
-                if (target.isPresent()) {
-                    sendMove(menu, dragSource, target.get());
-                    sent = true;
-                }
-            }
+            GridInteractionController.ReleaseResult release = dragInteraction.release((int) mouseX, (int) mouseY,
+                    List.of(menuSlotSurface(menu, hoveredMenuSlot), sidebarSurface()));
             clearDrag();
-            return sent || contains(mouseX, mouseY);
+            return release.handled() || contains(mouseX, mouseY);
         }
         if (!menu.getCarried().isEmpty() && expanded && contains(mouseX, mouseY)) {
-            Optional<GridItemTarget> target = sidebarTarget((int) mouseX, (int) mouseY, menu.getCarried());
-            if (target.isPresent()) {
-                sendMove(menu, new GridItemSource.MenuCarried(menu.containerId), target.get());
-            }
+            synchronizeCarried(menu);
+            carriedInteraction.release((int) mouseX, (int) mouseY, List.of(sidebarSurface()));
             return true;
         }
         return expanded && contains(mouseX, mouseY);
@@ -308,16 +294,7 @@ public final class ExternalContainerSidebar {
         if (!active) {
             return false;
         }
-        if (ModKeyMappings.ROTATE_GRID_ITEM.matches(keyCode, scanCode)
-                && (!movingStack(menu).isEmpty())) {
-            rotatePreview();
-            return true;
-        }
-        if (ModKeyMappings.TOGGLE_BACKPACK_FOLD.matches(keyCode, scanCode)
-                && !movingStack(menu).isEmpty()) {
-            return toggleFoldedPreview(menu);
-        }
-        return false;
+        return movingInteraction(menu).handlePreviewKey(keyCode, scanCode);
     }
 
     private static boolean supports(Screen screen, AbstractContainerMenu menu) {
@@ -438,40 +415,43 @@ public final class ExternalContainerSidebar {
                 selected ? 0xFFFFFFFF : 0xFFB6C0C8, false);
     }
 
-    private void renderGridPlacementPreview(GuiGraphics graphics, AbstractContainerMenu menu,
-                                            int mouseX, int mouseY, ItemStack moving) {
+    private void renderGridPlacementPreview(GuiGraphics graphics, int mouseX, int mouseY,
+                                            GridDragSession session) {
+        ItemStack moving = session.stack();
         if (moving.isEmpty()) {
             return;
         }
         Optional<PocketHit> pocketHit = pocketHit(mouseX, mouseY);
         if (pocketHit.isPresent()) {
-            GridItemTarget.PlayerGridPlacement target = pocketTarget(pocketHit.get(), moving);
-            UUID ignored = dragSource instanceof GridItemSource.PlayerGridEntry entry ? entry.entryId() : null;
-            boolean valid = GridPlacementValidator.canPlace(pocket, preparedPreview(moving), target.x(), target.y(),
+            GridItemTarget.PlayerGridPlacement target = pocketTarget(pocketHit.get(), session);
+            UUID ignored = session.source().filter(GridItemSource.PlayerGridEntry.class::isInstance)
+                    .map(GridItemSource.PlayerGridEntry.class::cast).map(GridItemSource.PlayerGridEntry::entryId)
+                    .orElse(null);
+            boolean valid = GridPlacementValidator.canPlace(pocket, moving, target.x(), target.y(),
                     target.rotated(), ignored, 0);
             renderPlacement(graphics, pocket, gridPanel.pocketLeft(), gridPanel.pocketTop(), target.x(), target.y(),
-                    moving, valid);
+                    session, valid);
             return;
         }
         gridPanel.equipmentRegionAt(mouseX, mouseY).ifPresent(region -> {
-            int targetX = targetCellX(region.cellX(mouseX, mouseY), moving);
-            int targetY = targetCellY(region.cellY(mouseX, mouseY), moving);
+            int targetX = targetCellX(region.cellX(mouseX, mouseY), session);
+            int targetY = targetCellY(region.cellY(mouseX, mouseY), session);
             UUID ignored = draggedEquipmentEntry != null
                     && draggedEquipmentEntry.slot() == region.slot()
                     && draggedEquipmentEntry.containerId().equals(region.containerId())
                     ? draggedEquipmentEntry.entry().entryId() : null;
-            boolean valid = GridPlacementValidator.canPlace(region.inventory(), preparedPreview(moving),
-                    targetX, targetY, rotatedPreview, ignored, 1);
+            boolean valid = GridPlacementValidator.canPlace(region.inventory(), moving,
+                    targetX, targetY, session.rotated(), ignored, 1);
             renderPlacement(graphics, region.inventory(), region.left(), region.top(), targetX, targetY,
-                    moving, valid);
+                    session, valid);
         });
     }
 
     private void renderPlacement(GuiGraphics graphics, GridInventoryData inventory, int gridLeft, int gridTop,
-                                 int targetX, int targetY, ItemStack stack, boolean valid) {
-        var size = GridItemSizeManager.getSize(preparedPreview(stack));
-        int placedWidth = size.placedWidth(rotatedPreview);
-        int placedHeight = size.placedHeight(rotatedPreview);
+                                 int targetX, int targetY, GridDragSession session, boolean valid) {
+        var size = GridItemSizeManager.getSize(session.stack());
+        int placedWidth = size.placedWidth(session.rotated());
+        int placedHeight = size.placedHeight(session.rotated());
         int x = gridLeft + GridLayoutMetrics.cellLeft(inventory, targetX, targetY, CELL);
         int y = gridTop + GridLayoutMetrics.cellTop(inventory, targetX, targetY, CELL);
         int width = GridLayoutMetrics.areaWidth(inventory, targetX, targetY, placedWidth, CELL);
@@ -481,7 +461,7 @@ public final class ExternalContainerSidebar {
     }
 
     private void renderMenuSlotPreview(GuiGraphics graphics, Slot slot, int menuLeft, int menuTop) {
-        boolean valid = isOperationSlot(slot) && canInsertIntoMenuSlot(slot, dragStack);
+        boolean valid = isOperationSlot(slot) && canInsertIntoMenuSlot(slot, dragInteraction.drag().stack());
         int x = menuLeft + slot.x - 1;
         int y = menuTop + slot.y - 1;
         graphics.pose().pushPose();
@@ -525,35 +505,35 @@ public final class ExternalContainerSidebar {
     }
 
     private void renderDraggedOverlay(GuiGraphics graphics, AbstractContainerMenu menu, int mouseX, int mouseY) {
-        ItemStack moving = movingStack(menu);
-        if (moving.isEmpty() || dragSource == null && !contains(mouseX, mouseY)) {
+        GridDragSession session = movingSession(menu);
+        ItemStack moving = session.stack();
+        if (moving.isEmpty() || !isDraggingSidebarItem() && !contains(mouseX, mouseY)) {
             return;
         }
-        ItemStack prepared = preparedPreview(moving);
-        var size = GridItemSizeManager.getSize(prepared);
-        int placedWidth = size.placedWidth(rotatedPreview);
-        int placedHeight = size.placedHeight(rotatedPreview);
-        int x = mouseX - Math.min(anchorCellX, Math.max(0, placedWidth - 1)) * CELL - CELL / 2;
-        int y = mouseY - Math.min(anchorCellY, Math.max(0, placedHeight - 1)) * CELL - CELL / 2;
+        var size = GridItemSizeManager.getSize(moving);
+        int placedWidth = size.placedWidth(session.rotated());
+        int placedHeight = size.placedHeight(session.rotated());
+        int x = mouseX - session.anchorCellX() * CELL - session.anchorPixelX();
+        int y = mouseY - session.anchorCellY() * CELL - session.anchorPixelY();
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, 0.0F, GridUiLayers.DRAGGED_ITEM);
-        GridItemRenderer.renderDraggedStackOverlay(graphics, prepared, x, y,
-                placedWidth * CELL, placedHeight * CELL, 0.82F, rotatedPreview);
+        GridItemRenderer.renderDraggedStackOverlay(graphics, moving, x, y,
+                placedWidth * CELL, placedHeight * CELL, 0.82F, session.rotated());
         graphics.pose().popPose();
     }
 
-    private Optional<GridItemTarget> sidebarTarget(int mouseX, int mouseY, ItemStack stack) {
+    private Optional<GridItemTarget> sidebarTarget(int mouseX, int mouseY, GridDragSession session) {
         if (tab == Tab.GRID) {
             Optional<PocketHit> pocketHit = pocketHit(mouseX, mouseY);
             if (pocketHit.isPresent()) {
-                return Optional.of(pocketTarget(pocketHit.get(), stack));
+                return Optional.of(pocketTarget(pocketHit.get(), session));
             }
             Optional<GridColumnPanel.Region> equipmentRegion = gridPanel.equipmentRegionAt(mouseX, mouseY);
             if (equipmentRegion.isPresent()) {
                 GridColumnPanel.Region region = equipmentRegion.get();
                 return Optional.of(new GridItemTarget.EquipmentStoragePlacement(region.slot(), region.containerId(),
-                        targetCellX(region.cellX(mouseX, mouseY), stack),
-                        targetCellY(region.cellY(mouseX, mouseY), stack), rotatedPreview, foldedPreview));
+                        targetCellX(region.cellX(mouseX, mouseY), session),
+                        targetCellY(region.cellY(mouseX, mouseY), session), session.rotated(), session.folded()));
             }
         } else {
             Optional<FreeSlotWidget> free = equipmentPanel.slotAt(mouseX, mouseY);
@@ -570,19 +550,17 @@ public final class ExternalContainerSidebar {
         return Optional.empty();
     }
 
-    private GridItemTarget.PlayerGridPlacement pocketTarget(PocketHit hit, ItemStack stack) {
-        return new GridItemTarget.PlayerGridPlacement(targetCellX(hit.cellX(), stack),
-                targetCellY(hit.cellY(), stack), rotatedPreview, foldedPreview);
+    private GridItemTarget.PlayerGridPlacement pocketTarget(PocketHit hit, GridDragSession session) {
+        return new GridItemTarget.PlayerGridPlacement(targetCellX(hit.cellX(), session),
+                targetCellY(hit.cellY(), session), session.rotated(), session.folded());
     }
 
-    private int targetCellX(int hoveredCell, ItemStack stack) {
-        int width = GridItemSizeManager.getSize(preparedPreview(stack)).placedWidth(rotatedPreview);
-        return hoveredCell - Math.min(anchorCellX, Math.max(0, width - 1));
+    private int targetCellX(int hoveredCell, GridDragSession session) {
+        return hoveredCell - session.anchorCellX();
     }
 
-    private int targetCellY(int hoveredCell, ItemStack stack) {
-        int height = GridItemSizeManager.getSize(preparedPreview(stack)).placedHeight(rotatedPreview);
-        return hoveredCell - Math.min(anchorCellY, Math.max(0, height - 1));
+    private int targetCellY(int hoveredCell, GridDragSession session) {
+        return hoveredCell - session.anchorCellY();
     }
 
     private Optional<PocketHit> pocketHit(int mouseX, int mouseY) {
@@ -602,109 +580,81 @@ public final class ExternalContainerSidebar {
 
     private void beginPocketDrag(PocketHit hit) {
         GridEntry entry = hit.entry();
-        dragSource = new GridItemSource.PlayerGridEntry(entry.entryId());
-        dragStack = entry.stack().copy();
+        dragInteraction.begin(new GridItemSource.PlayerGridEntry(entry.entryId()), entry.stack(), entry.rotated());
         draggedPocketEntryId = entry.entryId();
-        rotatedPreview = entry.rotated();
-        foldedPreview = GridBackpackItem.isFolded(dragStack);
-        anchorCellX = Math.max(0, hit.cellX() - entry.x());
-        anchorCellY = Math.max(0, hit.cellY() - entry.y());
+        dragInteraction.drag().setCellAnchor(hit.cellX() - entry.x(), hit.cellY() - entry.y());
     }
 
     private void beginEquipmentDrag(GridColumnPanel.EquipmentEntryHit hit) {
-        dragSource = new GridItemSource.EquipmentStorageEntry(hit.slot(), hit.containerId(), hit.entry().entryId());
-        dragStack = hit.entry().stack().copy();
+        dragInteraction.begin(new GridItemSource.EquipmentStorageEntry(
+                hit.slot(), hit.containerId(), hit.entry().entryId()), hit.entry().stack(), hit.entry().rotated());
         draggedEquipmentEntry = hit;
-        rotatedPreview = hit.entry().rotated();
-        foldedPreview = GridBackpackItem.isFolded(dragStack);
-        anchorCellX = 0;
-        anchorCellY = 0;
     }
 
     private void beginPlayerSlotDrag(int playerSlot, ItemStack stack) {
-        dragSource = new GridItemSource.PlayerSlot(playerSlot);
-        dragStack = stack.copy();
+        dragInteraction.begin(new GridItemSource.PlayerSlot(playerSlot), stack, false);
         draggedPlayerSlot = playerSlot;
-        rotatedPreview = false;
-        foldedPreview = GridBackpackItem.isFolded(dragStack);
-        anchorCellX = 0;
-        anchorCellY = 0;
     }
 
     private void beginCurioDrag(CuriosSlotWidget slot) {
-        dragSource = new GridItemSource.AccessorySlot(slot.view().identifier(), slot.view().index());
-        dragStack = slot.view().stack().copy();
-        rotatedPreview = false;
-        foldedPreview = GridBackpackItem.isFolded(dragStack);
-        anchorCellX = 0;
-        anchorCellY = 0;
+        dragInteraction.begin(new GridItemSource.AccessorySlot(
+                slot.view().identifier(), slot.view().index()), slot.view().stack(), false);
     }
 
     private void clearDrag() {
-        dragSource = null;
-        dragStack = ItemStack.EMPTY;
+        dragInteraction.clear();
         draggedPocketEntryId = null;
         draggedEquipmentEntry = null;
         draggedPlayerSlot = -1;
-        rotatedPreview = false;
-        foldedPreview = false;
-        anchorCellX = 0;
-        anchorCellY = 0;
     }
 
-    private ItemStack movingStack(AbstractContainerMenu menu) {
+    private GridInteractionController movingInteraction(AbstractContainerMenu menu) {
         if (isDraggingSidebarItem()) {
-            return dragStack;
+            return dragInteraction;
         }
+        synchronizeCarried(menu);
+        return carriedInteraction;
+    }
+
+    private GridDragSession movingSession(AbstractContainerMenu menu) {
+        return movingInteraction(menu).drag();
+    }
+
+    private void synchronizeCarried(AbstractContainerMenu menu) {
         ItemStack carried = menu.getCarried();
+        if (carried.isEmpty()) {
+            observedCarried = ItemStack.EMPTY;
+            carriedInteraction.clear();
+            return;
+        }
         if (!ItemStack.matches(observedCarried, carried)) {
             observedCarried = carried.copy();
-            foldedPreview = GridBackpackItem.isFolded(carried);
-            rotatedPreview = false;
-            anchorCellX = 0;
-            anchorCellY = 0;
-        }
-        return carried;
-    }
-
-    private ItemStack preparedPreview(ItemStack stack) {
-        ItemStack prepared = stack.copy();
-        if (prepared.getItem() instanceof GridBackpackItem) {
-            GridInventoryServices.itemStackData().setBackpackFolded(prepared, foldedPreview);
-        }
-        return prepared;
-    }
-
-    private void rotatePreview() {
-        ItemStack stack = dragStack;
-        if (stack.isEmpty()) {
-            Minecraft minecraft = Minecraft.getInstance();
-            stack = minecraft.player == null ? ItemStack.EMPTY : minecraft.player.containerMenu.getCarried();
-        }
-        if (!stack.isEmpty() && GridItemSizeManager.getSize(preparedPreview(stack)).rotatable()) {
-            rotatedPreview = !rotatedPreview;
+            carriedInteraction.begin(new GridItemSource.MenuCarried(menu.containerId), carried, false);
         }
     }
 
-    private boolean toggleFoldedPreview(AbstractContainerMenu menu) {
-        ItemStack stack = movingStack(menu);
-        if (!(stack.getItem() instanceof GridBackpackItem)) {
-            return false;
-        }
-        ItemStack toggled = preparedPreview(stack);
-        if (!GridBackpackItem.toggleFolded(toggled)) {
-            return false;
-        }
-        foldedPreview = GridBackpackItem.isFolded(toggled);
-        if (isDraggingSidebarItem()) {
-            dragStack = toggled;
-        }
-        return true;
+    private GridInteractionSurface menuSlotSurface(AbstractContainerMenu menu, @Nullable Slot hoveredMenuSlot) {
+        return (session, mouseX, mouseY) -> {
+            if (hoveredMenuSlot == null || contains(mouseX, mouseY)) {
+                return GridInteractionSurface.DropHit.pass();
+            }
+            int slotIndex = menu.slots.indexOf(hoveredMenuSlot);
+            if (slotIndex < 0 || !isOperationSlot(hoveredMenuSlot)) {
+                return GridInteractionSurface.DropHit.pass();
+            }
+            return GridInteractionSurface.DropHit.target(new GridItemTarget.MenuSlot(menu.containerId, slotIndex));
+        };
     }
 
-    private void sendMove(AbstractContainerMenu menu, GridItemSource source, GridItemTarget target) {
-        GridInventoryServices.network().sendToServer(new MoveItemMessage(source, target,
-                new GridMoveOptions(Integer.MAX_VALUE, rotatedPreview, foldedPreview)));
+    private GridInteractionSurface sidebarSurface() {
+        return (session, mouseX, mouseY) -> {
+            if (!expanded || !contains(mouseX, mouseY)) {
+                return GridInteractionSurface.DropHit.pass();
+            }
+            return sidebarTarget(mouseX, mouseY, session)
+                    .map(GridInteractionSurface.DropHit::target)
+                    .orElseGet(GridInteractionSurface.DropHit::blocked);
+        };
     }
 
     private boolean isOperationSlot(Slot slot) {
@@ -713,7 +663,7 @@ public final class ExternalContainerSidebar {
     }
 
     private boolean canInsertIntoMenuSlot(Slot slot, ItemStack stack) {
-        ItemStack moved = preparedPreview(stack);
+        ItemStack moved = stack;
         if (!isOperationSlot(slot) || moved.isEmpty() || !slot.mayPlace(moved)) {
             return false;
         }
