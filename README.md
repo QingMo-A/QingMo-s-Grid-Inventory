@@ -254,6 +254,13 @@ DF Grid Inventory 是一个数据驱动的俄罗斯方块式背包模组。不�
 .\gradlew.bat runNeoForge1211Client
 ```
 
+开发客户端和服务端默认还会加载对应版本的 Mekanism 与 TaCZ：Forge 1.20.1 使用官方 TaCZ，NeoForge 1.21.1 使用社区移植版。它们只属于开发运行环境，不会被打包进 DF Grid Inventory 的成品 JAR。排查单个模组兼容问题时可以临时关闭：
+
+```powershell
+.\gradlew.bat runForge1201Client -Pmekanism_runtime=false
+.\gradlew.bat runNeoForge1211Client -Ptacz_runtime=false
+```
+
 开发环境默认不加载 RarityCore。临时启用 RarityCore 并启动客户端：
 
 ```powershell

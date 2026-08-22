@@ -27,6 +27,13 @@ repositories {
             includeGroup("curse.maven")
         }
     }
+    maven {
+        name = "Modrinth"
+        url = uri("https://api.modrinth.com/maven")
+        content {
+            includeGroup("maven.modrinth")
+        }
+    }
 }
 
 minecraft {
@@ -82,6 +89,12 @@ def rarityCoreForge1201 =
 def enableRarityCoreRuntime =
         (findProperty("raritycore_runtime") ?: "false").toBoolean()
 
+def enableMekanismRuntime =
+        (findProperty("mekanism_runtime") ?: "true").toBoolean()
+
+def enableTaczRuntime =
+        (findProperty("tacz_runtime") ?: "true").toBoolean()
+
 dependencies {
     minecraft "net.minecraftforge:forge:${forge_1201_minecraft_version}-${forge_1201_version}"
     annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
@@ -95,6 +108,12 @@ dependencies {
     // 只用于开发环境 runClient / runServer。
     if (enableRarityCoreRuntime) {
         runtimeOnly fg.deobf(rarityCoreForge1201)
+    }
+    if (enableMekanismRuntime) {
+        runtimeOnly fg.deobf("maven.modrinth:mekanism:${mekanism_forge_1201_version}")
+    }
+    if (enableTaczRuntime) {
+        runtimeOnly fg.deobf("maven.modrinth:timeless-and-classics-zero:${tacz_forge_1201_version}")
     }
 }
 

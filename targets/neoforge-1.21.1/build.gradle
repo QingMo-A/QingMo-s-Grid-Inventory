@@ -27,6 +27,13 @@ repositories {
             includeGroup("curse.maven")
         }
     }
+    maven {
+        name = "Modrinth"
+        url = uri("https://api.modrinth.com/maven")
+        content {
+            includeGroup("maven.modrinth")
+        }
+    }
 }
 
 neoForge {
@@ -91,12 +98,24 @@ def rarityCoreNeoForge1211 =
 def enableRarityCoreRuntime =
         (findProperty("raritycore_runtime") ?: "false").toBoolean()
 
+def enableMekanismRuntime =
+        (findProperty("mekanism_runtime") ?: "true").toBoolean()
+
+def enableTaczRuntime =
+        (findProperty("tacz_runtime") ?: "true").toBoolean()
+
 dependencies {
     runtimeOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1"
     compileOnly "top.theillusivec4.curios:curios-neoforge:9.5.1+1.21.1:api"
     // 仅开发运行时加载
     if (enableRarityCoreRuntime) {
         localRuntime rarityCoreNeoForge1211
+    }
+    if (enableMekanismRuntime) {
+        localRuntime "maven.modrinth:mekanism:${mekanism_neoforge_1211_version}"
+    }
+    if (enableTaczRuntime) {
+        localRuntime "maven.modrinth:tacz-1.21.1:${tacz_neoforge_1211_version}"
     }
 }
 
