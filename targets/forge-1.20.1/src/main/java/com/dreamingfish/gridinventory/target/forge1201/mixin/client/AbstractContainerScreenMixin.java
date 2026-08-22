@@ -22,6 +22,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
+
 @Mixin(AbstractContainerScreen.class)
 public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMenu> extends Screen
         implements ExternalContainerSidebarAccess {
@@ -40,6 +43,16 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
             VanillaContainerScreenLayout.none();
     @Unique @Nullable
     private ResourceLocation df_grid_inventory$bottomCapTexture;
+    @Unique
+    private final Map<Slot, int[]> df_grid_inventory$originalPlayerSlotPositions = new IdentityHashMap<>();
+    @Unique
+    private int df_grid_inventory$originalImageHeight = -1;
+    @Unique
+    private int df_grid_inventory$originalInventoryLabelY;
+    @Unique
+    private boolean df_grid_inventory$layoutApplied;
+    @Unique
+    private boolean df_grid_inventory$nativeSideWidgetsArranged;
 
     protected AbstractContainerScreenMixin(Component title) {
         super(title);
@@ -47,12 +60,23 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
 
     @Inject(method = "init", at = @At("HEAD"))
     private void df_grid_inventory$prepareVanillaContainerLayout(CallbackInfo ci) {
+        df_grid_inventory$restoreContainerLayout();
+        df_grid_inventory$nativeSideWidgetsArranged = false;
         df_grid_inventory$bottomCapTexture = null;
         Screen screen = (Screen) (Object) this;
-        df_grid_inventory$vanillaLayout = VanillaContainerScreenLayout.resolve(screen);
-        if (!df_grid_inventory$vanillaLayout.hidesPlayerInventory()
-                || !ExternalContainerSidebar.supports(screen, menu)) {
+        if (!ExternalContainerSidebar.supports(screen, menu)) {
             df_grid_inventory$vanillaLayout = VanillaContainerScreenLayout.none();
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null) {
+            df_grid_inventory$vanillaLayout = VanillaContainerScreenLayout.none();
+            return;
+        }
+        Inventory playerInventory = minecraft.player.getInventory();
+        df_grid_inventory$vanillaLayout = VanillaContainerScreenLayout.resolve(
+                screen, menu, playerInventory, imageHeight);
+        if (!df_grid_inventory$vanillaLayout.hidesPlayerInventory()) {
             return;
         }
 
@@ -61,20 +85,39 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
             df_grid_inventory$bottomCapTexture = new ResourceLocation("minecraft", bottomCap.texturePath());
         }
         if (df_grid_inventory$vanillaLayout.compact()) {
+            df_grid_inventory$originalImageHeight = imageHeight;
             imageHeight = df_grid_inventory$vanillaLayout.compactImageHeight();
         }
+        df_grid_inventory$originalInventoryLabelY = inventoryLabelY;
+        df_grid_inventory$layoutApplied = true;
         inventoryLabelY = VanillaContainerScreenLayout.HIDDEN_SLOT_COORDINATE;
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null) {
-            return;
-        }
-        Inventory playerInventory = minecraft.player.getInventory();
         for (Slot slot : menu.slots) {
             if (slot.container == playerInventory) {
+                df_grid_inventory$originalPlayerSlotPositions.put(slot, new int[]{slot.x, slot.y});
                 SlotPositionAccessor position = (SlotPositionAccessor) slot;
                 position.df_grid_inventory$setX(VanillaContainerScreenLayout.HIDDEN_SLOT_COORDINATE);
                 position.df_grid_inventory$setY(VanillaContainerScreenLayout.HIDDEN_SLOT_COORDINATE);
             }
+        }
+    }
+
+    @Unique
+    private void df_grid_inventory$restoreContainerLayout() {
+        if (df_grid_inventory$originalImageHeight >= 0) {
+            imageHeight = df_grid_inventory$originalImageHeight;
+            df_grid_inventory$originalImageHeight = -1;
+        }
+        if (df_grid_inventory$layoutApplied) {
+            inventoryLabelY = df_grid_inventory$originalInventoryLabelY;
+            df_grid_inventory$layoutApplied = false;
+        }
+        if (!df_grid_inventory$originalPlayerSlotPositions.isEmpty()) {
+            for (Map.Entry<Slot, int[]> entry : df_grid_inventory$originalPlayerSlotPositions.entrySet()) {
+                SlotPositionAccessor position = (SlotPositionAccessor) entry.getKey();
+                position.df_grid_inventory$setX(entry.getValue()[0]);
+                position.df_grid_inventory$setY(entry.getValue()[1]);
+            }
+            df_grid_inventory$originalPlayerSlotPositions.clear();
         }
     }
 
@@ -92,8 +135,7 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
     )
     private void df_grid_inventory$clipVanillaContainerBody(GuiGraphics graphics, int mouseX, int mouseY,
                                                              float partialTick, CallbackInfo ci) {
-        if (df_grid_inventory$vanillaLayout.compact()
-                && !df_grid_inventory$vanillaLayout.decorateInRenderBg()) {
+        if (df_grid_inventory$vanillaLayout.clipsBackground()) {
             graphics.enableScissor(leftPos, topPos,
                     leftPos + imageWidth, topPos + df_grid_inventory$vanillaLayout.bodyHeight());
         }
@@ -109,8 +151,7 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
     )
     private void df_grid_inventory$renderVanillaContainerDecoration(GuiGraphics graphics, int mouseX, int mouseY,
                                                                      float partialTick, CallbackInfo ci) {
-        if (df_grid_inventory$vanillaLayout.compact()
-                && !df_grid_inventory$vanillaLayout.decorateInRenderBg()) {
+        if (df_grid_inventory$vanillaLayout.clipsBackground()) {
             graphics.disableScissor();
         }
         df_grid_inventory$renderVanillaContainerDecoration(graphics);
@@ -122,10 +163,20 @@ public abstract class AbstractContainerScreenMixin<T extends AbstractContainerMe
         df_grid_inventory$externalSidebar.render(graphics, menu, hoveredSlot, leftPos, topPos, mouseX, mouseY);
     }
 
+    @Inject(method = "render", at = @At("HEAD"))
+    private void df_grid_inventory$arrangeNativeSideWidgets(GuiGraphics graphics, int mouseX, int mouseY,
+                                                             float partialTick, CallbackInfo ci) {
+        if (!df_grid_inventory$nativeSideWidgetsArranged
+                && df_grid_inventory$vanillaLayout.nativeBackgroundResize()) {
+            VanillaContainerScreenLayout.arrangeNativeSideWidgets(
+                    children(), leftPos, topPos, imageWidth, imageHeight, height);
+            df_grid_inventory$nativeSideWidgetsArranged = true;
+        }
+    }
+
     @Unique
     private void df_grid_inventory$renderVanillaContainerDecoration(GuiGraphics graphics) {
-        if (df_grid_inventory$vanillaLayout.compact()
-                && !df_grid_inventory$vanillaLayout.decorateInRenderBg()) {
+        if (df_grid_inventory$vanillaLayout.clipsBackground()) {
             VanillaContainerScreenLayout.BottomCap bottomCap = df_grid_inventory$vanillaLayout.bottomCap();
             if (bottomCap != null && df_grid_inventory$bottomCapTexture != null) {
                 VanillaContainerScreenLayout.renderBottomCap(graphics, df_grid_inventory$bottomCapTexture,

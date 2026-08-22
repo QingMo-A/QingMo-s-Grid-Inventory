@@ -1,8 +1,19 @@
 package com.dreamingfish.gridinventory.client.screen.panel;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public final class VanillaContainerScreenLayout {
     public static final int HIDDEN_SLOT_COORDINATE = -10_000;
@@ -18,8 +29,19 @@ public final class VanillaContainerScreenLayout {
     private static final int HOPPER_BODY_HEIGHT = 50;
     private static final int BEACON_BODY_HEIGHT = 136;
     private static final int CAP_LEFT_WIDTH = 7;
+    private static final int SLOT_SIZE = 18;
+    private static final int MIN_PLAYER_ROW_SIZE = 9;
+    private static final int MIN_ADAPTIVE_BODY_HEIGHT = 32;
+    private static final int MIN_ADAPTIVE_HEIGHT_SAVING = 18;
+    private static final int SIDE_WIDGET_GAP = 1;
+    private static final int SCREEN_EDGE_PADDING = 2;
 
-    private static final Layout NONE = new Layout(false, 0, false, null, null);
+    // One entry covers every screen implemented on top of the same resizable GUI framework.
+    private static final Set<String> NATIVE_RESIZABLE_SCREEN_BASES = Set.of(
+            "mekanism.client.gui.GuiMekanism"
+    );
+
+    private static final Layout NONE = new Layout(false, 0, false, false, null, null);
     private static final Layout RECIPE_BOOK = compact(STANDARD_BODY_HEIGHT, true, null);
     private static final Layout BREWING_STAND = standard("textures/gui/container/brewing_stand.png");
     private static final Layout CARTOGRAPHY_TABLE = standard("textures/gui/container/cartography_table.png");
@@ -38,7 +60,7 @@ public final class VanillaContainerScreenLayout {
             new BottomCap("textures/gui/container/hopper.png", 126, STANDARD_IMAGE_WIDTH));
     private static final Layout BEACON = compact(BEACON_BODY_HEIGHT, false,
             new BottomCap("textures/gui/container/beacon.png", 212, 230));
-    private static final Layout MERCHANT = new Layout(true, 0, false, null,
+    private static final Layout MERCHANT = new Layout(true, 0, false, false, null,
             new Mask(101, 75, 171, 88, 0xFFC6C6C6));
 
     private VanillaContainerScreenLayout() {
@@ -73,6 +95,18 @@ public final class VanillaContainerScreenLayout {
         };
     }
 
+    public static Layout resolve(Screen screen, AbstractContainerMenu menu,
+                                 Inventory playerInventory, int originalImageHeight) {
+        Layout vanilla = resolve(screen);
+        if (vanilla != NONE) {
+            return vanilla;
+        }
+        if (!hasNativeResizableBackground(screen.getClass())) {
+            return NONE;
+        }
+        return resolveAdaptive(menu, playerInventory, originalImageHeight);
+    }
+
     public static void renderBottomCap(GuiGraphics graphics, ResourceLocation texture,
                                        int sourceY, int sourceWidth,
                                        int x, int y, int width) {
@@ -90,6 +124,27 @@ public final class VanillaContainerScreenLayout {
         }
         graphics.blit(texture, x + width - CAP_LEFT_WIDTH, y, sourceWidth - CAP_LEFT_WIDTH,
                 sourceY, CAP_LEFT_WIDTH, BOTTOM_CAP_HEIGHT);
+    }
+
+    public static void arrangeNativeSideWidgets(List<? extends GuiEventListener> children,
+                                                int menuLeft, int menuTop,
+                                                int imageWidth, int imageHeight, int screenHeight) {
+        List<AbstractWidget> left = children.stream()
+                .filter(AbstractWidget.class::isInstance)
+                .map(AbstractWidget.class::cast)
+                .filter(VanillaContainerScreenLayout::isNativeFrameworkElement)
+                .filter(widget -> widget.getX() + widget.getWidth() <= menuLeft + 1)
+                .sorted((first, second) -> Integer.compare(first.getY(), second.getY()))
+                .toList();
+        List<AbstractWidget> right = children.stream()
+                .filter(AbstractWidget.class::isInstance)
+                .map(AbstractWidget.class::cast)
+                .filter(VanillaContainerScreenLayout::isNativeFrameworkElement)
+                .filter(widget -> widget.getX() >= menuLeft + imageWidth - 1)
+                .sorted((first, second) -> Integer.compare(first.getY(), second.getY()))
+                .toList();
+        arrangeSideWidgetColumn(left, menuTop, imageHeight, screenHeight);
+        arrangeSideWidgetColumn(right, menuTop, imageHeight, screenHeight);
     }
 
     public static int alignedRecipeBookScreenHeight(int screenHeight, int imageHeight) {
@@ -124,11 +179,12 @@ public final class VanillaContainerScreenLayout {
     }
 
     private static Layout compact(int bodyHeight, boolean decorateInRenderBg, BottomCap bottomCap) {
-        return new Layout(true, bodyHeight, decorateInRenderBg, bottomCap, null);
+        return new Layout(true, bodyHeight, decorateInRenderBg, false, bottomCap, null);
     }
 
     public record Layout(boolean hidesPlayerInventory, int bodyHeight,
-                         boolean decorateInRenderBg, BottomCap bottomCap, Mask mask) {
+                         boolean decorateInRenderBg, boolean nativeBackgroundResize,
+                         BottomCap bottomCap, Mask mask) {
         public boolean compact() {
             return bodyHeight > 0;
         }
@@ -136,11 +192,88 @@ public final class VanillaContainerScreenLayout {
         public int compactImageHeight() {
             return bodyHeight + BOTTOM_CAP_HEIGHT;
         }
+
+        public boolean clipsBackground() {
+            return compact() && !decorateInRenderBg && !nativeBackgroundResize;
+        }
     }
 
     public record BottomCap(String texturePath, int sourceY, int sourceWidth) {
     }
 
     public record Mask(int x, int y, int width, int height, int color) {
+    }
+
+    private static Layout resolveAdaptive(AbstractContainerMenu menu, Inventory playerInventory,
+                                          int originalImageHeight) {
+        Map<Integer, Set<Integer>> playerRows = new HashMap<>();
+        int operationBottom = 0;
+        for (Slot slot : menu.slots) {
+            if (slot.x < 0 || slot.y < 0) {
+                continue;
+            }
+            if (slot.container == playerInventory) {
+                playerRows.computeIfAbsent(slot.y, ignored -> new HashSet<>()).add(slot.x);
+            } else {
+                operationBottom = Math.max(operationBottom, slot.y + SLOT_SIZE);
+            }
+        }
+
+        int firstPlayerRowY = playerRows.entrySet().stream()
+                .filter(entry -> entry.getValue().size() >= MIN_PLAYER_ROW_SIZE)
+                .mapToInt(Map.Entry::getKey)
+                .min()
+                .orElse(Integer.MAX_VALUE);
+        if (firstPlayerRowY == Integer.MAX_VALUE || operationBottom > firstPlayerRowY) {
+            return NONE;
+        }
+
+        int bodyHeight = firstPlayerRowY - 1;
+        int compactImageHeight = bodyHeight + BOTTOM_CAP_HEIGHT;
+        if (bodyHeight < MIN_ADAPTIVE_BODY_HEIGHT
+                || originalImageHeight - compactImageHeight < MIN_ADAPTIVE_HEIGHT_SAVING) {
+            return NONE;
+        }
+        return new Layout(true, bodyHeight, false, true, null, null);
+    }
+
+    private static boolean hasNativeResizableBackground(Class<?> screenClass) {
+        for (Class<?> type = screenClass; type != null; type = type.getSuperclass()) {
+            if (NATIVE_RESIZABLE_SCREEN_BASES.contains(type.getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isNativeFrameworkElement(AbstractWidget widget) {
+        return widget.getClass().getName().startsWith("mekanism.client.gui.element.");
+    }
+
+    private static void arrangeSideWidgetColumn(List<AbstractWidget> widgets,
+                                                int menuTop, int imageHeight, int screenHeight) {
+        if (widgets.isEmpty()) {
+            return;
+        }
+        int totalHeight = widgets.stream().mapToInt(AbstractWidget::getHeight).sum()
+                + SIDE_WIDGET_GAP * (widgets.size() - 1);
+        int desiredTop = menuTop + (imageHeight - totalHeight) / 2;
+        int maximumTop = Math.max(SCREEN_EDGE_PADDING, screenHeight - totalHeight - SCREEN_EDGE_PADDING);
+        int targetY = Math.max(SCREEN_EDGE_PADDING, Math.min(desiredTop, maximumTop));
+        for (AbstractWidget widget : widgets) {
+            moveNativeFrameworkElement(widget, targetY - widget.getY());
+            targetY += widget.getHeight() + SIDE_WIDGET_GAP;
+        }
+    }
+
+    private static void moveNativeFrameworkElement(AbstractWidget widget, int deltaY) {
+        if (deltaY == 0) {
+            return;
+        }
+        try {
+            widget.getClass().getMethod("move", int.class, int.class).invoke(widget, 0, deltaY);
+        } catch (ReflectiveOperationException ignored) {
+            widget.setY(widget.getY() + deltaY);
+        }
     }
 }
